@@ -115,7 +115,15 @@ export function ThemeSelector({ currentTheme, profileId }: Props) {
                     ? "2px solid var(--theme-accent)"
                     : "2px solid transparent",
                   outlineOffset: "2px",
-                  transition:   "outline-color var(--duration-fast) var(--ease-in-out)",
+                  // Selected floats on the accent wash — never inset (soft-UI Rule 4).
+                  background:   isActive
+                    ? "color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))"
+                    : "transparent",
+                  border:       isActive
+                    ? "1px solid var(--neu-edge)"
+                    : "1px solid transparent",
+                  boxShadow:    isActive ? "var(--neu-shadow-chip)" : "none",
+                  transition:   "outline-color var(--duration-fast) var(--ease-in-out), background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out)",
                 }}
               >
                 {/*
@@ -199,7 +207,7 @@ export function ThemeSelector({ currentTheme, profileId }: Props) {
                   fontSize:    "var(--text-xs)",
                   fontWeight:  isActive ? "var(--weight-medium)" : "var(--weight-normal)",
                   color:       isActive
-                    ? "var(--theme-text-primary)"
+                    ? "var(--neu-accent-deep)"
                     : "var(--theme-text-tertiary)",
                   transition:  "color var(--duration-fast) var(--ease-in-out)",
                 }}

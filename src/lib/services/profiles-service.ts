@@ -4,7 +4,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canonicalizePhone } from "@/lib/utils/phone";
-import type { Profile, UserRole, AppDomain } from "@/lib/types/database";
+import type { Database, Profile, UserRole, AppDomain } from "@/lib/types/database";
 import type { AssignableUser } from "@/lib/types";
 
 /**
@@ -171,6 +171,7 @@ export async function updateProfileFields(
     | 'job_title'
     | 'theme'
     | 'app_icon'
+    | 'appearance'
     | 'timezone'
     | 'is_on_leave'
     | 'avatar_url'
@@ -179,7 +180,10 @@ export async function updateProfileFields(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .update(fields)
+    // `appearance` (migration 0158) is absent from the generated Update type
+    // until the next database.ts regen — the cast bridges the seam, same
+    // interim posture as the documented post-migration RPC casts.
+    .update(fields as Database["public"]["Tables"]["profiles"]["Update"])
     .eq("id", id)
     .select()
     .single();

@@ -237,8 +237,9 @@ function DomainStatCard({
                   width:        '88px',
                   padding:      'var(--space-1) var(--space-2)',
                   borderRadius: 'var(--radius-sm)',
-                  border:       '1px solid var(--theme-paper-border)',
-                  background:   'var(--theme-paper)',
+                  border:       '1px solid var(--neu-input-edge)',
+                  background:   'var(--neu-input-bg)',
+                  boxShadow:    'var(--neu-shadow-input)',
                   color:        'var(--theme-text-primary)',
                   fontFamily:   'var(--font-mono)',
                   fontSize:     'var(--text-sm)',
@@ -548,13 +549,14 @@ export function DomainOverviewPanel({
           })}
         </div>
 
-        {/* Comparative bar chart */}
+        {/* Comparative bar chart — charts sit RAISED on the gradient sheen,
+            never in a well (neu chart-panel recipe) */}
         <div
           style={{
-            background:   'var(--theme-paper)',
-            border:       '1px solid var(--theme-paper-border)',
+            background:   'var(--neu-input-bg)',
+            border:       '1px solid var(--neu-input-edge)',
             borderRadius: 'var(--radius-md)',
-            boxShadow:    'var(--shadow-1)',
+            boxShadow:    'var(--neu-shadow-input)',
             padding:      'var(--space-5)',
           }}
         >

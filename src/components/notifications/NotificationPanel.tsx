@@ -195,10 +195,10 @@ export function NotificationPanel({
               // md+ the measured anchor coords below override top/right inline.
               display:       "flex",
               flexDirection: "column",
-              background:    "var(--theme-paper)",
-              border:        "1px solid var(--theme-paper-border)",
-              borderRadius:  "var(--radius-lg)",
-              boxShadow:     "var(--shadow-4)",
+              background:    "var(--neu-surface-high)",
+              border:        "1px solid var(--neu-edge)",
+              borderRadius:  "var(--neu-radius-panel)",
+              boxShadow:     "var(--neu-shadow-raised-lg)",
               overflow:      "hidden",
               // Desktop anchor — applied ONLY at md+ (isMobile false). Below md
               // these stay undefined so the sheet CSS governs.

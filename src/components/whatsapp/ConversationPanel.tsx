@@ -12,6 +12,7 @@ import { ArrowLeft, Paperclip } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatDate } from "@/lib/utils/dates";
 import { MessageBar } from "@/components/ui/MessageBar";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { DictationButton } from "@/components/ui/DictationButton";
 import { MessageBubble } from "@/components/whatsapp/MessageBubble";
 import { createClient } from "@/lib/supabase/client";
@@ -368,8 +369,8 @@ export function ConversationPanel({
           alignItems:     "center",
           gap:            "var(--space-3)",
           flexShrink:     0,
-          borderBottom:   "1px solid var(--theme-paper-border)",
-          background:     "var(--theme-paper)",
+          borderBottom:   "1px solid var(--neu-header-edge)",
+          background:     "var(--neu-header-wash)",
         }}
       >
         {/* Back to list — single-pane mode only (<md) */}
@@ -453,42 +454,35 @@ export function ConversationPanel({
         }}
       >
         {grouped.length === 0 ? (
-          <p
-            style={{
-              fontFamily: "var(--font-serif)",
-              fontStyle:  "italic",
-              fontSize:   "var(--text-sm)",
-              color:      "var(--theme-text-tertiary)",
-              textAlign:  "center",
-              margin:     "auto",
-            }}
-          >
-            No messages yet.
-          </p>
+          <div style={{ margin: "auto" }}>
+            <EmptyState title="No messages yet." variant="inline" />
+          </div>
         ) : (
           grouped.map(({ dateLabel, messages: dayMessages }) => (
             <div key={dateLabel}>
-              {/* Date separator */}
+              {/* Date separator — soft raised pill floating on the well */}
               <div
                 style={{
                   display:        "flex",
-                  alignItems:     "center",
-                  gap:            "var(--space-3)",
-                  margin:         "var(--space-3) 0",
+                  justifyContent: "center",
+                  margin:         "var(--space-4) 0 var(--space-3)",
                 }}
               >
-                <div style={{ flex: 1, height: "1px", background: "var(--theme-paper-border)" }} />
                 <span
                   style={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize:   "var(--text-xs)",
-                    color:      "var(--theme-text-tertiary)",
-                    whiteSpace: "nowrap",
+                    fontFamily:   "var(--font-sans)",
+                    fontSize:     "var(--text-xs)",
+                    color:        "var(--theme-text-tertiary)",
+                    whiteSpace:   "nowrap",
+                    padding:      "var(--space-1) var(--space-3)",
+                    background:   "var(--neu-surface)",
+                    border:       "1px solid var(--neu-edge)",
+                    borderRadius: "var(--neu-radius-pill)",
+                    boxShadow:    "var(--neu-shadow-chip)",
                   }}
                 >
                   {dateLabel}
                 </span>
-                <div style={{ flex: 1, height: "1px", background: "var(--theme-paper-border)" }} />
               </div>
 
               {/* Messages for this day */}
@@ -514,6 +508,8 @@ export function ConversationPanel({
           padding:       "var(--space-3) var(--space-4)",
           paddingBottom: "calc(var(--space-3) + env(safe-area-inset-bottom, 0px))",
           flexShrink:    0,
+          background:    "var(--theme-paper)",
+          borderTop:     "1px solid var(--theme-paper-border)",
         }}
       >
         {/* Hidden file input — driven by the attach button. */}

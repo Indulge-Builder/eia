@@ -50,7 +50,7 @@ export function ManagerBudgetWidget({ initialData, dateRange }: WidgetProps) {
   return (
     <div
       style={{
-        borderRadius:  "var(--radius-lg)",
+        borderRadius:  "var(--neu-radius-card)",
         border:        "1px solid var(--theme-paper-border)",
         background:    "var(--theme-paper)",
         boxShadow:     "var(--shadow-1)",
@@ -159,7 +159,7 @@ function FuelGaugeBody({
           </p>
           <p
             style={{
-              fontFamily:         "var(--font-mono)",
+              fontFamily:         "var(--font-serif)",
               fontSize:           "clamp(var(--text-3xl), 2rem + 1.6vw, 3rem)",
               fontWeight:         "var(--weight-semibold)",
               fontVariantNumeric: "tabular-nums",
@@ -175,7 +175,7 @@ function FuelGaugeBody({
         <div style={{ textAlign: "right", flexShrink: 0 }}>
           <p
             style={{
-              fontFamily:         "var(--font-mono)",
+              fontFamily:         "var(--font-serif)",
               fontSize:           "var(--text-2xl)",
               fontWeight:         "var(--weight-semibold)",
               fontVariantNumeric: "tabular-nums",
@@ -261,7 +261,8 @@ function FuelTank({
         position:     "relative",
         width:        "100%",
         height:       14,
-        background:   "var(--theme-paper-subtle)",
+        background:   "var(--neu-well)",
+        boxShadow:    "var(--neu-shadow-inset)",
         border:       "1px solid var(--theme-paper-border)",
         borderRadius: "var(--radius-full)",
         overflow:     "hidden",
@@ -274,7 +275,7 @@ function FuelTank({
         style={{
           width:           "100%",
           height:          "100%",
-          background:      fill,
+          background:      `linear-gradient(180deg, color-mix(in srgb, ${fill} 78%, white), ${fill})`,
           borderRadius:    "var(--radius-full)",
           transformOrigin: "left center",
         }}

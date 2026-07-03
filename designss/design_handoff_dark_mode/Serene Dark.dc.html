@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&amp;family=Geist:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; background: #28241C; }
+    * { box-sizing: border-box; }
+    ::selection { background: rgba(230,200,140,0.25); }
+    input { font-family: 'Geist', system-ui, sans-serif; }
+    input:focus { outline: none; }
+    @keyframes logoSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes logoBreathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+    @keyframes logoGlow { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.5; } }
+    @keyframes dotHop { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-4px); opacity: 1; } }
+    @keyframes shimmerD { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    @keyframes deplete { from { width: 100%; } to { width: 0%; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  </style>
+</helmet>
+
+<div style="min-height:100vh;background:#28241C;font-family:'Geist',system-ui,sans-serif;color:#E8E0D4;padding:64px 48px 96px;display:flex;justify-content:center;{{ tweakVars }}">
+<div style="width:100%;max-width:1320px;display:flex;flex-direction:column;gap:56px;">
+
+  <!-- Masthead -->
+  <div data-screen-label="Masthead" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:12px;font-weight:600;letter-spacing:0.22em;color:var(--acc-deep);text-transform:uppercase;padding-left:0.22em;">Serene · Dark</div>
+      <div style="font-family:'Playfair Display',serif;font-size:44px;font-weight:500;line-height:1.08;">Warm charcoal</div>
+      <div style="font-size:14px;color:#A39A88;max-width:620px;line-height:1.6;">Candlelight, not moonlight. Same material, same top-left light — the highlight turns candle-warm, accents lift lighter to hold on charcoal, and the gold mark comes home to its native ground.</div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <a href="Serene Polish.dc.html" style="text-decoration:none;height:46px;padding:0 20px;border-radius:999px;background:#2D2920;border:1px solid rgba(255,240,214,0.06);box-shadow:3px 3px 8px rgba(0,0,0,0.45),-3px -3px 8px rgba(255,240,214,0.045);display:flex;align-items:center;font-size:13px;font-weight:500;color:#A39A88;white-space:nowrap;">Polish →</a>
+      <a href="Serene Components.dc.html" style="text-decoration:none;height:46px;padding:0 20px;border-radius:999px;background:#2D2920;border:1px solid rgba(255,240,214,0.06);box-shadow:3px 3px 8px rgba(0,0,0,0.45),-3px -3px 8px rgba(255,240,214,0.045);display:flex;align-items:center;font-size:13px;font-weight:500;color:#A39A88;white-space:nowrap;">Components →</a>
+    </div>
+  </div>
+
+  <!-- ═══ 01 · The mark at home ═══ -->
+  <div data-screen-label="Mark at home" style="display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep);text-transform:uppercase;padding-left:0.16em;">01 · The mark at home</div>
+    <div style="position:relative;height:400px;border-radius:36px;background:#28241C;border:1px solid rgba(255,240,214,0.06);box-shadow:10px 10px 24px rgba(0,0,0,0.55),-10px -10px 24px rgba(255,240,214,0.055);overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;">
+      <div style="position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(214,175,110,0.18) 0%,transparent 65%);animation:logoGlow 4s ease-in-out infinite;"></div>
+      <div style="position:relative;width:170px;height:170px;animation:logoBreathe 4s ease-in-out infinite;">
+        <div style="width:100%;height:100%;animation:logoSpin 90s linear infinite;">{{ mandalaHero }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+        <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:600;letter-spacing:0.42em;padding-left:0.42em;color:#E8E0D4;">SERENE</div>
+        <div style="font-size:12px;color:#6E675C;letter-spacing:0.08em;">Attending to every detail</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#6E675C;padding-left:0.16em;">the brand asset is gold on near-black — dark mode is where the logo lives natively · boot sequence identical, glow drops to 18%</div>
+  </div>
+
+  <!-- ═══ 02 · Actions & controls ═══ -->
+  <div data-screen-label="Actions dark" style="display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep);text-transform:uppercase;padding-left:0.16em;">02 · Actions &amp; controls</div>
+    <div style="background:#2D2920;border-radius:32px;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.50),-6px -6px 14px rgba(255,240,214,0.05);padding:28px;display:flex;flex-direction:column;gap:26px;">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <button style="height:48px;padding:0 26px;border-radius:999px;background:var(--acc-grad);border:1px solid rgba(255,240,214,0.09);box-shadow:3px 3px 8px rgba(0,0,0,0.45),-3px -3px 8px rgba(255,240,214,0.045);font-family:'Geist',sans-serif;font-size:14px;font-weight:600;color:var(--acc-fg);cursor:pointer;white-space:nowrap;transition:transform 220ms cubic-bezier(0.34,1.3,0.64,1);" style-hover="transform:translateY(-1px);" style-active="transform:scale(0.97);">Place request</button>
+        <button style="height:48px;padding:0 26px;border-radius:999px;background:#2D2920;border:1px solid rgba(255,240,214,0.06);box-shadow:3px 3px 8px rgba(0,0,0,0.45),-3px -3px 8px rgba(255,240,214,0.045);font-family:'Geist',sans-serif;font-size:14px;font-weight:500;color:#A39A88;cursor:pointer;white-space:nowrap;transition:transform 220ms cubic-bezier(0.34,1.3,0.64,1);" style-hover="transform:translateY(-1px);" style-active="transform:scale(0.97);">Secondary</button>
+        <button style="height:48px;padding:0 22px;border-radius:999px;background:transparent;border:none;font-family:'Geist',sans-serif;font-size:14px;font-weight:500;color:#A39A88;cursor:pointer;" style-hover="color:#E8E0D4;">Ghost</button>
+        <button style="height:48px;padding:0 26px;border-radius:999px;background:color-mix(in srgb,#CD8279 20%,#2D2920);border:1px solid rgba(255,240,214,0.06);box-shadow:2px 2px 5px rgba(0,0,0,0.40),-2px -2px 5px rgba(255,240,214,0.04);font-family:'Geist',sans-serif;font-size:14px;font-weight:500;color:#E0A29A;cursor:pointer;white-space:nowrap;">Remove</button>
+        <div style="flex:1;"></div>
+        <div onClick="{{ flipToggle }}" style="width:58px;height:34px;border-radius:999px;cursor:pointer;padding:4px;background:linear-gradient(180deg,#221E17,#2B261E);box-shadow:inset 2px 2px 5px rgba(0,0,0,0.40),inset -1px -1px 3px rgba(255,240,214,0.04),0 1px 0 rgba(255,240,214,0.05);display:flex;transition:background 260ms ease;">
+          <div style="width:26px;height:26px;border-radius:50%;box-shadow:2px 2px 5px rgba(0,0,0,0.55),-1px -1px 3px rgba(255,240,214,0.05);transition:transform 260ms cubic-bezier(0.34,1.3,0.64,1),background 260ms ease;{{ knobStyle }}"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;">
+        <div style="display:inline-flex;padding:5px;border-radius:999px;background:linear-gradient(180deg,#221E17,#2B261E);box-shadow:inset 2px 2px 5px rgba(0,0,0,0.40),inset -1px -1px 3px rgba(255,240,214,0.04),0 1px 0 rgba(255,240,214,0.05);gap:4px;">
+          <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="3">
+            <div onClick="{{ tab.pick }}" style="height:36px;padding:0 20px;border-radius:999px;display:flex;align-items:center;font-size:13px;cursor:pointer;transition:background 240ms ease,color 240ms ease,box-shadow 240ms ease;{{ tab.style }}">{{ tab.label }}</div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="5">
+            <span style="font-size:11px;font-weight:600;padding:5px 13px;border-radius:999px;white-space:nowrap;border:1px solid rgba(255,240,214,0.06);box-shadow:2px 2px 5px rgba(0,0,0,0.40),-2px -2px 5px rgba(255,240,214,0.04);{{ c.style }}">{{ c.label }}</span>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 03 · Inputs ═══ -->
+  <div data-screen-label="Inputs dark" style="display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep);text-transform:uppercase;padding-left:0.16em;">03 · Inputs — still floating, candle-lit sheen</div>
+    <div style="background:#2D2920;border-radius:32px;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.50),-6px -6px 14px rgba(255,240,214,0.05);padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:22px;">
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <span style="font-size:12px;font-weight:500;color:#A39A88;">Search</span>
+        <div style="display:flex;align-items:center;gap:10px;height:48px;padding:0 18px;border-radius:22px;background:linear-gradient(180deg,#332E24,#2D2920);border:1px solid rgba(255,240,214,0.08);box-shadow:3px 3px 8px rgba(0,0,0,0.45),-3px -3px 8px rgba(255,240,214,0.045),inset 0 1px 0 rgba(255,240,214,0.06);">
+          <span style="color:#6E675C;font-size:15px;">⌕</span>
+          <input placeholder="Search leads…" style="flex:1;background:transparent;border:none;font-size:14px;color:#E8E0D4;" />
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <span style="font-size:12px;font-weight:500;color:#A39A88;">Guest name</span>
+        <div style="height:48px;padding:0 18px;border-radius:22px;background:linear-gradient(180deg,#332E24,#2D2920);border:1px solid rgba(255,240,214,0.08);box-shadow:3px 3px 8px rgba(0,0,0,0.45),-3px -3px 8px rgba(255,240,214,0.045),inset 0 1px 0 rgba(255,240,214,0.06);display:flex;align-items:center;">
+          <input value="Amara Chen" style="flex:1;background:transparent;border:none;font-size:14px;color:#E8E0D4;" />
+        </div>
+      </div>
+      <div style="grid-column:span 2;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 22px;border-radius:999px;background:linear-gradient(180deg,#332E24,#2D2920);border:1px solid rgba(255,240,214,0.08);box-shadow:3px 3px 8px rgba(0,0,0,0.45),-3px -3px 8px rgba(255,240,214,0.045),inset 0 1px 0 rgba(255,240,214,0.06);">
+        <input placeholder="Message Elaya…" style="flex:1;background:transparent;border:none;font-size:14px;color:#E8E0D4;" />
+        <span style="width:26px;height:26px;display:inline-flex;opacity:0.5;">{{ mandalaTiny }}</span>
+        <button style="width:44px;height:44px;border-radius:50%;background:var(--acc-grad);border:1px solid rgba(255,240,214,0.09);box-shadow:2px 2px 5px rgba(0,0,0,0.45),-2px -2px 5px rgba(255,240,214,0.04);color:var(--acc-fg);font-size:15px;cursor:pointer;transition:transform 220ms cubic-bezier(0.34,1.3,0.64,1);" style-active="transform:scale(0.94);">↑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 04 · Data ═══ -->
+  <div data-screen-label="Data dark" style="display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep);text-transform:uppercase;padding-left:0.16em;">04 · Data — tiles, table, chart</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:24px;">
+      <sc-for list="{{ stats }}" as="st" hint-placeholder-count="3">
+        <div style="background:#2D2920;border-radius:32px;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.50),-6px -6px 14px rgba(255,240,214,0.05);padding:24px 26px;display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#6E675C;">{{ st.label }}</span>
+          <span style="font-family:'Playfair Display',serif;font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;color:#E8E0D4;">{{ st.value }}</span>
+          <span style="font-size:11px;color:var(--acc-deep);font-weight:500;">{{ st.trend }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:grid;grid-template-columns:7fr 5fr;gap:24px;">
+      <!-- table -->
+      <div style="background:#2D2920;border-radius:32px;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.50),-6px -6px 14px rgba(255,240,214,0.05);padding:24px;display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;gap:14px;padding:6px 16px 12px;font-size:10.5px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#6E675C;">
+          <span style="flex:1.4;">Lead</span><span style="flex:1;">Value</span><span style="flex:1;">Status</span><span style="width:56px;text-align:right;">Last</span>
+        </div>
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:16px;cursor:pointer;transition:background 160ms ease;" style-hover="background:var(--acc-wash);">
+            <span style="flex:1.4;font-size:13.5px;font-weight:500;color:#E8E0D4;">{{ r.name }}</span>
+            <span style="flex:1;font-family:'Playfair Display',serif;font-size:15px;font-weight:600;color:#E8E0D4;">{{ r.value }}</span>
+            <span style="flex:1;min-width:0;"><span style="font-size:10.5px;font-weight:600;padding:4px 11px;border-radius:999px;white-space:nowrap;border:1px solid rgba(255,240,214,0.06);box-shadow:2px 2px 5px rgba(0,0,0,0.40),-2px -2px 5px rgba(255,240,214,0.04);{{ r.chipStyle }}">{{ r.status }}</span></span>
+            <span style="width:56px;text-align:right;font-size:11.5px;color:#6E675C;">{{ r.last }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <!-- chart -->
+      <div style="background:#2D2920;border-radius:32px;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.50),-6px -6px 14px rgba(255,240,214,0.05);padding:24px 26px;display:flex;flex-direction:column;gap:18px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;">
+          <span style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#6E675C;">Requests · week</span>
+          <span style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:#E8E0D4;">312</span>
+        </div>
+        <div style="flex:1;display:flex;align-items:flex-end;gap:12px;min-height:150px;border-bottom:1px dashed rgba(255,240,214,0.10);padding-bottom:2px;">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="7">
+            <div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;border-radius:999px;background:linear-gradient(180deg,#221E17,#2B261E);box-shadow:inset 2px 2px 5px rgba(0,0,0,0.40),inset -1px -1px 3px rgba(255,240,214,0.04);padding:3px;">
+              <div style="width:100%;border-radius:999px;background:var(--acc-grad);box-shadow:1px 1px 3px rgba(0,0,0,0.4);transition:height 500ms cubic-bezier(0.22,1,0.36,1);{{ b.style }}"></div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <sc-for list="{{ bars }}" as="b" hint-placeholder-count="7">
+            <span style="flex:1;text-align:center;font-size:10px;color:#6E675C;">{{ b.day }}</span>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 05 · Feedback & Elaya ═══ -->
+  <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:24px;">
+    <div data-screen-label="Feedback dark" style="grid-column:span 6;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep);text-transform:uppercase;padding-left:0.16em;">05 · Feedback</div>
+      <div style="flex:1;background:#2D2920;border-radius:32px;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.50),-6px -6px 14px rgba(255,240,214,0.05);padding:26px;display:flex;flex-direction:column;gap:18px;">
+        <!-- toast -->
+        <div style="position:relative;display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:18px;background:#332E24;border:1px solid rgba(255,240,214,0.09);box-shadow:10px 10px 24px rgba(0,0,0,0.55),-10px -10px 24px rgba(255,240,214,0.055);overflow:hidden;">
+          <span style="flex:1;font-size:13px;color:#E8E0D4;">Note deleted</span>
+          <button style="height:32px;padding:0 16px;border-radius:999px;background:rgba(255,240,214,0.06);border:1px solid rgba(255,240,214,0.09);font-family:'Geist',sans-serif;font-size:12px;font-weight:600;color:var(--acc);cursor:pointer;">Undo</button>
+          <span style="position:absolute;left:0;bottom:0;height:2.5px;background:var(--acc);animation:deplete 5s linear infinite;"></span>
+        </div>
+        <!-- tooltip inverts to cream -->
+        <div style="display:flex;align-items:center;gap:18px;">
+          <div style="position:relative;width:42px;height:42px;border-radius:999px;background:#2D2920;box-shadow:2px 2px 6px rgba(0,0,0,0.45),-2px -2px 6px rgba(255,240,214,0.045);border:1px solid rgba(255,240,214,0.06);display:flex;align-items:center;justify-content:center;font-size:15px;color:#A39A88;">↻
+            <span style="position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);padding:7px 12px;border-radius:12px;background:#ECE8E1;color:#38332B;font-size:11.5px;font-weight:500;white-space:nowrap;box-shadow:4px 4px 14px rgba(0,0,0,0.5);">Refresh <span style="font-size:9.5px;font-weight:600;padding:2px 6px;border-radius:5px;background:rgba(56,51,43,0.1);">R</span></span>
+          </div>
+          <span style="font-size:11px;color:#6E675C;">tooltips invert — cream pill on charcoal</span>
+        </div>
+        <!-- skeleton -->
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="width:180px;height:18px;border-radius:9px;background:linear-gradient(90deg,#221E17 25%,#332E24 50%,#221E17 75%);background-size:200% 100%;animation:shimmerD 1.8s linear infinite;"></div>
+          <div style="width:280px;height:12px;border-radius:7px;background:linear-gradient(90deg,#221E17 25%,#332E24 50%,#221E17 75%);background-size:200% 100%;animation:shimmerD 1.8s linear 150ms infinite;"></div>
+          <div style="display:flex;gap:10px;">
+            <div style="flex:1;height:56px;border-radius:18px;background:linear-gradient(90deg,#221E17 25%,#332E24 50%,#221E17 75%);background-size:200% 100%;animation:shimmerD 1.8s linear 300ms infinite;"></div>
+            <div style="flex:1;height:56px;border-radius:18px;background:linear-gradient(90deg,#221E17 25%,#332E24 50%,#221E17 75%);background-size:200% 100%;animation:shimmerD 1.8s linear 450ms infinite;"></div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#6E675C;">skeleton sweeps well → surface-high · toast floats on raised-lg</div>
+      </div>
+    </div>
+
+    <div data-screen-label="Elaya dark" style="grid-column:span 6;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep);text-transform:uppercase;padding-left:0.16em;">06 · Chat &amp; Elaya</div>
+      <div style="flex:1;background:#2D2920;border-radius:32px;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.50),-6px -6px 14px rgba(255,240,214,0.05);padding:26px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;gap:12px;align-items:flex-end;">
+          <div style="width:38px;height:38px;border-radius:50%;background:#221E17;border:1px solid rgba(255,240,214,0.09);box-shadow:2px 2px 6px rgba(0,0,0,0.45),-2px -2px 6px rgba(255,240,214,0.045);display:flex;align-items:center;justify-content:center;flex-shrink:0;animation:logoBreathe 3s ease-in-out infinite;"><span style="width:26px;height:26px;display:inline-flex;">{{ mandalaDisc }}</span></div>
+          <div style="max-width:75%;padding:13px 17px;border-radius:18px 18px 18px 4px;background:#332E24;border:1px solid rgba(255,240,214,0.06);box-shadow:2px 2px 6px rgba(0,0,0,0.45),-2px -2px 6px rgba(255,240,214,0.045);font-size:13.5px;line-height:1.55;color:#E8E0D4;">The Positano villa is confirmed for the 14th. Shall I arrange the transfer from Naples as well?</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;">
+          <div style="max-width:75%;padding:13px 17px;border-radius:18px 18px 4px 18px;background:var(--acc-wash);border:1px solid rgba(255,240,214,0.06);font-size:13.5px;line-height:1.55;color:#E8E0D4;">Yes — and add a stop at Le Sirenuse for aperitivo.</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:38px;height:38px;border-radius:50%;background:#221E17;border:1px solid rgba(255,240,214,0.09);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="width:26px;height:26px;display:inline-flex;animation:logoSpin 8s linear infinite;">{{ mandalaDisc }}</span></div>
+          <div style="display:flex;align-items:center;gap:8px;padding:12px 18px;border-radius:18px 18px 18px 4px;background:#332E24;border:1px solid rgba(255,240,214,0.06);">
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--acc);animation:dotHop 1.2s ease-in-out infinite;"></span>
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--acc);animation:dotHop 1.2s ease-in-out 150ms infinite;"></span>
+            <span style="width:7px;height:7px;border-radius:50%;background:var(--acc);animation:dotHop 1.2s ease-in-out 300ms infinite;"></span>
+          </div>
+        </div>
+        <div style="flex:1;"></div>
+        <div style="font-size:11px;color:#6E675C;">glyph disc goes deeper than the surface (#221E17) so the gold still floats · user bubbles = accent wash</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 07 · Palette + empty state in dark ═══ -->
+  <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:24px;">
+    <div data-screen-label="Palette dark" style="grid-column:span 6;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep);text-transform:uppercase;padding-left:0.16em;">07 · Command palette</div>
+      <div style="flex:1;border-radius:28px;background:#332E24;border:1px solid rgba(255,240,214,0.09);box-shadow:14px 14px 40px rgba(0,0,0,0.55),-8px -8px 24px rgba(255,240,214,0.04);overflow:hidden;display:flex;flex-direction:column;">
+        <div style="display:flex;align-items:center;gap:12px;padding:17px 22px;">
+          <span style="font-size:16px;color:#6E675C;">⌕</span>
+          <span style="flex:1;font-size:15px;color:#6E675C;">Search leads, actions, pages…</span>
+          <span style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:7px;background:#221E17;box-shadow:inset 1px 1px 3px rgba(0,0,0,0.45),inset -1px -1px 3px rgba(255,240,214,0.04);color:#A39A88;">esc</span>
+        </div>
+        <div style="height:1px;background:rgba(255,240,214,0.07);"></div>
+        <div style="padding:10px;display:flex;flex-direction:column;gap:2px;">
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#6E675C;padding:6px 12px 4px;">Actions</div>
+          <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:14px;background:var(--acc-wash);">
+            <span style="width:26px;height:26px;border-radius:9px;background:#221E17;box-shadow:inset 1px 1px 3px rgba(0,0,0,0.4),inset -1px -1px 3px rgba(255,240,214,0.04);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--acc-deep);">✦</span>
+            <span style="flex:1;font-size:14px;color:#E8E0D4;">Ask Elaya</span>
+            <span style="font-size:11px;color:#6E675C;">A</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:14px;">
+            <span style="width:26px;height:26px;border-radius:9px;background:#221E17;box-shadow:inset 1px 1px 3px rgba(0,0,0,0.4),inset -1px -1px 3px rgba(255,240,214,0.04);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--acc-deep);">+</span>
+            <span style="flex:1;font-size:14px;color:#E8E0D4;">New lead</span>
+            <span style="font-size:11px;color:#6E675C;">N</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:14px;">
+            <span style="width:26px;height:26px;border-radius:9px;background:#221E17;box-shadow:inset 1px 1px 3px rgba(0,0,0,0.4),inset -1px -1px 3px rgba(255,240,214,0.04);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--acc-deep);">→</span>
+            <span style="flex:1;font-size:14px;color:#E8E0D4;">Dashboard</span>
+            <span style="font-size:11px;color:#6E675C;">G D</span>
+          </div>
+        </div>
+        <div style="flex:1;"></div>
+        <div style="height:1px;background:rgba(255,240,214,0.07);"></div>
+        <div style="display:flex;align-items:center;gap:16px;padding:11px 20px;font-size:11px;color:#6E675C;">
+          <span>↑↓ navigate</span><span>↵ open</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#6E675C;padding-left:0.16em;">panel sits on surface-high · scrim deepens to rgba(12,10,7,0.5)</div>
+    </div>
+
+    <div data-screen-label="Empty dark" style="grid-column:span 6;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep);text-transform:uppercase;padding-left:0.16em;">08 · Empty state</div>
+      <div style="position:relative;flex:1;min-height:320px;background:#2D2920;border-radius:32px;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.50),-6px -6px 14px rgba(255,240,214,0.05);padding:26px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;">
+        <div style="position:absolute;right:-50px;top:-50px;width:240px;height:240px;opacity:0.1;animation:logoSpin 120s linear infinite;">{{ mandalaWatermark }}</div>
+        <div style="width:72px;height:72px;">{{ mandalaEmpty }}</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:500;font-style:italic;color:#E8E0D4;">Nothing here yet — beautifully so.</div>
+          <div style="font-size:13px;color:#A39A88;max-width:340px;text-align:center;line-height:1.6;">Notes you add about this lead will appear here, and Elaya will remember them.</div>
+        </div>
+        <button style="height:44px;padding:0 24px;border-radius:999px;background:var(--acc-grad);border:1px solid rgba(255,240,214,0.09);box-shadow:3px 3px 8px rgba(0,0,0,0.45),-3px -3px 8px rgba(255,240,214,0.045);font-family:'Geist',sans-serif;font-size:13px;font-weight:600;color:var(--acc-fg);cursor:pointer;white-space:nowrap;transition:transform 220ms cubic-bezier(0.34,1.3,0.64,1);" style-hover="transform:translateY(-1px);" style-active="transform:scale(0.97);">+ Add a note</button>
+      </div>
+      <div style="font-size:11px;color:#6E675C;padding-left:0.16em;">watermark rises to 10% opacity — gold carries further on charcoal</div>
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;earth&quot;, &quot;air&quot;, &quot;water&quot;, &quot;fire&quot;, &quot;candy&quot;, &quot;rose&quot;, &quot;moss&quot;, &quot;lilac&quot;], &quot;default&quot;: &quot;earth&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Theme&quot;}}">
+class Component extends DCLogic {
+  state = { toggleOn: true, tab: 0 };
+
+  lotus(opts) {
+    const o = opts || {};
+    this._seq = (this._seq || 0) + 1;
+    const gid = 'dkGrad' + this._seq;
+    const circles = [];
+    for (let k = 0; k < 8; k++) {
+      const ang = (k / 8) * Math.PI * 2 - Math.PI / 2;
+      circles.push(React.createElement('circle', {
+        key: k, cx: 100 + Math.cos(ang) * 46, cy: 100 + Math.sin(ang) * 46, r: 46,
+        fill: 'none', stroke: 'url(#' + gid + ')', strokeWidth: o.sw || 2.2,
+      }));
+    }
+    return React.createElement('svg', { viewBox: '0 0 200 200', style: { width: '100%', height: '100%', display: 'block', overflow: 'visible' } },
+      React.createElement('defs', null,
+        React.createElement('linearGradient', { id: gid, x1: '1', y1: '0', x2: '0', y2: '1' },
+          React.createElement('stop', { offset: '0%', stopColor: o.from || '#5A4426' }),
+          React.createElement('stop', { offset: '100%', stopColor: o.to || '#D6AF6E' })
+        )
+      ), circles);
+  }
+
+  renderVals() {
+    const bases = {
+      earth: { base: '#D6BC82', fg: '#33290F' },
+      air:   { base: '#97B5D2', fg: '#223240' },
+      water: { base: '#8FC3B9', fg: '#1C2E2A' },
+      fire:  { base: '#DC9877', fg: '#3A1F12' },
+      candy: { base: '#F0B5D2', fg: '#2E1522' },
+      rose:  { base: '#D9A0A5', fg: '#45272A' },
+      moss:  { base: '#A9C4A0', fg: '#26301F' },
+      lilac: { base: '#C9C0E4', fg: '#2E2840' },
+    };
+    const a = bases[this.props.accent] || bases.earth;
+    const s = this.state;
+    // dark chips: pastel mixed 24% into surface, deep tone for text (values from [data-neu="dark"])
+    const chip = (p, deep) => 'background:color-mix(in srgb,' + p + ' 24%,#2D2920);color:' + deep + ';';
+    const chips = [
+      { label: 'Won', style: chip('#9DB894', '#B9D2B0') },
+      { label: 'In discussion', style: chip('#97B3CA', '#B7CFE2') },
+      { label: 'New', style: chip('#D7BF8A', '#E9D6AC') },
+      { label: 'Needs attention', style: chip('#CD8279', '#E0A29A') },
+      { label: 'Nurturing', style: chip('#A79DC8', '#C5BCE0') },
+    ];
+    return {
+      // accent lifts lighter on charcoal — exact recipe from tokens
+      tweakVars: '--acc:color-mix(in srgb,' + a.base + ' 82%,white);--acc-deep:color-mix(in srgb,' + a.base + ' 66%,white);--acc-fg:' + a.fg + ';' +
+        '--acc-grad:linear-gradient(145deg,color-mix(in srgb,var(--acc) 92%,white),color-mix(in srgb,var(--acc) 86%,black));' +
+        '--acc-wash:color-mix(in srgb,var(--acc) 14%,transparent);',
+
+      mandalaHero: this.lotus({}),
+      mandalaTiny: this.lotus({ sw: 5 }),
+      mandalaDisc: this.lotus({ from: '#7A5C30', to: '#E8CFA0', sw: 4 }),
+      mandalaWatermark: this.lotus({}),
+      mandalaEmpty: this.lotus({}),
+
+      flipToggle: () => this.setState({ toggleOn: !s.toggleOn }),
+      knobStyle: s.toggleOn
+        ? 'transform:translateX(24px);background:var(--acc-grad);'
+        : 'transform:translateX(0);background:#3A342A;',
+
+      tabs: ['Overview', 'Journey', 'Notes'].map((label, i) => ({
+        label,
+        pick: () => this.setState({ tab: i }),
+        style: i === s.tab
+          ? 'background:linear-gradient(180deg,#3A342A,#2F2A21);color:#E8E0D4;box-shadow:2px 2px 6px rgba(0,0,0,0.45),-2px -2px 6px rgba(255,240,214,0.05),inset 0 1px 0 rgba(255,240,214,0.06);font-weight:600;'
+          : 'background:transparent;color:#A39A88;font-weight:500;',
+      })),
+
+      chips,
+      stats: [
+        { label: 'Pipeline value', value: '€284,500', trend: '↑ 12% vs last month' },
+        { label: 'Active leads', value: '137', trend: '↑ 9 this week' },
+        { label: 'Avg response', value: '1.8h', trend: '↓ 0.4h faster' },
+      ],
+      rows: [
+        { name: 'Amara Chen', value: '€62,000', status: 'Nurturing', chipStyle: chip('#A79DC8', '#C5BCE0'), last: '2d' },
+        { name: 'Rohan Kapoor', value: '€48,000', status: 'Won', chipStyle: chip('#9DB894', '#B9D2B0'), last: '4h' },
+        { name: 'Elif Demir', value: '€35,500', status: 'In discussion', chipStyle: chip('#97B3CA', '#B7CFE2'), last: '1d' },
+        { name: 'Lars Nyström', value: '€27,000', status: 'Needs attention', chipStyle: chip('#CD8279', '#E0A29A'), last: '5d' },
+      ],
+      bars: [46, 72, 58, 88, 64, 96, 52].map((h, i) => ({
+        style: 'height:' + h + '%;',
+        day: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][i],
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

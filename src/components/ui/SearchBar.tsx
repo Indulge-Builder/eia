@@ -69,14 +69,14 @@ export function SearchBar({
   const borderColor = suppressFocusAccent
     ? variant === "soft"
       ? "transparent"
-      : "var(--theme-paper-border)"
+      : "var(--neu-input-edge)"
     : variant === "soft"
       ? focused
         ? "var(--theme-accent)"
         : "transparent"
       : focused
         ? "var(--theme-accent)"
-        : "var(--theme-paper-border)";
+        : "var(--neu-input-edge)";
 
   return (
     <div
@@ -125,16 +125,22 @@ export function SearchBar({
           paddingRight: value
             ? `calc(var(--space-3) + ${iconSize}px + var(--space-3))`
             : "var(--space-3)",
-          background: "var(--theme-paper-subtle)",
+          // Neumorphic Rule 3: search fields FLOAT — gradient sheen + inner
+          // top highlight, pill radius (specimen SearchBar).
+          background: variant === "soft" ? "transparent" : "var(--neu-input-bg)",
           border: `1px solid ${borderColor}`,
-          borderRadius: "var(--radius-md)",
+          borderRadius: "var(--radius-full)",
           fontSize,
           color: "var(--theme-text-primary)",
           fontFamily: "var(--font-sans)",
           outline: "none",
           transition: "var(--transition-hover)",
           boxShadow:
-            !suppressFocusAccent && focused ? "var(--shadow-focus)" : "none",
+            variant === "soft"
+              ? "none"
+              : !suppressFocusAccent && focused
+                ? "0 0 0 1px var(--theme-accent), var(--neu-shadow-input)"
+                : "var(--neu-shadow-input)",
           caretColor: "var(--theme-accent)",
           opacity: disabled ? 0.5 : 1,
           cursor: disabled ? "not-allowed" : "text",

@@ -2850,11 +2850,16 @@ export type SlaHoursMode     = 'agent_shift' | 'business' | 'clock'
 // ─────────────────────────────────────────────
 
 export type Profile = Omit<Database['public']['Tables']['profiles']['Row'], 'theme' | 'app_icon'> & {
-  theme: 'earth' | 'air' | 'water' | 'fire' | 'martini' | 'candy'
+  // Mirrors THEME_KEYS (src/lib/constants/themes.ts) + migration 0157
+  theme: 'earth' | 'air' | 'water' | 'fire' | 'candy' | 'rose' | 'moss' | 'lilac'
   // Narrowed to the ICON_KEYS union (src/lib/constants/app-icons.ts) — the
   // app_icon column lands in the base Row as `string` until database.ts is
   // regenerated after migration 0121, the same posture as `theme`.
   app_icon: 'icon-1' | 'icon-2' | 'icon-3' | 'icon-4'
+  // Mirrors APPEARANCE_KEYS (src/lib/constants/appearance.ts) + migration
+  // 0158 — absent from the generated Row until the next regen, the same
+  // posture as `theme`/`app_icon`.
+  appearance: 'light' | 'dark' | 'system'
 }
 export type AdCreative       = Database['public']['Tables']['ad_creatives']['Row']
 export type LeadActivity     = Database['public']['Tables']['lead_activities']['Row']

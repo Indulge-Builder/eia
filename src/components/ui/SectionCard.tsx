@@ -17,7 +17,11 @@ export interface SectionCardProps {
  *
  * Matches the Profile page treatment exactly:
  *   - `--theme-paper` background, 1px paper-border, `--shadow-1` (flat, grounded — NOT levitating)
- *   - Header strip in `--theme-paper-subtle` with a `label-micro` title
+ *   - Header strip on the THEMED accent-surface wash (`--theme-accent-surface`,
+ *     re-tints with every theme) + accent-tinted hairline + accent `label-micro`
+ *     title — the shared CardHeader treatment. Never repaint it with
+ *     `--theme-paper-subtle` (the sunken well tone; inset marks state only,
+ *     neumorphic Rule 4)
  *   - Body padded `--space-6` by default
  *
  * Used by:
@@ -34,10 +38,11 @@ export function SectionCard({
 }: SectionCardProps) {
   return (
     <div
+      // Card-role radius (Marshmallow 32) — cards, not fields (--neu-radius-*).
       style={{
         background:   "var(--theme-paper)",
         border:       "1px solid var(--theme-paper-border)",
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         boxShadow:    "var(--shadow-1)",
         overflow:     "hidden",
       }}
@@ -48,12 +53,12 @@ export function SectionCard({
           alignItems:   "center",
           gap:          "var(--space-4)",
           padding:      "var(--space-4) var(--space-6)",
-          background:   "var(--theme-paper-subtle)",
-          borderBottom: "1px solid var(--theme-paper-border)",
+          background:   "var(--neu-header-wash)",
+          borderBottom: "1px solid var(--neu-header-edge)",
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 className="label-micro" style={{ margin: 0 }}>
+          <h2 className="label-micro" style={{ margin: 0, color: "var(--theme-accent)" }}>
             {title}
           </h2>
           {description && (

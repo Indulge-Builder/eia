@@ -38,6 +38,7 @@ function StatusChip({ status }: { status: string }) {
         color: colors?.text ?? "var(--theme-text-secondary)",
         background: colors?.light ?? "var(--theme-paper-subtle)",
         border: `1px solid ${colors?.border ?? "var(--theme-paper-border)"}`,
+        boxShadow: "var(--neu-shadow-chip)",
         whiteSpace: "nowrap",
         flexShrink: 0,
       }}
@@ -256,7 +257,8 @@ function ScopeSwitch({
         display: "inline-flex",
         padding: "2px",
         borderRadius: "var(--radius-full)",
-        background: "var(--theme-paper-subtle)",
+        background: "var(--neu-track-bg)",
+        boxShadow: "var(--neu-shadow-track)",
         border: "1px solid var(--theme-paper-border)",
         opacity: disabled ? 0.6 : 1,
       }}
@@ -274,8 +276,8 @@ function ScopeSwitch({
           left: 2,
           width: "calc(50% - 2px)",
           borderRadius: "var(--radius-full)",
-          background: "var(--theme-accent)",
-          boxShadow: "var(--shadow-1)",
+          background: "var(--neu-accent-gradient)",
+          boxShadow: "var(--neu-shadow-knob)",
         }}
       />
       {options.map((opt) => {
@@ -425,7 +427,7 @@ export function AgentActivityWidget({
   return (
     <div
       style={{
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         border: "1px solid var(--theme-paper-border)",
         background: "var(--theme-paper)",
         boxShadow: "var(--shadow-1)",
@@ -481,7 +483,8 @@ export function AgentActivityWidget({
               fontWeight: "var(--weight-medium)",
               color: "var(--color-success-text)",
               background: "var(--color-success-light)",
-              border: "1px solid var(--color-success-text)",
+              border: "1px solid var(--neu-edge)",
+              boxShadow: "var(--neu-shadow-chip)",
               borderRadius: "var(--radius-full)",
               padding: "1px 6px",
               letterSpacing: "0.03em",

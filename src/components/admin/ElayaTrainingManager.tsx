@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { MotionButton, MOTION_BUTTON_DEFAULTS } from "@/components/ui/MotionButton";
 import { SearchBar } from "@/components/ui/SearchBar";
-import { Spinner } from "@/components/ui/Spinner";
+import { SeedMandala } from "@/components/ui/SeedMandala";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TrainingAssetFormModal } from "./TrainingAssetFormModal";
@@ -447,7 +447,7 @@ function AssetCard({
           onMouseEnter={(e) => { if (isDeleting) return; e.currentTarget.style.borderColor = "var(--color-danger)"; e.currentTarget.style.color = "var(--color-danger-text)"; }}
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--theme-paper-border)"; e.currentTarget.style.color = "var(--theme-text-secondary)"; }}
         >
-          {isDeleting ? <Spinner size="sm" /> : (<><Trash2 style={{ width: 12, height: 12, strokeWidth: 1.5 }} />Delete</>)}
+          {isDeleting ? <SeedMandala size={14} variant="currentColor" spin={3.5} /> : (<><Trash2 style={{ width: 12, height: 12, strokeWidth: 1.5 }} />Delete</>)}
         </button>
       </div>
     </motion.div>

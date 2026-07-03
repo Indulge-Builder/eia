@@ -99,7 +99,11 @@ export function Dialog({
             style={{
               position:   'fixed',
               inset:      0,
-              backgroundColor: 'color-mix(in srgb, var(--theme-canvas) 72%, transparent)',
+              // Neumorphic scrim — warm umber + 3px blur (README modal recipe;
+              // the sanctioned scrim treatment for this design system).
+              backgroundColor: 'var(--neu-scrim)',
+              backdropFilter: 'blur(3px)',
+              WebkitBackdropFilter: 'blur(3px)',
               zIndex:     ('var(--z-overlay)' as React.CSSProperties['zIndex']),
             }}
           >
@@ -128,8 +132,9 @@ export function Dialog({
                 .filter(Boolean)
                 .join(' ')}
               style={{
-                background:   'var(--theme-paper)',
-                boxShadow:    'var(--shadow-4)',
+                background:   'var(--neu-surface-high)',
+                border:       '1px solid var(--neu-edge)',
+                boxShadow:    'var(--neu-shadow-modal)',
                 overflow:     'hidden',
                 display:      'flex',
                 flexDirection:'column',

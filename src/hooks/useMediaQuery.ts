@@ -16,6 +16,9 @@ export const MQ = {
   tabletDown: '(max-width: 1023.98px)',
   /** Coarse pointer — touch-first device, regardless of width. */
   touch: '(pointer: coarse)',
+  /** Real hover hardware — the gate every hover-only affordance (tooltips,
+   *  hover washes) branches on. Matches the CSS-side hover gating rule. */
+  finePointer: '(hover: hover) and (pointer: fine)',
 } as const;
 
 /**

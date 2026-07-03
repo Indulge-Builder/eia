@@ -142,7 +142,7 @@ export function ManagerLeadVolumeWidget({
       ? { single: null, multi: multiSeed }
       : null;
 
-  const { series: chartColors } = useChartTokens();
+  const { series: chartColors, grid: gridColor } = useChartTokens();
 
   // The ONE fetcher (refresh button) — multi action for "All domains" (different
   // return shape), single-domain action when scoped to one domain.
@@ -209,7 +209,8 @@ export function ManagerLeadVolumeWidget({
     const observer = new MutationObserver(() => {
       setResolvedDomainColors(resolveColorMap(DOMAIN_LINE_COLORS));
     });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    // data-neu included so the lines re-resolve on a dark-mode flip too
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-neu'] });
     return () => observer.disconnect();
   }, []);
 
@@ -223,7 +224,7 @@ export function ManagerLeadVolumeWidget({
   return (
     <div
       style={{
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         border: "1px solid var(--theme-paper-border)",
         background: "var(--theme-paper)",
         boxShadow: "var(--shadow-1)",
@@ -334,8 +335,8 @@ export function ManagerLeadVolumeWidget({
                 <CartesianGrid
                   horizontal
                   vertical={false}
-                  stroke="var(--theme-paper-border)"
-                  strokeDasharray="none"
+                  stroke={gridColor}
+                  strokeDasharray="4 4"
                 />
                 <XAxis
                   dataKey="label"
@@ -362,7 +363,7 @@ export function ManagerLeadVolumeWidget({
                     />
                   )}
                   cursor={{
-                    stroke: "var(--theme-paper-border)",
+                    stroke: gridColor,
                     strokeWidth: 1,
                   }}
                 />
@@ -413,8 +414,8 @@ export function ManagerLeadVolumeWidget({
               <CartesianGrid
                 horizontal
                 vertical={false}
-                stroke="var(--theme-paper-border)"
-                strokeDasharray="none"
+                stroke={gridColor}
+                strokeDasharray="4 4"
               />
               <XAxis
                 dataKey="label"
@@ -439,7 +440,7 @@ export function ManagerLeadVolumeWidget({
                   fontSize: "var(--text-xs)",
                   color: "var(--theme-text-primary)",
                 }}
-                cursor={{ stroke: "var(--theme-paper-border)", strokeWidth: 1 }}
+                cursor={{ stroke: gridColor, strokeWidth: 1 }}
               />
               <Line
                 type="monotone"

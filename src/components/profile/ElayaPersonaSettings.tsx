@@ -203,14 +203,19 @@ function ChipField<T extends string>({
               style={{
                 padding: "var(--space-2) var(--space-3)",
                 borderRadius: "var(--radius-full)",
-                border: `1px solid ${isActive ? "var(--theme-accent)" : "var(--theme-paper-border)"}`,
-                background: isActive ? "var(--theme-accent-surface)" : "var(--theme-paper)",
-                color: isActive ? "var(--theme-accent)" : "var(--theme-text-secondary)",
+                // Selected floats on the accent wash — hairline edge + chip
+                // shadow, never a coloured border (soft-UI Rule 4).
+                border: "1px solid var(--neu-edge)",
+                background: isActive
+                  ? "color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))"
+                  : "var(--theme-paper)",
+                boxShadow: isActive ? "var(--neu-shadow-chip)" : "none",
+                color: isActive ? "var(--neu-accent-deep)" : "var(--theme-text-secondary)",
                 fontFamily: "var(--font-sans)",
                 fontSize: "var(--text-sm)",
                 fontWeight: isActive ? "var(--weight-medium)" : "var(--weight-normal)",
                 cursor: disabled ? "not-allowed" : "pointer",
-                transition: "border-color var(--duration-fast) var(--ease-in-out), background var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)",
+                transition: "box-shadow var(--duration-fast) var(--ease-in-out), background var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)",
               }}
             >
               {opt.label}

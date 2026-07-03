@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 
 /**
  * Generic column definition for Table<T>.
@@ -43,6 +44,13 @@ export interface TableProps<T> {
    */
   virtualized?: boolean;
   rowCount?: number;
+  /**
+   * The built-in "paginated approach" for rule P-03: when set and rows.length
+   * exceeds it, only the first `previewRows` rows render, followed by a
+   * "Show all N" expander row (one-way, client-side reveal). Setting it counts
+   * as handling P-03 — the dev warn is suppressed.
+   */
+  previewRows?: number;
   loading?: boolean;
   className?: string;
   style?: React.CSSProperties;
@@ -58,17 +66,21 @@ export function Table<T>({
   stickyHeader = false,
   virtualized = false,
   rowCount,
+  previewRows,
   loading = false,
   className,
   style,
 }: TableProps<T>) {
   const count = rowCount ?? rows.length;
+  const [expanded, setExpanded] = React.useState(false);
+  const collapsed = previewRows != null && !expanded && rows.length > previewRows;
+  const visibleRows = collapsed ? rows.slice(0, previewRows) : rows;
 
-  if (process.env.NODE_ENV !== 'production' && !virtualized && count > 100) {
+  if (process.env.NODE_ENV !== 'production' && !virtualized && previewRows == null && count > 100) {
     console.warn(
       `[Table] Rendering ${count} rows without virtualisation. ` +
-      `Set virtualized={true} and handle virtualisation in the consumer, or ` +
-      `consider a paginated approach. (rule P-03)`
+      `Set virtualized={true} and handle virtualisation in the consumer, ` +
+      `set previewRows for the built-in show-all reveal, or paginate. (rule P-03)`
     );
   }
 
@@ -143,7 +155,7 @@ export function Table<T>({
               </td>
             </tr>
           ) : (
-            rows.map((row, i) => {
+            visibleRows.map((row, i) => {
               const key = rowKey(row, i);
               const isSelected = selectedRowKey === key;
               // Row-by-row arrival (design-dna M-04) — first 8 rows, 30ms steps
@@ -162,7 +174,7 @@ export function Table<T>({
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected) {
-                      (e.currentTarget as HTMLTableRowElement).style.background = 'var(--theme-paper-subtle)';
+                      (e.currentTarget as HTMLTableRowElement).style.background = 'color-mix(in srgb, var(--theme-accent) 5%, transparent)';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -187,6 +199,41 @@ export function Table<T>({
                 </tr>
               );
             })
+          )}
+          {!loading && collapsed && (
+            <tr>
+              <td colSpan={columns.length} style={{ padding: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => setExpanded(true)}
+                  className="serene-pressable"
+                  style={{
+                    width:          '100%',
+                    display:        'flex',
+                    alignItems:     'center',
+                    justifyContent: 'center',
+                    gap:            'var(--space-1)',
+                    padding:        'var(--space-3) var(--space-4)',
+                    background:     'transparent',
+                    border:         'none',
+                    cursor:         'pointer',
+                    fontFamily:     'var(--font-sans)',
+                    fontSize:       'var(--text-xs)',
+                    color:          'var(--theme-text-secondary)',
+                    transition:     'color var(--duration-fast) var(--ease-in-out)',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--theme-accent)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--theme-text-secondary)';
+                  }}
+                >
+                  Show all {rows.length}
+                  <ChevronDown style={{ width: '12px', height: '12px', strokeWidth: 1.5 }} aria-hidden />
+                </button>
+              </td>
+            </tr>
           )}
         </tbody>
       </table>

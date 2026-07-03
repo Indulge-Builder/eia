@@ -23,6 +23,7 @@
 import { Suspense, use } from "react";
 import { Bell } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { DomainSelector } from "@/components/layout/DomainSelector";
 import type { Notification } from "@/lib/types/database";
 
@@ -84,9 +85,12 @@ export function PageControls({
         </span>
       )}
 
-      <Suspense fallback={<BellFallback />}>
-        <SeededNotificationBell userId={userId} promise={notificationsPromise} />
-      </Suspense>
+      {/* Icon-only control — charcoal tooltip carries the label (polish §05) */}
+      <Tooltip label="Notifications" side="bottom">
+        <Suspense fallback={<BellFallback />}>
+          <SeededNotificationBell userId={userId} promise={notificationsPromise} />
+        </Suspense>
+      </Tooltip>
     </div>
   );
 }

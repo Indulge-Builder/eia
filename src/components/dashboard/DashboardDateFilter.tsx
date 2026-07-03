@@ -118,9 +118,12 @@ export function DashboardDateFilter({ activePreset, fromParam, toParam }: Dashbo
           width:          isMobile ? '36px' : undefined,
           padding:        isMobile ? 0 : '0 var(--space-3)',
           borderRadius:   'var(--radius-md)',
-          border:       `1px solid ${open || isActive ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
-          background:   open || isActive ? 'var(--theme-accent-surface)' : 'var(--theme-paper)',
-          color:        open || isActive ? 'var(--theme-accent)' : 'var(--theme-text-secondary)',
+          border:       '1px solid var(--neu-edge)',
+          background:   open || isActive
+            ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
+            : 'var(--theme-paper)',
+          color:        open || isActive ? 'var(--neu-accent-deep)' : 'var(--theme-text-secondary)',
+          boxShadow:    'var(--neu-shadow-chip)',
           fontSize:     'var(--text-xs)',
           fontWeight:   'var(--weight-medium)',
           cursor:       'pointer',
@@ -181,8 +184,11 @@ export function DashboardDateFilter({ activePreset, fromParam, toParam }: Dashbo
                       width:        '100%',
                       padding:      'var(--space-2) var(--space-3)',
                       borderRadius: 'var(--radius-sm)',
-                      background:   isSelected ? 'var(--theme-accent-surface)' : 'transparent',
-                      color:        isSelected ? 'var(--theme-accent)' : 'var(--theme-text-primary)',
+                      background:   isSelected
+                        ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
+                        : 'transparent',
+                      boxShadow:    isSelected ? 'var(--neu-shadow-chip)' : 'none',
+                      color:        isSelected ? 'var(--neu-accent-deep)' : 'var(--theme-text-primary)',
                       fontSize:     'var(--text-xs)',
                       fontWeight:   isSelected ? 'var(--weight-semibold)' : 'var(--weight-normal)',
                       cursor:       'pointer',
@@ -191,7 +197,7 @@ export function DashboardDateFilter({ activePreset, fromParam, toParam }: Dashbo
                       transition:   'background var(--duration-fast) var(--ease-in-out)',
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'var(--theme-paper-subtle)';
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'var(--neu-accent-wash)';
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
@@ -248,7 +254,8 @@ export function DashboardDateFilter({ activePreset, fromParam, toParam }: Dashbo
                   width:        '100%',
                   height:       '30px',
                   borderRadius: 'var(--radius-sm)',
-                  background:   'var(--theme-accent)',
+                  background:   'var(--neu-accent-gradient)',
+                  boxShadow:    'var(--neu-shadow-raised-sm)',
                   color:        'var(--theme-accent-fg)',
                   fontSize:     'var(--text-xs)',
                   fontWeight:   'var(--weight-semibold)',

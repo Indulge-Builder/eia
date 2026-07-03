@@ -100,16 +100,14 @@ export function FormChip({
         height:       28,
         padding:      '0 var(--space-3)',
         borderRadius: 'var(--radius-full)',
-        border:       active
-          ? `1.5px solid ${color ?? 'var(--theme-accent)'}`
-          : '1px solid var(--theme-paper-border)',
+        // Selected chips FLOAT on a wash + chip shadow — never a coloured border.
+        border:       '1px solid var(--theme-paper-border)',
         background:   active
-          ? (color
-              ? `color-mix(in srgb, ${color} 12%, transparent)`
-              : 'var(--theme-accent-surface)')
+          ? `color-mix(in srgb, ${color ?? 'var(--theme-accent)'} 12%, var(--neu-surface))`
           : 'transparent',
+        boxShadow:    active ? 'var(--neu-shadow-chip)' : 'none',
         color:        active
-          ? (color ?? 'var(--theme-accent)')
+          ? (color ?? 'var(--neu-accent-deep)')
           : 'var(--theme-text-secondary)',
         fontFamily:   'var(--font-sans)',
         fontSize:     'var(--text-xs)',
@@ -171,8 +169,9 @@ export function PriorityChipRow({
                 width:          20,
                 height:         20,
                 borderRadius:   'var(--radius-full)',
-                border:         isActive ? `2px solid ${cfg.color}` : '1.5px solid var(--theme-paper-border)',
-                background:     isActive ? `color-mix(in srgb, ${cfg.color} 14%, transparent)` : 'transparent',
+                border:         '1.5px solid var(--theme-paper-border)',
+                background:     isActive ? `color-mix(in srgb, ${cfg.color} 14%, var(--neu-surface))` : 'transparent',
+                boxShadow:      isActive ? 'var(--neu-shadow-chip)' : 'none',
                 cursor:         disabled ? 'not-allowed' : 'pointer',
                 flexShrink:     0,
                 transition:     'var(--transition-hover)',
@@ -324,14 +323,14 @@ export function TaskTypeField({
             cursor:       disabled ? 'not-allowed' : 'pointer',
             padding:      'var(--space-3) var(--space-4)',
             borderRadius: 'var(--radius-md)',
+            // Selected row FLOATS on an accent wash + chip shadow (never a coloured border).
             background:   value === type
-              ? 'var(--theme-accent-surface)'
+              ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
               : 'var(--theme-paper-subtle)',
-            border: `1px solid ${value === type
-              ? 'var(--theme-accent-muted)'
-              : 'var(--theme-paper-border)'}`,
+            border:     '1px solid var(--theme-paper-border)',
+            boxShadow:  value === type ? 'var(--neu-shadow-chip)' : 'none',
             opacity:    disabled ? 0.6 : 1,
-            transition: 'background var(--duration-fast) var(--ease-in-out), border-color var(--duration-fast) var(--ease-in-out)',
+            transition: 'background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out)',
           }}
         >
           <input
@@ -348,7 +347,7 @@ export function TaskTypeField({
               fontFamily: 'var(--font-sans)',
               fontSize:   'var(--text-sm)',
               color:      value === type
-                ? 'var(--theme-accent)'
+                ? 'var(--neu-accent-deep)'
                 : 'var(--theme-text-primary)',
               fontWeight: value === type ? 'var(--weight-semibold)' : 'var(--weight-normal)',
             }}

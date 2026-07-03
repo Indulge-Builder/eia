@@ -283,26 +283,25 @@ export function CalledModal({ open, leadId, onClose }: Props) {
             style={{
               width:        '100%',
               padding:      'var(--space-3)',
-              border:       '1px solid var(--theme-paper-border)',
-              borderRadius: 'var(--radius-sm)',
-              background:   'var(--theme-paper)',
+              border:       '1px solid var(--neu-input-edge)',
+              borderRadius: 'var(--radius-lg)',
+              background:   'var(--neu-input-bg)',
+              boxShadow:    'var(--neu-shadow-input)',
               fontSize:     'var(--text-sm)',
               color:        'var(--theme-text-primary)',
               lineHeight:   'var(--leading-relaxed)',
               resize:       'vertical',
               outline:      'none',
-              transition:   'var(--transition-hover)',
+              transition:   'box-shadow var(--duration-fast) var(--ease-in-out)',
               boxSizing:    'border-box',
               fontFamily:   'var(--font-sans)',
               opacity:      isPending ? 0.6 : 1,
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'var(--theme-accent)';
-              e.currentTarget.style.boxShadow   = 'var(--shadow-focus)';
+              e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)';
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'var(--theme-paper-border)';
-              e.currentTarget.style.boxShadow   = 'none';
+              e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)';
             }}
           />
         </div>

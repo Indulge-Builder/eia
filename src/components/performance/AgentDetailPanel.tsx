@@ -373,7 +373,7 @@ export function AgentDetailPanel({ agent, domain, period, customFrom, customTo }
                   height:       '68px',
                   borderRadius: 'var(--radius-lg)',
                   background:   p.bg,
-                  border:       `1px solid ${p.border}`,
+                  border:       '1px solid var(--neu-edge)',
                   opacity:      0.5,
                 }}
               />

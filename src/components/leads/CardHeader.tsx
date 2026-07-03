@@ -16,8 +16,13 @@ type Props = {
 
 /**
  * THE dossier card-header strip (DRY extraction, 2026-06-20 audit D3).
- * Flex row: Lucide icon (0.875rem, tertiary) + uppercase semibold micro-label
- * + optional right slot, on a paper-subtle strip with a bottom border.
+ * Flex row: Lucide icon (0.875rem) + uppercase micro-label + optional right
+ * slot on the THEMED header wash — --neu-header-wash (22% accent into the
+ * surface; the 12% --theme-accent-surface tint read washed-out) closed by
+ * the --neu-header-edge hairline. Headers are the theme-coloured zone of a
+ * card; tune the intensity in serene-neumorphic-tokens.css ONLY.
+ * Never repaint the strip with --theme-paper-subtle (the sunken well tone,
+ * inset marks state only — neu Rule 4) or theme-invariant grey text.
  * Display-only (A-06); server-component-safe.
  */
 export function CardHeader({ icon: Icon, label, right, style, iconStyle, labelStyle }: Props) {
@@ -28,8 +33,8 @@ export function CardHeader({ icon: Icon, label, right, style, iconStyle, labelSt
         alignItems:   'center',
         gap:          'var(--space-2)',
         padding:      'var(--space-4) var(--space-5)',
-        borderBottom: '1px solid var(--theme-paper-border)',
-        background:   'var(--theme-paper-subtle)',
+        borderBottom: '1px solid var(--neu-header-edge)',
+        background:   'var(--neu-header-wash)',
         ...style,
       }}
     >
@@ -37,23 +42,13 @@ export function CardHeader({ icon: Icon, label, right, style, iconStyle, labelSt
         style={{
           width:       '0.875rem',
           height:      '0.875rem',
-          color:       'var(--theme-text-tertiary)',
+          color:       'var(--theme-accent)',
           strokeWidth: 1.5,
           flexShrink:  0,
           ...iconStyle,
         }}
       />
-      <span
-        style={{
-          fontFamily:    'var(--font-sans)',
-          fontSize:      'var(--text-2xs)',
-          fontWeight:    'var(--weight-semibold)',
-          letterSpacing: 'var(--tracking-widest)',
-          textTransform: 'uppercase',
-          color:         'var(--theme-text-tertiary)',
-          ...labelStyle,
-        }}
-      >
+      <span className="label-micro" style={{ color: 'var(--theme-accent)', ...labelStyle }}>
         {label}
       </span>
       {right}

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Phone } from 'lucide-react';
 import { DrillModalShell } from './DrillModalShell';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAgentCallsForManagerAction } from '@/lib/actions/performance';
 import { formatRelativeTime } from '@/lib/utils/dates';
@@ -86,7 +86,7 @@ export function AgentCallsDrillModal({ open, agentId, agentName, domain, onClose
     <DrillModalShell open={open} title="Recent calls" subtitle={subtitle} onClose={onClose}>
       {loading && items.length === 0 ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-8)' }}>
-          <Spinner size="md" />
+          <LogoSpinner size="md" />
         </div>
       ) : error && items.length === 0 ? (
         <EmptyState variant="inline" title="Couldn't load calls." size="sm" />

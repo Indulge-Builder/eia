@@ -80,9 +80,10 @@ src/lib/validations/fields.ts       ← uuidField(msg)/emailField(msg) — THE s
 src/lib/trigger/cancel-runs.ts      ← cancelRunsByTag(tag) — THE Trigger.dev cancel-by-tag helper (DELAYED/QUEUED list → settle-cancel; dry-audit D8); lives OUTSIDE src/trigger so the task scan skips it
 src/lib/elaya/access.ts             ← canAccessLead — THE shared Elaya per-lead access gate (ONE security predicate for both tool registries) + leadDisplayName/statusLabel (dry-audit D6+D15)
 eslint.config.mjs                   ← THE lint config (flat, correctness-only; `pnpm lint` / `pnpm lint:fix`, NOT in the build). Machine-enforces A-17 m-as-motion, no window.confirm/alert, Rule-05 supabase import scoping, the Anthropic-adapter-only SDK rule. React-Compiler-prep rules OFF until compiler adoption (rationale in the file). Keep it lean — a new rule must prevent a bug.
-src/components/leads/CardHeader.tsx ← <CardHeader icon label right?> — THE dossier card-header strip (icon + micro-label + right slot on paper-subtle); all 7 dossier cards compose it (dry-audit D3)
+src/components/leads/CardHeader.tsx ← <CardHeader icon label right?> — THE dossier card-header strip: accent icon + accent micro-label on the THEMED --neu-header-wash (22% accent into surface — stronger than the 12% accent-surface, which read washed-out; tune ONLY via the token) + --neu-header-edge hairline (never paper-subtle — the sunken well tone, neu Rule 4); all 7 dossier cards compose it (dry-audit D3)
 src/lib/constants/define-enum.ts    ← defineEnum([{ id, label }]) — THE factory for simple string-enum constants (derives values/labels/options/zodEnum from one array); richer config tables (TASK_PRIORITY, lead-status badges) stay hand-written
 src/lib/constants/themes.ts         ← THE theme vocabulary (THEME_KEYS/ThemeKey/isThemeKey) + THEME_COOKIE 'serene-theme' + persistThemeCookie() — the SSR theme mirror; the root layout reads the cookie to stamp data-theme on <html> server-side (zero-flash), ThemeInitializer/ThemeSelector keep it in sync with profiles.theme
+src/lib/constants/appearance.ts     ← THE light/dark mode vocabulary (APPEARANCE_KEYS light/dark/system — 'system' follows prefers-color-scheme, UI label "Auto"; built like themes.ts) + APPEARANCE_COOKIE 'serene-appearance' + persistAppearanceCookie() (the SSR mirror of profiles.appearance, migration 0158 — the root layout stamps data-neu="dark" server-side; 'system' gets a pre-paint inline script) + applyAppearanceToDom() — THE ONLY place data-neu flips (attribute + <meta theme-color> rewrite #ECE8E1↔#28241C) + NEU_CANVAS_LIGHT/DARK (the sanctioned meta/manifest hex mirrors of --neu-canvas). ThemeInitializer syncs on load + owns the live OS listener; the profile AppearanceSelector (segmented Light · Dark · Auto) writes it; rides the existing updateProfile action (NO new persist action)
 src/lib/constants/app-icons.ts      ← THE PWA home-screen icon vocabulary (ICON_KEYS/IconKey/isIconKey/ICON_OPTIONS/ICON_ENUM/DEFAULT_ICON via defineEnum — built like themes.ts) + iconSrc(value) (THE only key→/icon-N.webp path resolver; validates against ICON_KEYS, falls back to DEFAULT_ICON — NEVER interpolate a raw param into an icon path) + APP_ICON_COOKIE 'serene-app-icon' + persistAppIconCookie() (the SSR manifest mirror — the root layout reads it to point <link rel=manifest> at /api/manifest?icon=<saved> + apple-touch-icon; IconInitializer/IconSelector keep it in sync with profiles.app_icon). One square /public/icon-N.webp per key (covers manifest 192/512 + maskable + apple); adding an option = one { id,label } line + a CHECK migration. Mirrors profiles.theme end-to-end; rides the existing updateProfile action (NO new persist action)
 src/components/ui/StatTile.tsx      ← <StatTile label value sub? variant="card"|"cell"> — THE labelled stat tile (campaign metric cards + deals summary cells); performance MetricCard deliberately stays bespoke
 src/lib/utils/scroll.ts             ← scrollToBottom(el), lockBodyScroll() → unlock fn (re-entrant; mobile drawer/sheets)
@@ -131,6 +132,8 @@ src/hooks/useDashboardLayout.ts       ← localStorage layout hook (key: serene:
 src/components/dashboard/            ← DashboardCanvas, DashboardWidgetSlot, WidgetSkeleton, widgets/
 src/components/ui/                  ← shadcn primitives, zero feature imports
 src/components/ui/elaya-glyph.tsx     ← Elaya's custom SVG mark (always breathing)
+src/components/mobile/              ← THE Indulge CLIENT-app mobile layer (design_handoff_mobile_system, 2026-07-03): IndulgeMark (9-circle stroked mark — THE drawer button; no hamburger ever), MobileTabBar (EXACTLY 4 rooms + the Elaya knob — never a fifth tab), MobileDrawer, app-bars, fields/controls/content/overlays + screens/ + demo-data.ts (specimen copy, butler voice). Display-only, --neu-* tokens exclusively; mounted by src/app/(client)/m/ (staff-session-gated preview — customer auth stubbed). Touch floor 44; mobile radii card 24 / tile 18 / field 16 / pill
+src/styles/serene-mobile.css        ← the mobile layer's CSS (imported after serene-neumorphic-tokens.css): --neu-m-* scrim/drawer/sheet/indicator tokens (+ dark overrides), halo/breathe/dot idle loops at mobile timings, .neu-m-touch(-knob/-quiet) press recipes — all reduced-motion gated
 src/styles/design-tokens.css        ← ALL CSS variables, all themes
 src/app/globals.css                 ← `.layout-shell` (the mounted flat dashboard shell) + `.layout-canvas` (atmosphere class — mounted on the auth shell only, never the dashboard shell) + Tailwind @theme isolation block
 docs/design/DESIGN-DNA.md          ← full design reference
@@ -325,19 +328,29 @@ Elaya never silently crosses domain boundaries.
 ## Theme Quick Reference
 
 ```text
-data-theme="earth"   → champagne gold accent (#c9a553), warm canvas (#0d0c0a) + grain + radial washes
-data-theme="air"     → slate blue accent (#54769e), blue-black canvas
-data-theme="water"   → deep teal accent (#1e7d72), teal-black canvas
-data-theme="fire"    → ember sienna accent (#c25022), brown-black canvas
-data-theme="martini" → periwinkle accent (#9fa1ff), evening-indigo canvas (#0a0a16); near-white paper w/ periwinkle whisper (#f8f8fe); mint→success chips, sky→info chips
-data-theme="candy"   → candy-pink accent (#f9b2d7), dark-plum canvas (#130a12); near-white paper w/ blush whisper (#fdf9fb); pastel rainbow lives in the chips (mint success / powder-blue info / lemon warning)
+NEUMORPHIC FINAL REVISION (2026-07-03): the app renders on the soft-UI
+token layer (src/styles/serene-neumorphic-tokens.css — Whisper shadows,
+Marshmallow radii, one cream material #ECE8E1/#F1EDE6). A theme changes
+ONLY the accent family — surfaces, shadow pairs, text, semantic status
+chips, and the --domain-* chart palette NEVER re-tint. EIGHT themes;
+the neu layer overrides the stock design-tokens accents with these
+design-approved softened values:
 
-Default (no attribute) = Earth.
-Theme attribute goes on the <html> element.
---theme-accent-fg on Earth is #201808 (warm ink on gold).
---theme-accent-fg on Martini is #191a38 and on Candy is #2b1420 (dark ink — pastel accents can never hold white text; never "fix" them to #ffffff).
---theme-accent-fg on Air/Water/Fire is #ffffff.
-(cosmos / coffee / macha were retired 2026-07-02 — migration 0156.)
+data-theme="earth" → honey gold       #D6BC82 (deep #8A7448, fg #33290F)
+data-theme="air"   → powder sky       #97B5D2 (deep #587A96, fg #223240)
+data-theme="water" → soft seafoam     #8FC3B9 (deep #4E7E74, fg #1C2E2A)
+data-theme="fire"  → terracotta peach #DC9877 (deep #A05C3E, fg #3A1F12)
+data-theme="candy" → soft pink        #F0B5D2 (deep #A85C87, fg #2E1522)
+data-theme="rose"  → English rose     #D9A0A5 (deep #B57F84, fg #45272A)
+data-theme="moss"  → matcha sage      #A9C4A0 (deep #6F8A66, fg #26301F)
+data-theme="lilac" → light lilac      #C9C0E4 (deep #8E83B8, fg #2E2840)
+
+Default (no attribute) = Earth. Theme attribute goes on <html>.
+ALL accents take DARK INK --theme-accent-fg — pastel fills can never
+hold white text; never "fix" an accent-fg to #ffffff.
+Dark mode: data-neu="dark" (warm charcoal; accents auto-lift lighter).
+(cosmos / coffee / macha retired 2026-07-02 — migration 0156;
+ martini retired 2026-07-03 — migration 0157 moved it to lilac.)
 ```
 
 ---

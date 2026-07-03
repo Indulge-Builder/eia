@@ -64,18 +64,20 @@ const fieldLabel: React.CSSProperties = {
   marginBottom:  'var(--space-2)',
 };
 
+/* Inputs FLOAT (neumorphic Rule 3): gradient sheen + paired input shadow. */
 const fieldInput: React.CSSProperties = {
   width:        '100%',
   height:       '2.25rem',
   paddingLeft:  'var(--space-3)',
   paddingRight: 'var(--space-3)',
-  border:       '1px solid var(--theme-paper-border)',
-  borderRadius: 'var(--radius-sm)',
-  background:   'var(--theme-paper)',
+  border:       '1px solid var(--neu-input-edge)',
+  borderRadius: 'var(--radius-lg)',
+  background:   'var(--neu-input-bg)',
+  boxShadow:    'var(--neu-shadow-input)',
   fontSize:     'var(--text-sm)',
   color:        'var(--theme-text-primary)',
   outline:      'none',
-  transition:   'var(--transition-hover)',
+  transition:   'box-shadow var(--duration-fast) var(--ease-in-out)',
   boxSizing:    'border-box',
   fontFamily:   'var(--font-sans)',
 };
@@ -273,12 +275,10 @@ export function AddLeadModal({
   // Shared input focus style handlers (inline)
   // ─────────────────────────────────────────────
   function focusOn(e: React.FocusEvent<HTMLInputElement>) {
-    e.currentTarget.style.borderColor = 'var(--theme-accent)';
-    e.currentTarget.style.boxShadow   = 'var(--shadow-focus)';
+    e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)';
   }
   function focusOff(e: React.FocusEvent<HTMLInputElement>) {
-    e.currentTarget.style.borderColor = 'var(--theme-paper-border)';
-    e.currentTarget.style.boxShadow   = 'none';
+    e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)';
   }
 
   const dropdownWrapStyle = {
@@ -318,7 +318,8 @@ export function AddLeadModal({
             alignItems:   'flex-start',
             gap:          'var(--space-3)',
             background:   'var(--color-warning-light)',
-            border:       '1px solid var(--color-warning)',
+            border:       '1px solid var(--neu-edge)',
+            boxShadow:    'var(--neu-shadow-chip)',
             borderRadius: 'var(--radius-md)',
             padding:      'var(--space-3)',
             marginBottom: 'var(--space-5)',

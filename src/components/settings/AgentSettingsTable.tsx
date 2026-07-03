@@ -73,11 +73,14 @@ function WorkDayPicker({ days, onChange, disabled }: WorkDayPickerProps) {
               width:          "26px",
               height:         "26px",
               borderRadius:   "var(--radius-xs)",
-              border:         selected
-                ? "1px solid var(--theme-accent)"
-                : "1px solid var(--theme-paper-border)",
-              background:     selected ? "var(--theme-accent-surface)" : "transparent",
-              color:          selected ? "var(--theme-accent)" : "var(--theme-text-tertiary)",
+              // Selected floats on the accent wash — hairline edge + chip
+              // shadow, never a coloured border (soft-UI Rule 4).
+              border:         "1px solid var(--neu-edge)",
+              background:     selected
+                ? "color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))"
+                : "transparent",
+              boxShadow:      selected ? "var(--neu-shadow-chip)" : "none",
+              color:          selected ? "var(--neu-accent-deep)" : "var(--theme-text-tertiary)",
               fontFamily:     "var(--font-sans)",
               fontSize:       "var(--text-2xs)",
               fontWeight:     selected ? "var(--weight-semibold)" : "var(--weight-normal)",
@@ -87,7 +90,7 @@ function WorkDayPicker({ days, onChange, disabled }: WorkDayPickerProps) {
               display:        "flex",
               alignItems:     "center",
               justifyContent: "center",
-              transition:     "background var(--duration-fast) var(--ease-in-out), border-color var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)",
+              transition:     "background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)",
               flexShrink:     0,
             }}
           >

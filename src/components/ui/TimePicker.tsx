@@ -348,8 +348,11 @@ function AmpmToggle({
       style={{
         display: "flex",
         alignItems: "center",
-        background: "var(--theme-paper-subtle)",
-        border: "1px solid var(--theme-paper-border)",
+        // Satin inset track — inset marks state (soft-UI rule 4); the active
+        // meridiem floats inside it as a gradient pill.
+        background: "var(--neu-track-bg)",
+        border: "none",
+        boxShadow: "var(--neu-shadow-track)",
         borderRadius: "var(--radius-md)",
         padding: "var(--space-1)",
         gap: 0,
@@ -375,10 +378,10 @@ function AmpmToggle({
               color: isActive
                 ? "var(--theme-text-primary)"
                 : "var(--theme-text-secondary)",
-              background: isActive ? "var(--theme-paper)" : "transparent",
+              background: isActive ? "var(--neu-tab-active-bg)" : "transparent",
               border: "none",
               borderRadius: "var(--radius-sm)",
-              boxShadow: isActive ? "var(--shadow-1)" : "none",
+              boxShadow: isActive ? "var(--neu-shadow-tab-active)" : "none",
               cursor: "pointer",
               transition: "var(--transition-hover)",
               outline: "none",
@@ -656,9 +659,10 @@ export function TimePicker({
           padding: "0 var(--space-2)",
           width: "100%",
           minWidth: 88,
-          background: "var(--theme-paper-subtle)",
-          border: `1px solid ${focused || open ? "var(--theme-accent)" : "var(--theme-paper-border)"}`,
-          borderRadius: "var(--radius-sm)",
+          // Fields FLOAT (soft-UI rule 3): gradient sheen + paired input shadow.
+          background: "var(--neu-input-bg)",
+          border: `1px solid ${focused || open ? "var(--theme-accent)" : "var(--neu-input-edge)"}`,
+          borderRadius: "var(--radius-md)",
           fontSize: "var(--text-sm)",
           fontFamily: "var(--font-sans)",
           fontWeight: "var(--weight-normal)",
@@ -667,7 +671,9 @@ export function TimePicker({
             : "var(--theme-text-tertiary)",
           cursor: disabled ? "not-allowed" : "pointer",
           opacity: disabled ? 0.5 : 1,
-          boxShadow: focused || open ? "var(--shadow-focus)" : "none",
+          boxShadow: focused || open
+            ? "0 0 0 1px var(--theme-accent), var(--neu-shadow-input)"
+            : "var(--neu-shadow-input)",
           transition: "var(--transition-hover)",
           outline: "none",
           whiteSpace: "nowrap",

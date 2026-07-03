@@ -5,6 +5,7 @@ import { m as motion } from "framer-motion";
 import { type LucideIcon } from "lucide-react";
 import { ENTER_DURATION, EASE_OUT_EXPO } from "@/lib/constants/motion";
 import { useWidgetDensityTier } from "@/hooks/useWidgetDensity";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 
 const MotionLink = motion.create(Link);
 
@@ -85,7 +86,7 @@ export function SnapshotCountWidget({
 
         <span
           style={{
-            fontFamily: "var(--font-mono)",
+            fontFamily: "var(--font-serif)",
             fontSize: isCompact ? "var(--text-2xl)" : "var(--text-3xl)",
             fontWeight: "var(--weight-semibold)",
             fontVariantNumeric: "tabular-nums",
@@ -94,7 +95,7 @@ export function SnapshotCountWidget({
             transition: "color var(--duration-fast) var(--ease-in-out)",
           }}
         >
-          {count}
+          <AnimatedNumber value={String(count)} />
         </span>
 
         {!isCompact && hint && (

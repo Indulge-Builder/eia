@@ -1,5 +1,6 @@
 import { getDealsByRole, getDealsSummary } from '@/lib/services/deals-service';
 import { DealCard } from '@/components/deals/DealCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { DealsSummaryStrip } from '@/components/deals/DealsSummaryStrip';
 import { LeadsPagination } from '@/components/leads/LeadsPagination';
 import type { UserRole, AppDomain, DealFilters } from '@/lib/types/database';
@@ -40,24 +41,22 @@ export async function DealsAsync({
       <DealsSummaryStrip summary={summary} domain={summaryDomain} />
 
       {deals.length === 0 ? (
-        <div
-          style={{
-            padding:   'var(--space-16) var(--space-8)',
-            textAlign: 'center',
-          }}
-        >
-          <p
-            style={{
-              fontFamily: 'var(--font-serif)',
-              fontStyle:  'italic',
-              fontSize:   'var(--text-lg)',
-              color:      'var(--theme-text-secondary)',
-              margin:     0,
-            }}
-          >
-            {hasActiveFilters ? 'Nothing matches these filters.' : 'No deals recorded yet.'}
-          </p>
-        </div>
+        hasActiveFilters ? (
+          <EmptyState
+            variant="inline"
+            size="lg"
+            title="Nothing matches these filters."
+            style={{ padding: 'var(--space-16) var(--space-8)' }}
+          />
+        ) : (
+          // §08 brand empty — the mark rests here until the first win lands.
+          <EmptyState
+            brand
+            title="The first win is still on its way."
+            description="Deals you close will gather here — gold petals and all."
+            minHeight="340px"
+          />
+        )
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {deals.map((deal, i) => (

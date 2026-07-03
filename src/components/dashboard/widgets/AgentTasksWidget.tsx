@@ -213,7 +213,7 @@ export function AgentTasksWidget({ userId, initialData }: WidgetProps) {
 
       <div
         style={{
-          borderRadius: "var(--radius-lg)",
+          borderRadius: "var(--neu-radius-card)",
           border: "1px solid var(--theme-paper-border)",
           background: "var(--theme-paper)",
           boxShadow: "var(--shadow-1)",
@@ -274,7 +274,7 @@ export function AgentTasksWidget({ userId, initialData }: WidgetProps) {
           >
             <span
               style={{
-                fontFamily: "var(--font-mono)",
+                fontFamily: "var(--font-serif)",
                 fontSize: "var(--text-2xl)",
                 fontWeight: "var(--weight-semibold)",
                 lineHeight: 1,

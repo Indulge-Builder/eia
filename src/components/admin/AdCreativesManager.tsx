@@ -5,7 +5,7 @@ import { m as motion } from "framer-motion";
 import { Plus, Pencil, Trash2, Film, SlidersHorizontal } from "lucide-react";
 import { MotionButton, MOTION_BUTTON_DEFAULTS } from "@/components/ui/MotionButton";
 import { SearchBar } from "@/components/ui/SearchBar";
-import { Spinner } from "@/components/ui/Spinner";
+import { SeedMandala } from "@/components/ui/SeedMandala";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AdCreativeFormModal } from "./AdCreativeFormModal";
@@ -354,7 +354,7 @@ function CreativeCard({
           }}
         >
           {isDeleting ? (
-            <Spinner size="sm" />
+            <SeedMandala size={14} variant="currentColor" spin={3.5} />
           ) : (
             <>
               <Trash2 style={{ width: 12, height: 12, strokeWidth: 1.5 }} />

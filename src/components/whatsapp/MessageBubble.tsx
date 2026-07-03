@@ -36,7 +36,7 @@ function DeliveryIcon({ status }: { status: WhatsAppMessage["status"] }) {
           width:       "13px",
           height:      "13px",
           strokeWidth: 2,
-          color:       "var(--theme-accent)",
+          color:       "var(--neu-info-deep)",
         }}
       />
     );
@@ -157,7 +157,7 @@ function MediaPlaceholder({ message }: { message: WhatsAppMessage }) {
           alignItems:   "center",
           gap:          "var(--space-2)",
           padding:      "var(--space-3)",
-          background:   "var(--theme-paper-border)",
+          background:   "var(--neu-well)",
           borderRadius: "var(--radius-sm)",
         }}
       >
@@ -187,7 +187,8 @@ function MediaPlaceholder({ message }: { message: WhatsAppMessage }) {
             style={{
               fontFamily:     "var(--font-sans)",
               fontSize:       "var(--text-xs)",
-              color:          "var(--theme-accent)",
+              color:          "var(--neu-accent-deep)",
+              fontWeight:     "var(--weight-medium)",
               textDecoration: "none",
               marginLeft:     "auto",
             }}
@@ -270,7 +271,7 @@ export function MessageBubble({ message, isOptimistic = false, entrance = false 
           style={{
             fontFamily:   "var(--font-sans)",
             fontSize:     "var(--text-2xs)",
-            color:        "var(--theme-accent)",
+            color:        "var(--neu-accent-deep)",
             fontWeight:   "var(--weight-medium)",
             marginBottom: "var(--space-1)",
             paddingRight: "var(--space-1)",
@@ -286,15 +287,13 @@ export function MessageBubble({ message, isOptimistic = false, entrance = false 
           maxWidth:     "72%",
           padding:      "var(--space-3) var(--space-4)",
           borderRadius: isOutbound
-            ? "var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-lg)"
-            : "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-sm)",
+            ? "20px 20px 6px 20px"
+            : "20px 20px 20px 6px",
           background:   isOutbound
-            ? "var(--theme-accent-surface)"
-            : "var(--theme-paper)",
-          border:       isOutbound
-            ? "1px solid color-mix(in srgb, var(--theme-accent) 25%, transparent)"
-            : "1px solid var(--theme-paper-border)",
-          boxShadow:    "var(--shadow-1)",
+            ? "var(--neu-chat-user-bg)"
+            : "var(--neu-surface-high)",
+          border:       "1px solid var(--neu-edge)",
+          boxShadow:    "var(--neu-shadow-chip)",
         }}
       >
         {isMedia ? (

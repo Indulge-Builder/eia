@@ -37,7 +37,6 @@ import {
   CheckSquare,
   CalendarDays,
   User,
-  CheckCircle2,
   Trash2,
   GripVertical,
 } from "lucide-react";
@@ -64,6 +63,7 @@ import {
 } from "@/lib/actions/tasks";
 import { formatDate } from "@/lib/utils/dates";
 import { CollapseReveal } from "@/components/ui/CollapseReveal";
+import { CheckTile } from "@/components/ui/CheckTile";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { toast } from "@/lib/toast";
 import { TASK_STATUS, TASK_PRIORITY } from "@/lib/constants/task-constants";
@@ -393,37 +393,14 @@ function SortableChecklistItem({
         </span>
       )}
 
-      <button
-        type="button"
-        onClick={() => onToggle(item.id)}
+      {/* Completion tile — inset well ↔ accent-gradient flip + check draw
+          + one ring pulse (polish §03, THE CheckTile primitive) */}
+      <CheckTile
+        checked={item.checked}
+        onToggle={() => onToggle(item.id)}
+        size={20}
         aria-label={item.checked ? "Uncheck item" : "Check item"}
-        style={{
-          width:          "16px",
-          height:         "16px",
-          borderRadius:   "var(--radius-xs)",
-          border:         item.checked
-            ? "1.5px solid var(--theme-accent)"
-            : "1.5px solid var(--theme-paper-border)",
-          background:     item.checked ? "var(--theme-accent)" : "transparent",
-          cursor:         "pointer",
-          flexShrink:     0,
-          display:        "flex",
-          alignItems:     "center",
-          justifyContent: "center",
-          transition:     "var(--transition-interactive)",
-        }}
-      >
-        {item.checked && (
-          <CheckCircle2
-            style={{
-              width:       10,
-              height:      10,
-              strokeWidth: 2.5,
-              color:       "var(--theme-accent-fg)",
-            }}
-          />
-        )}
-      </button>
+      />
 
       {editMode ? (
         <input
@@ -829,7 +806,10 @@ export function SubTaskModal({
         style={{
           position:   "fixed",
           inset:      0,
-          background: "color-mix(in srgb, var(--theme-canvas) 72%, transparent)",
+          // Neumorphic scrim — warm umber + 3px blur (mirrors ui/Dialog; the old
+          // canvas-72% formula assumed the retired dark canvas and no longer dims).
+          background: "var(--neu-scrim)",
+          backdropFilter: "blur(3px)",
           zIndex:     "var(--z-overlay)" as React.CSSProperties["zIndex"],
         }}
       />
@@ -1359,24 +1339,14 @@ export function SubTaskModal({
                         alignItems:     "center",
                         justifyContent: "space-between",
                         padding:        "var(--space-3) var(--space-4)",
-                        borderBottom:   "1px solid var(--theme-paper-border)",
-                        background:     "var(--theme-paper-subtle)",
+                        borderBottom:   "1px solid var(--neu-header-edge)",
+                        background:     "var(--neu-header-wash)",
                       }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-                        <CheckSquare style={{ width: 13, height: 13, strokeWidth: 1.5, color: "var(--theme-text-tertiary)", flexShrink: 0 }} />
-                        <span
-                          style={{
-                            fontFamily:    "var(--font-sans)",
-                            fontSize:      "var(--text-2xs)",
-                            fontWeight:    "var(--weight-semibold)",
-                            letterSpacing: "var(--tracking-widest)",
-                            textTransform: "uppercase" as const,
-                            color:         "var(--theme-text-tertiary)",
-                          }}
-                        >
-                          Action Items
-                        </span>
+                        {/* Themed header (the CardHeader accent-surface treatment) */}
+                        <CheckSquare style={{ width: 13, height: 13, strokeWidth: 1.5, color: "var(--theme-accent)", flexShrink: 0 }} />
+                        <span className="label-micro" style={{ color: "var(--theme-accent)" }}>Action Items</span>
                       </div>
                       {totalCount > 0 && (
                         <span
@@ -1500,23 +1470,12 @@ export function SubTaskModal({
                       alignItems:   "center",
                       gap:          "var(--space-2)",
                       padding:      "var(--space-3) var(--space-4)",
-                      borderBottom: "1px solid var(--theme-paper-border)",
-                      background:   "var(--theme-paper-subtle)",
+                      borderBottom: "1px solid var(--neu-header-edge)",
+                      background:   "var(--neu-header-wash)",
                     }}
                   >
-                    <CalendarDays style={{ width: 13, height: 13, strokeWidth: 1.5, color: "var(--theme-text-tertiary)", flexShrink: 0 }} />
-                    <span
-                      style={{
-                        fontFamily:    "var(--font-sans)",
-                        fontSize:      "var(--text-2xs)",
-                        fontWeight:    "var(--weight-semibold)",
-                        letterSpacing: "var(--tracking-widest)",
-                        textTransform: "uppercase" as const,
-                        color:         "var(--theme-text-tertiary)",
-                      }}
-                    >
-                      Details
-                    </span>
+                    <CalendarDays style={{ width: 13, height: 13, strokeWidth: 1.5, color: "var(--theme-accent)", flexShrink: 0 }} />
+                    <span className="label-micro" style={{ color: "var(--theme-accent)" }}>Details</span>
                   </div>
                   <div
                     style={{

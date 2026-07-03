@@ -9,6 +9,7 @@ import { getNotifications } from '@/lib/services/notifications-service';
 import { resolveDateRangePreset } from '@/lib/constants/date-range-presets';
 import { TOP_BAR_ENABLED } from '@/lib/constants/feature-flags';
 import { PageControls } from '@/components/layout/PageControls';
+import { CondensingPageHeader } from '@/components/layout/CondensingPageHeader';
 import type { DealFilters, AppDomain } from '@/lib/types/database';
 import { DealsFilters } from '@/components/deals/DealsFilters';
 import { AddDealButton } from '@/components/deals/AddDealButton';
@@ -101,25 +102,22 @@ export default async function DealsPage({
 
   return (
     <main className="flex-1 p-4 sm:p-6 lg:p-8">
-      {/* Row 1 — Page header */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <h1 className="type-page-title m-0">Deals<span className="page-title-dot">.</span></h1>
-        <div className="flex items-center gap-3">
-          <AddDealButton
-            callerRole={profile.role}
-            callerDomain={profile.domain}
-            callerName={profile.full_name ?? ''}
-            callerId={profile.id}
+      {/* Row 1 — Page header (sticky, condenses past 24px scroll — polish §07) */}
+      <CondensingPageHeader title="Deals">
+        <AddDealButton
+          callerRole={profile.role}
+          callerDomain={profile.domain}
+          callerName={profile.full_name ?? ''}
+          callerId={profile.id}
+        />
+        {TOP_BAR_ENABLED && (
+          <PageControls
+            userId={profile.id}
+            isPrivileged={showDomainFilter}
+            notificationsPromise={getNotifications(profile.id)}
           />
-          {TOP_BAR_ENABLED && (
-            <PageControls
-              userId={profile.id}
-              isPrivileged={showDomainFilter}
-              notificationsPromise={getNotifications(profile.id)}
-            />
-          )}
-        </div>
-      </div>
+        )}
+      </CondensingPageHeader>
 
       {/* Row 2 — Filter bar */}
       <div className="px-5 py-4 mb-4 rounded-md border border-(--theme-paper-border) bg-(--theme-paper) shadow-(--shadow-1)">

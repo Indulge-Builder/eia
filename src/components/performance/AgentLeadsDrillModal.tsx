@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { DrillModalShell } from './DrillModalShell';
 import { LeadDrillRow } from './LeadDrillRow';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAgentLeadsScopedAction } from '@/lib/actions/performance';
 import type { LeadsResult } from '@/lib/services/leads-service';
@@ -81,7 +81,7 @@ export function AgentLeadsDrillModal({ open, agentId, agentName, domain, period,
     >
       {loading && rows.length === 0 ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-8)' }}>
-          <Spinner size="md" />
+          <LogoSpinner size="md" />
         </div>
       ) : error && rows.length === 0 ? (
         <EmptyState variant="inline" title="Couldn't load leads." size="sm" />

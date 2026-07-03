@@ -44,7 +44,7 @@ navigation.
 
 **Going Cold chip** lives in `LeadsTable.tsx` toolbar (left cluster — first control, or just right of the manager view switcher when that's shown) — not in `LeadsFilters`. Immediate-commit via `buildFilterParams`; on activate clears `status` + `outcome` from URL. `activeCount` in `LeadsFilters` still counts `going_cold=true`.
 
-**Shell composition:** the bar chrome (icon, search, divider, Range trigger + panel, Clear) is `<FilterBar>` from `src/components/ui/FilterBar.tsx` with `layout="scroll"`, `showCountBadge={false}`, `dateRange.trigger="chevron"`. This file owns only the six `FilterDropdown`s + their commit wiring.
+**Shell composition:** the bar chrome (icon + count badge, search, Range/Dates triggers + panels, Clear) is `<FilterBar>` from `src/components/ui/FilterBar.tsx` in the **same default configuration as `DealsFilters`** (2026-07-03 — the compact single-row scroll variant was retired here; it read as cramped/misplaced next to the other list pages): default `wrap` layout, default `badge` date triggers, count badge shown, no divider, standard search focus chrome, `searchStyle={{ flex: '1 1 220px', minWidth: '180px' }}`. Below md the wrap layout still auto-collapses to the scroll behaviour, so every `FilterDropdown` keeps `menuPortal`. This file owns only the six `FilterDropdown`s + their commit wiring.
 
 **Search state** is managed separately from the dropdown/date draft — owned by `useUrlFilters({ resetKeys: ['page'] })` from `src/hooks/useUrlFilters.ts`:
 
@@ -56,18 +56,15 @@ navigation.
 **Multi-select URL parsing** is `parseMultiParam<T>(params, key)` from
 `src/lib/utils/filter-params.ts` (comma-separated values) — never re-inline the split.
 
-**Single-row layout** (left → right):
+**Layout** (left → right, deals-standard wrap):
 
-- Container: `<FilterBar layout="scroll">` — `flexWrap: nowrap`, `gap: var(--space-2)`, `overflowX: auto`, hidden scrollbar. Horizontal scroll on narrow viewports; chips stay on one line.
-- Order: Sliders icon → `SearchBar` → 1px vertical divider → Status → Outcome → Source → Campaign? → Agent? → Domain? → Range → Clear?.
-- **Search:** `suppressFocusAccent` — paper border + no `--shadow-focus` on focus. `style={{ flex: '1 1 180px', maxWidth: '280px' }}` — grows modestly but never dominates wide viewports (without `maxWidth`, chips scroll off-screen).
-- **Filter chips:** `menuPortal` + `hideCountBadge` + `accentBorderOnOpen={false}` — no numeric count on triggers (prevents width shift); accent border/tint when the chip has a selection, not when the menu is open.
-- **Range:** accent border only when dates are set (`rangeActive`), not when the panel is open.
-- **Divider:** inline `div`, `width: 1`, `height: 1.25rem`, `background: var(--theme-paper-border)`, `flexShrink: 0` — separates search from filter chips.
-- Every `FilterDropdown` and the Range trigger: `flexShrink: 0`.
-- **Dropdown panels:** every `FilterDropdown` must pass `menuPortal` (menus render `position: fixed` on `document.body`). Without it, `overflowX: auto` on the row clips the absolutely positioned menu and options are unreachable. The Range date panel lives inside `<FilterBar>` (`usePortalAnchor()` + `<FloatingPanel>` + `<DateRangeFields>` — see `src/components/CLAUDE.md` Overlays) — same rule, owned structurally.
+- Container: `<FilterBar>` default wrap layout — `gap: var(--space-3)`, wraps on narrow paper; below md FilterBar itself collapses every bar to the single-row scroll behaviour.
+- Order: Sliders icon + count badge → `SearchBar` → Status → Outcome → Source → Campaign? → Agent? → Domain? → Range → Dates → Clear?.
+- **Search:** standard chrome (accent focus ring), `searchStyle={{ flex: '1 1 220px', minWidth: '180px' }}` — byte-for-byte the `DealsFilters` values.
+- **Filter chips:** plain `FilterDropdown` + `menuPortal` — count badges and open-accent border on, same as deals.
+- **Dropdown panels:** every `FilterDropdown` must pass `menuPortal` (menus render `position: fixed` on `document.body`) — required because the below-md collapse makes the row `overflowX: auto`, which would clip a non-portaled menu. The Range/Dates panels live inside `<FilterBar>` (`usePortalAnchor()` + `<FloatingPanel>` — see `src/components/CLAUDE.md` Overlays) — same rule, owned structurally.
 
-**`activeCount`** — counts active URL params (what the table is showing). Used only for showing/hiding the Clear button — no numeric badge in the bar.
+**`activeCount`** — counts active URL params (what the table is showing). Drives the sliders-icon count badge and the Clear button.
 
 **Domain change invariant:** `domain` change must atomically clear `agent_id` and `campaign` in the same `push()` call. Never use a separate `useEffect` for this.
 

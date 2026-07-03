@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&amp;family=Geist:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; background: #ECE8E1; }
+    * { box-sizing: border-box; }
+    ::selection { background: rgba(214,188,130,0.3); }
+    input { font-family: 'Geist', system-ui, sans-serif; }
+    input:focus { outline: none; }
+    @keyframes logoSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes checkDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+    @keyframes ringPulse { 0% { box-shadow: 0 0 0 0 rgba(214,188,130,0.45); } 100% { box-shadow: 0 0 0 20px rgba(214,188,130,0); } }
+    @keyframes petalFall { 0% { transform: translateY(-12px) rotate(0deg); opacity: 0; } 12% { opacity: 0.9; } 100% { transform: translateY(230px) rotate(220deg); opacity: 0; } }
+    @keyframes deplete { from { width: 100%; } to { width: 0%; } }
+    @keyframes toastUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    @keyframes riseIn { from { opacity: 0; transform: translateY(10px) scale(0.985); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  </style>
+</helmet>
+
+<div style="min-height:100vh;background:#ECE8E1;font-family:'Geist',system-ui,sans-serif;color:#38332B;padding:64px 48px 96px;display:flex;justify-content:center;{{ tweakVars }}">
+<div style="width:100%;max-width:1320px;display:flex;flex-direction:column;gap:56px;">
+
+  <!-- Masthead -->
+  <div data-screen-label="Masthead" style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="font-size:12px;font-weight:600;letter-spacing:0.22em;color:var(--acc-deep,#8A7448);text-transform:uppercase;padding-left:0.22em;">Serene · Polish</div>
+      <div style="font-family:'Playfair Display',serif;font-size:44px;font-weight:500;line-height:1.08;">Refinement layer</div>
+      <div style="font-size:14px;color:#8A8274;max-width:600px;line-height:1.6;">Command palette, list choreography, success moments, living numbers, tooltips, undo, and the small physics that make the app feel expensive. Everything here is live — click things.</div>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center;">
+      <a href="Serene Loading.dc.html" style="text-decoration:none;height:46px;padding:0 20px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);display:flex;align-items:center;font-size:13px;font-weight:500;color:#8A8274;white-space:nowrap;">Loading →</a>
+      <a href="Serene Components.dc.html" style="text-decoration:none;height:46px;padding:0 20px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);display:flex;align-items:center;font-size:13px;font-weight:500;color:#8A8274;white-space:nowrap;">Components →</a>
+    </div>
+  </div>
+
+  <!-- ═══ 01 · Command palette ═══ -->
+  <div data-screen-label="Command palette" style="display:flex;flex-direction:column;gap:16px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep,#8A7448);text-transform:uppercase;padding-left:0.16em;">01 · Command palette — ⌘K</div>
+    <div style="position:relative;height:520px;border-radius:36px;background:#ECE8E1;border:1px solid rgba(255,255,255,0.6);box-shadow:6px 6px 16px rgba(166,156,140,0.28),-6px -6px 16px rgba(255,255,255,0.75);overflow:hidden;display:flex;justify-content:center;">
+      <!-- faint app behind -->
+      <div style="position:absolute;inset:0;padding:36px;display:flex;flex-direction:column;gap:14px;opacity:0.5;">
+        <div style="width:180px;height:22px;border-radius:10px;background:#E9E4DB;"></div>
+        <div style="width:300px;height:12px;border-radius:8px;background:#E9E4DB;"></div>
+        <div style="display:flex;gap:14px;margin-top:10px;">
+          <div style="flex:1;height:90px;border-radius:22px;background:#E9E4DB;"></div>
+          <div style="flex:1;height:90px;border-radius:22px;background:#E9E4DB;"></div>
+          <div style="flex:1;height:90px;border-radius:22px;background:#E9E4DB;"></div>
+        </div>
+        <div style="flex:1;border-radius:22px;background:#E9E4DB;margin-top:4px;"></div>
+      </div>
+      <div style="position:absolute;inset:0;background:rgba(56,51,43,0.28);backdrop-filter:blur(3px);"></div>
+      <!-- the palette -->
+      <div style="position:relative;margin-top:64px;width:640px;max-width:calc(100% - 48px);height:fit-content;border-radius:28px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.6);box-shadow:12px 12px 32px rgba(120,110,92,0.35),-6px -6px 16px rgba(255,255,255,0.5);animation:riseIn 320ms cubic-bezier(0.22,1,0.36,1) both;overflow:hidden;">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 22px;">
+          <span style="font-size:16px;color:#ABA396;">⌕</span>
+          <input value="{{ query }}" onChange="{{ onQuery }}" onKeyDown="{{ onPaletteKey }}" placeholder="Search leads, actions, pages…" style="flex:1;background:transparent;border:none;font-size:15px;color:#38332B;" />
+          <span style="font-size:10px;font-weight:600;padding:3px 8px;border-radius:7px;background:#ECE8E1;box-shadow:inset 1px 1px 3px rgba(166,156,140,0.3),inset -1px -1px 3px rgba(255,255,255,0.7);color:#8A8274;">esc</span>
+        </div>
+        <div style="height:1px;background:rgba(166,156,140,0.18);"></div>
+        <div style="max-height:296px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;">
+          <sc-for list="{{ paletteGroups }}" as="g" hint-placeholder-count="3">
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <div style="font-size:10px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#ABA396;padding:6px 12px 4px;">{{ g.name }}</div>
+              <sc-for list="{{ g.items }}" as="item" hint-placeholder-count="3">
+                <div onClick="{{ item.pick }}" onMouseEnter="{{ item.hover }}" style="display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:14px;cursor:pointer;transition:background 160ms ease;{{ item.style }}">
+                  <span style="width:26px;height:26px;border-radius:9px;background:#ECE8E1;box-shadow:inset 1px 1px 3px rgba(166,156,140,0.25),inset -1px -1px 3px rgba(255,255,255,0.65);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--acc-deep,#8A7448);flex-shrink:0;">{{ item.icon }}</span>
+                  <span style="flex:1;font-size:14px;color:#38332B;">{{ item.label }}</span>
+                  <span style="font-size:11px;color:#ABA396;">{{ item.hint }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+          <sc-if value="{{ paletteEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:22px 12px;text-align:center;font-size:13px;color:#ABA396;font-style:italic;font-family:'Playfair Display',serif;">Nothing matches — Elaya can look wider.</div>
+          </sc-if>
+        </div>
+        <div style="height:1px;background:rgba(166,156,140,0.18);"></div>
+        <div style="display:flex;align-items:center;gap:16px;padding:11px 20px;font-size:11px;color:#ABA396;">
+          <span style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:6px;background:#ECE8E1;box-shadow:inset 1px 1px 3px rgba(166,156,140,0.3),inset -1px -1px 3px rgba(255,255,255,0.7);">↑↓</span> navigate</span>
+          <span style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;font-weight:600;padding:2px 6px;border-radius:6px;background:#ECE8E1;box-shadow:inset 1px 1px 3px rgba(166,156,140,0.3),inset -1px -1px 3px rgba(255,255,255,0.7);">↵</span> open</span>
+          <span style="flex:1;"></span>
+          <span style="color:var(--acc-deep,#8A7448);font-weight:500;">{{ lastAction }}</span>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#ABA396;padding-left:0.16em;">opens with ⌘K anywhere · fuzzy across leads, deals, tasks, pages, and quick actions · panel rises 320ms spring, scrim blurs the app</div>
+  </div>
+
+  <!-- ═══ 02 + 03 ═══ -->
+  <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:24px;">
+
+    <!-- List choreography -->
+    <div data-screen-label="List choreography" style="grid-column:span 7;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep,#8A7448);text-transform:uppercase;padding-left:0.16em;">02 · List choreography</div>
+      <div style="flex:1;background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:26px;display:flex;flex-direction:column;gap:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;">Today's tasks</div>
+          <button onClick="{{ addTask }}" style="height:38px;padding:0 18px;border-radius:999px;background:var(--acc-grad,linear-gradient(145deg,#DFC996,#C8AC6E));border:1px solid rgba(255,255,255,0.35);box-shadow:2px 2px 6px rgba(166,156,140,0.24),-2px -2px 6px rgba(255,255,255,0.65);font-family:'Geist',sans-serif;font-size:12.5px;font-weight:600;color:var(--acc-fg,#33290F);cursor:pointer;transition:transform 220ms cubic-bezier(0.34,1.3,0.64,1);" style-hover="transform:translateY(-1px);" style-active="transform:scale(0.96);">+ Add task</button>
+        </div>
+        <div style="display:flex;flex-direction:column;">
+          <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="3">
+            <div style="overflow:hidden;transition:max-height 380ms cubic-bezier(0.22,1,0.36,1),opacity 320ms ease,transform 380ms cubic-bezier(0.22,1,0.36,1);{{ t.rowStyle }}">
+              <div style="display:flex;align-items:center;gap:14px;padding:10px 6px;">
+                <div onClick="{{ t.toggle }}" style="width:30px;height:30px;border-radius:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background 260ms ease,box-shadow 260ms ease;{{ t.tileStyle }}">
+                  <svg viewBox="0 0 24 24" style="width:15px;height:15px;overflow:visible;">
+                    <path d="M5 12.5 L10 17.5 L19 6.5" pathLength="1" stroke-dasharray="1" fill="none" stroke="var(--acc-fg,#33290F)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="{{ t.checkStyle }}"></path>
+                  </svg>
+                </div>
+                <span style="flex:1;font-size:14px;transition:color 260ms ease,opacity 260ms ease;{{ t.labelStyle }}">{{ t.label }}</span>
+                <span style="font-size:11px;font-weight:500;padding:4px 11px;border-radius:999px;background:#ECE8E1;box-shadow:inset 1px 1px 3px rgba(166,156,140,0.22),inset -1px -1px 3px rgba(255,255,255,0.6);color:#8A8274;flex-shrink:0;">{{ t.chip }}</span>
+                <span onClick="{{ t.remove }}" style="width:28px;height:28px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#ABA396;cursor:pointer;flex-shrink:0;transition:background 160ms ease,color 160ms ease;" style-hover="background:rgba(217,142,133,0.14);color:#B06A61;">×</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="font-size:11px;color:#ABA396;">rows settle in and lift out — 380ms spring on height + transform, never a snap · applies to tables, notifications, filters</div>
+      </div>
+    </div>
+
+    <!-- Success moments -->
+    <div data-screen-label="Success moments" style="grid-column:span 5;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep,#8A7448);text-transform:uppercase;padding-left:0.16em;">03 · Success moments</div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:24px;">
+        <!-- button morph -->
+        <div style="background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:22px 26px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <span style="font-size:13px;font-weight:600;">Save morph</span>
+            <span style="font-size:11px;color:#ABA396;">spinner → check → label</span>
+          </div>
+          <button onClick="{{ saveMorph }}" style="height:46px;min-width:150px;padding:0 22px;border-radius:999px;border:1px solid rgba(255,255,255,0.35);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);font-family:'Geist',sans-serif;font-size:13.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;transition:transform 220ms cubic-bezier(0.34,1.3,0.64,1),background 300ms ease;{{ saveBtnStyle }}" style-active="transform:scale(0.97);">{{ saveBtnInner }}</button>
+        </div>
+        <!-- big check -->
+        <div style="background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:22px 26px;display:flex;align-items:center;justify-content:space-between;gap:16px;">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <span style="font-size:13px;font-weight:600;">Complete ring</span>
+            <span style="font-size:11px;color:#ABA396;">check draws in · gold ring pulses once</span>
+          </div>
+          <div onClick="{{ toggleBigCheck }}" style="width:52px;height:52px;border-radius:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 260ms ease,box-shadow 260ms ease;{{ bigTileStyle }}">
+            <svg viewBox="0 0 24 24" style="width:24px;height:24px;overflow:visible;">
+              <path d="M5 12.5 L10 17.5 L19 6.5" pathLength="1" stroke-dasharray="1" fill="none" stroke="var(--acc-fg,#33290F)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="{{ bigCheckStyle }}"></path>
+            </svg>
+          </div>
+        </div>
+        <!-- deal won -->
+        <div style="position:relative;background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:22px 26px;display:flex;flex-direction:column;gap:14px;overflow:hidden;">
+          <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;">
+            <sc-for list="{{ petals }}" as="p" hint-placeholder-count="0">
+              <span style="{{ p.style }}"></span>
+            </sc-for>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <span style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;">Kapoor · Mykonos charter</span>
+              <span style="font-size:12px;color:#8A8274;">€48,000 · 7 nights · August</span>
+            </div>
+            <span style="font-size:11px;font-weight:600;padding:5px 13px;border-radius:999px;border:1px solid rgba(255,255,255,0.55);box-shadow:2px 2px 6px rgba(166,156,140,0.24),-2px -2px 6px rgba(255,255,255,0.65);transition:background 300ms ease,color 300ms ease;{{ dealChipStyle }}">{{ dealChipLabel }}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button onClick="{{ markWon }}" style="height:38px;padding:0 18px;border-radius:999px;background:var(--acc-grad,linear-gradient(145deg,#DFC996,#C8AC6E));border:1px solid rgba(255,255,255,0.35);box-shadow:2px 2px 6px rgba(166,156,140,0.24),-2px -2px 6px rgba(255,255,255,0.65);font-family:'Geist',sans-serif;font-size:12.5px;font-weight:600;color:var(--acc-fg,#33290F);cursor:pointer;transition:transform 220ms cubic-bezier(0.34,1.3,0.64,1);" style-hover="transform:translateY(-1px);" style-active="transform:scale(0.96);">{{ wonBtnLabel }}</button>
+            <span style="font-size:11px;color:#ABA396;">gold petals fall once — 2.4s, then gone · reserved for Won only</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 04 · Living numbers ═══ -->
+  <div data-screen-label="Living numbers" style="display:flex;flex-direction:column;gap:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep,#8A7448);text-transform:uppercase;padding-left:0.16em;">04 · Living numbers — count up on mount</div>
+      <button onClick="{{ replayNums }}" style="height:34px;padding:0 16px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:2px 2px 6px rgba(166,156,140,0.24),-2px -2px 6px rgba(255,255,255,0.65);font-family:'Geist',sans-serif;font-size:12px;font-weight:500;color:#8A8274;cursor:pointer;">↻ Replay</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px;">
+      <div style="background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:24px 26px;display:flex;flex-direction:column;gap:8px;">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#ABA396;">Pipeline value</span>
+        <span style="font-family:'Playfair Display',serif;font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;">{{ numRevenue }}</span>
+        <span style="font-size:11px;color:var(--acc-deep,#8A7448);font-weight:500;">↑ 12% vs last month</span>
+      </div>
+      <div style="background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:24px 26px;display:flex;flex-direction:column;gap:8px;">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#ABA396;">Active leads</span>
+        <span style="font-family:'Playfair Display',serif;font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;">{{ numLeads }}</span>
+        <span style="font-size:11px;color:var(--acc-deep,#8A7448);font-weight:500;">↑ 9 this week</span>
+      </div>
+      <div style="background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:24px 26px;display:flex;flex-direction:column;gap:8px;">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#ABA396;">Win rate</span>
+        <span style="font-family:'Playfair Display',serif;font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;">{{ numWin }}</span>
+        <span style="font-size:11px;color:#ABA396;">steady</span>
+      </div>
+      <div style="background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:24px 26px;display:flex;flex-direction:column;gap:8px;">
+        <span style="font-size:11px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:#ABA396;">Avg response</span>
+        <span style="font-family:'Playfair Display',serif;font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;">{{ numResp }}</span>
+        <span style="font-size:11px;color:var(--acc-deep,#8A7448);font-weight:500;">↓ 0.4h faster</span>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#ABA396;padding-left:0.16em;">1.4s ease-out-cubic, tabular numerals so digits don't jitter · charts draw in alongside (.neu-draw already shipped)</div>
+  </div>
+
+  <!-- ═══ 05 + 06 ═══ -->
+  <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:24px;">
+
+    <!-- Tooltips -->
+    <div data-screen-label="Tooltips" style="grid-column:span 6;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep,#8A7448);text-transform:uppercase;padding-left:0.16em;">05 · Tooltip — hover the specimens</div>
+      <div style="flex:1;background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:26px;display:flex;align-items:center;justify-content:space-around;gap:20px;flex-wrap:wrap;">
+        <!-- rail icon -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+          <div onMouseEnter="{{ tipAEnter }}" onMouseLeave="{{ tipALeave }}" style="position:relative;width:46px;height:46px;border-radius:16px;background:#ECE8E1;box-shadow:2px 2px 6px rgba(166,156,140,0.24),-2px -2px 6px rgba(255,255,255,0.65);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+            <span style="width:24px;height:24px;display:inline-flex;">{{ mandalaTipIcon }}</span>
+            <span style="position:absolute;left:calc(100% + 12px);top:50%;padding:7px 12px;border-radius:12px;background:#2D2920;color:#F1EDE6;font-size:11.5px;font-weight:500;white-space:nowrap;box-shadow:4px 4px 12px rgba(120,110,92,0.35);pointer-events:none;z-index:5;transition:opacity 180ms ease,transform 180ms cubic-bezier(0.22,1,0.36,1);{{ tipAStyle }}">Elaya</span>
+          </div>
+          <span style="font-size:10px;color:#ABA396;">collapsed rail</span>
+        </div>
+        <!-- truncated text -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+          <div onMouseEnter="{{ tipBEnter }}" onMouseLeave="{{ tipBLeave }}" style="position:relative;max-width:190px;padding:11px 16px;border-radius:16px;background:#ECE8E1;box-shadow:inset 1px 1px 3px rgba(166,156,140,0.22),inset -1px -1px 3px rgba(255,255,255,0.6);cursor:default;">
+            <span style="display:block;font-size:12.5px;color:#38332B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Reservation at La Sponda for the Chen anniversary dinner</span>
+            <span style="position:absolute;bottom:calc(100% + 10px);left:50%;padding:7px 12px;border-radius:12px;background:#2D2920;color:#F1EDE6;font-size:11.5px;font-weight:500;white-space:nowrap;box-shadow:4px 4px 12px rgba(120,110,92,0.35);pointer-events:none;z-index:5;transition:opacity 180ms ease,transform 180ms cubic-bezier(0.22,1,0.36,1);{{ tipBStyle }}">Reservation at La Sponda for the Chen anniversary dinner</span>
+          </div>
+          <span style="font-size:10px;color:#ABA396;">truncated cell</span>
+        </div>
+        <!-- icon button + kbd -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+          <div onMouseEnter="{{ tipCEnter }}" onMouseLeave="{{ tipCLeave }}" style="position:relative;width:42px;height:42px;border-radius:999px;background:#ECE8E1;box-shadow:2px 2px 6px rgba(166,156,140,0.24),-2px -2px 6px rgba(255,255,255,0.65);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;color:#8A8274;">
+            ↻
+            <span style="position:absolute;top:calc(100% + 10px);left:50%;padding:7px 8px 7px 12px;border-radius:12px;background:#2D2920;color:#F1EDE6;font-size:11.5px;font-weight:500;white-space:nowrap;box-shadow:4px 4px 12px rgba(120,110,92,0.35);pointer-events:none;z-index:5;display:flex;align-items:center;gap:8px;transition:opacity 180ms ease,transform 180ms cubic-bezier(0.22,1,0.36,1);{{ tipCStyle }}">Refresh <span style="font-size:9.5px;font-weight:600;padding:2px 6px;border-radius:5px;background:rgba(255,255,255,0.14);">R</span></span>
+          </div>
+          <span style="font-size:10px;color:#ABA396;">icon action + shortcut</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#ABA396;padding-left:0.16em;">charcoal pill on cream · 500ms hover delay, 180ms fade + 4px slide · never on touch</div>
+    </div>
+
+    <!-- Undo toast -->
+    <div data-screen-label="Undo toast" style="grid-column:span 6;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep,#8A7448);text-transform:uppercase;padding-left:0.16em;">06 · Undo, not confirm</div>
+      <div style="flex:1;background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:26px;display:flex;flex-direction:column;gap:16px;">
+        <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;">Notes</div>
+        <div style="overflow:hidden;transition:max-height 380ms cubic-bezier(0.22,1,0.36,1),opacity 320ms ease,transform 380ms cubic-bezier(0.22,1,0.36,1);{{ noteRowStyle }}">
+          <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:18px;background:#F3EFE8;border:1px solid rgba(255,255,255,0.6);box-shadow:2px 2px 6px rgba(166,156,140,0.22),-2px -2px 6px rgba(255,255,255,0.65);">
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px;">
+              <span style="font-size:13.5px;font-weight:500;">Prefers the corner suite, allergic to shellfish</span>
+              <span style="font-size:11px;color:#ABA396;">Amara Chen · added yesterday</span>
+            </div>
+            <button onClick="{{ deleteNote }}" style="height:34px;padding:0 16px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:2px 2px 6px rgba(166,156,140,0.24),-2px -2px 6px rgba(255,255,255,0.65);font-family:'Geist',sans-serif;font-size:12px;font-weight:500;color:#B06A61;cursor:pointer;">Delete</button>
+          </div>
+        </div>
+        <sc-if value="{{ noteGone }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px;border-radius:18px;text-align:center;font-size:12px;color:#ABA396;">Note deleted. <span onClick="{{ restoreNote }}" style="color:var(--acc-deep,#8A7448);font-weight:600;cursor:pointer;">Bring it back to replay</span></div>
+        </sc-if>
+        <div style="flex:1;"></div>
+        <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+          <div style="position:relative;display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:18px;background:#2D2920;color:#F1EDE6;box-shadow:6px 6px 16px rgba(120,110,92,0.4);overflow:hidden;animation:toastUp 320ms cubic-bezier(0.22,1,0.36,1) both;">
+            <span style="flex:1;font-size:13px;">Note deleted</span>
+            <button onClick="{{ undoDelete }}" style="height:32px;padding:0 16px;border-radius:999px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);font-family:'Geist',sans-serif;font-size:12px;font-weight:600;color:var(--acc,#D6BC82);cursor:pointer;">Undo</button>
+            <span style="position:absolute;left:0;bottom:0;height:2.5px;background:var(--acc,#D6BC82);animation:deplete 5s linear forwards;"></span>
+          </div>
+        </sc-if>
+        <div style="font-size:11px;color:#ABA396;">destructive actions commit after 5s — no confirm dialog · the bar is the countdown</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 07 + 08 ═══ -->
+  <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:24px;">
+
+    <!-- Sticky condense -->
+    <div data-screen-label="Header condense" style="grid-column:span 6;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep,#8A7448);text-transform:uppercase;padding-left:0.16em;">07 · Header condense — scroll the frame</div>
+      <div onScroll="{{ onFrameScroll }}" style="height:340px;border-radius:32px;background:#ECE8E1;border:1px solid rgba(255,255,255,0.6);box-shadow:inset 2px 2px 6px rgba(166,156,140,0.22),inset -2px -2px 6px rgba(255,255,255,0.6);overflow-y:auto;">
+        <div style="position:sticky;top:0;z-index:2;display:flex;flex-direction:column;justify-content:center;transition:padding 300ms cubic-bezier(0.22,1,0.36,1),background 300ms ease,box-shadow 300ms ease,backdrop-filter 300ms ease;{{ headStyle }}">
+          <div style="font-family:'Playfair Display',serif;font-weight:600;line-height:1.15;transition:font-size 300ms cubic-bezier(0.22,1,0.36,1);{{ headTitleStyle }}">Leads</div>
+          <div style="font-size:12px;color:#8A8274;overflow:hidden;transition:opacity 240ms ease,max-height 300ms cubic-bezier(0.22,1,0.36,1);{{ headSubStyle }}">137 active · 9 new this week</div>
+        </div>
+        <div style="padding:8px 22px 22px;display:flex;flex-direction:column;gap:12px;">
+          <sc-for list="{{ fakeRows }}" as="r" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:18px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:2px 2px 6px rgba(166,156,140,0.22),-2px -2px 6px rgba(255,255,255,0.65);">
+              <span style="width:34px;height:34px;border-radius:50%;background:linear-gradient(145deg,#E9E4DB,#DDD6C9);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#8A8274;">{{ r.initials }}</span>
+              <span style="flex:1;font-size:13px;font-weight:500;">{{ r.name }}</span>
+              <span style="font-size:11px;color:#ABA396;">{{ r.meta }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#ABA396;padding-left:0.16em;">title 26 → 17px, subtitle folds away, header gains blur + hairline · 300ms, driven by scroll position</div>
+    </div>
+
+    <!-- Empty state -->
+    <div data-screen-label="Empty states" style="grid-column:span 6;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.16em;color:var(--acc-deep,#8A7448);text-transform:uppercase;padding-left:0.16em;">08 · Empty states — the mark rests here</div>
+      <div style="position:relative;flex:1;min-height:340px;background:#F1EDE6;border-radius:32px;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);padding:26px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;">
+        <div style="position:absolute;right:-50px;top:-50px;width:240px;height:240px;opacity:0.08;animation:logoSpin 120s linear infinite;">{{ mandalaWatermark }}</div>
+        <div style="width:76px;height:76px;opacity:0.85;">{{ mandalaEmpty }}</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:500;font-style:italic;color:#38332B;">Nothing here yet — beautifully so.</div>
+          <div style="font-size:13px;color:#8A8274;max-width:340px;text-align:center;line-height:1.6;">Notes you add about this lead will appear here, and Elaya will remember them.</div>
+        </div>
+        <button style="height:44px;padding:0 24px;border-radius:999px;background:var(--acc-grad,linear-gradient(145deg,#DFC996,#C8AC6E));border:1px solid rgba(255,255,255,0.35);box-shadow:3px 3px 8px rgba(166,156,140,0.26),-3px -3px 8px rgba(255,255,255,0.7);font-family:'Geist',sans-serif;font-size:13px;font-weight:600;color:var(--acc-fg,#33290F);cursor:pointer;transition:transform 220ms cubic-bezier(0.34,1.3,0.64,1);" style-hover="transform:translateY(-1px);" style-active="transform:scale(0.97);">+ Add a note</button>
+      </div>
+      <div style="font-size:11px;color:#ABA396;padding-left:0.16em;">seed mandala at 8% turns once every 2 minutes · serif-italic voice · always one primary action</div>
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;earth&quot;, &quot;air&quot;, &quot;water&quot;, &quot;fire&quot;, &quot;candy&quot;, &quot;rose&quot;, &quot;moss&quot;, &quot;lilac&quot;], &quot;default&quot;: &quot;earth&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Theme&quot;}}">
+class Component extends DCLogic {
+  state = {
+    query: '', sel: 0, lastAction: '',
+    tasks: [
+      { id: 1, label: "Call Amara about the Positano villa", chip: 'Today', done: false, ph: 'in' },
+      { id: 2, label: 'Send yacht options to Rohan', chip: 'Today', done: true, ph: 'in' },
+      { id: 3, label: 'Confirm chef for the Demir dinner', chip: 'Tomorrow', done: false, ph: 'in' },
+    ],
+    taskSeq: 4,
+    savePhase: 'idle',
+    bigCheck: false,
+    dealWon: false, petals: [],
+    nums: { revenue: 0, leads: 0, win: 0, resp: 0 },
+    tipA: false, tipB: false, tipC: false,
+    noteState: 'present', toastOn: false,
+    condensed: false,
+  };
+
+  // ── brand mark: 8 circles, each passing through the exact center (offset === r)
+  lotus(opts) {
+    const o = opts || {};
+    this._seq = (this._seq || 0) + 1;
+    const gid = 'polGrad' + this._seq;
+    const circles = [];
+    for (let k = 0; k < 8; k++) {
+      const ang = (k / 8) * Math.PI * 2 - Math.PI / 2;
+      circles.push(React.createElement('circle', {
+        key: k, cx: 100 + Math.cos(ang) * 46, cy: 100 + Math.sin(ang) * 46, r: 46,
+        fill: 'none', stroke: o.stroke || ('url(#' + gid + ')'), strokeWidth: o.sw || 2.2,
+      }));
+    }
+    return React.createElement('svg', { viewBox: '0 0 200 200', style: { width: '100%', height: '100%', display: 'block', overflow: 'visible' } },
+      React.createElement('defs', null,
+        React.createElement('linearGradient', { id: gid, x1: '1', y1: '0', x2: '0', y2: '1' },
+          React.createElement('stop', { offset: '0%', stopColor: o.from || '#2B1D10' }),
+          React.createElement('stop', { offset: '100%', stopColor: o.to || '#C08A4E' })
+        )
+      ), circles);
+  }
+
+  // ── palette
+  PALETTE = [
+    { name: 'Actions', items: [
+      { icon: '✦', label: 'Ask Elaya', hint: 'A' },
+      { icon: '+', label: 'New lead', hint: 'N' },
+      { icon: '✓', label: 'New task', hint: 'T' },
+    ]},
+    { name: 'Leads', items: [
+      { icon: '◐', label: 'Amara Chen', hint: 'Nurturing' },
+      { icon: '◐', label: 'Rohan Kapoor', hint: 'New' },
+      { icon: '◐', label: 'Elif Demir', hint: 'In discussion' },
+    ]},
+    { name: 'Go to', items: [
+      { icon: '→', label: 'Dashboard', hint: 'G D' },
+      { icon: '→', label: 'Deals', hint: 'G E' },
+      { icon: '→', label: 'WhatsApp', hint: 'G W' },
+    ]},
+  ];
+
+  filteredGroups() {
+    const q = this.state.query.trim().toLowerCase();
+    const groups = [];
+    let flat = 0;
+    this.PALETTE.forEach((g) => {
+      const items = g.items.filter((it) => !q || it.label.toLowerCase().includes(q));
+      if (!items.length) return;
+      groups.push({
+        name: g.name,
+        items: items.map((it) => {
+          const idx = flat++;
+          const active = idx === this.state.sel;
+          return {
+            icon: it.icon, label: it.label, hint: it.hint,
+            style: active ? 'background:color-mix(in srgb, var(--acc,#D6BC82) 16%, transparent);' : '',
+            pick: () => this.setState({ lastAction: '→ ' + it.label }),
+            hover: () => this.setState({ sel: idx }),
+          };
+        }),
+      });
+    });
+    groups._count = flat;
+    return groups;
+  }
+
+  // ── tasks
+  taskPhStyle(ph) {
+    if (ph === 'enter') return 'max-height:0px;opacity:0;transform:translateY(-8px);';
+    if (ph === 'leave') return 'max-height:0px;opacity:0;transform:translateX(24px);';
+    return 'max-height:72px;opacity:1;transform:none;';
+  }
+  mutateTask(id, fn) {
+    this.setState((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? fn({ ...t }) : t)) }));
+  }
+  removeTask(id) {
+    this.mutateTask(id, (t) => { t.ph = 'leave'; return t; });
+    setTimeout(() => this.setState((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) })), 400);
+  }
+
+  // ── numbers
+  animateNums() {
+    const T = { revenue: 284500, leads: 137, win: 42.6, resp: 1.8 };
+    const t0 = performance.now(), dur = 1400;
+    const tick = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      const e = 1 - Math.pow(1 - p, 3);
+      this.setState({ nums: { revenue: T.revenue * e, leads: T.leads * e, win: T.win * e, resp: T.resp * e } });
+      if (p < 1) this._raf = requestAnimationFrame(tick);
+    };
+    cancelAnimationFrame(this._raf);
+    this._raf = requestAnimationFrame(tick);
+  }
+  componentDidMount() { this.animateNums(); }
+  componentWillUnmount() { cancelAnimationFrame(this._raf); clearTimeout(this._noteTimer); }
+
+  // ── petals
+  spawnPetals() {
+    const petals = [];
+    for (let i = 0; i < 14; i++) {
+      const size = 7 + Math.random() * 8;
+      petals.push({
+        style: 'position:absolute;top:-16px;left:' + (4 + Math.random() * 90) + '%;width:' + size + 'px;height:' + size +
+          'px;border-radius:50% 50% 50% 0;background:linear-gradient(145deg,#E8CFA0,#C08A4E);opacity:0;animation:petalFall ' +
+          (1.6 + Math.random() * 1.1).toFixed(2) + 's cubic-bezier(0.4,0,0.6,1) ' + Math.round(Math.random() * 500) + 'ms forwards;',
+      });
+    }
+    this.setState({ petals });
+    setTimeout(() => this.setState({ petals: [] }), 3200);
+  }
+
+  renderVals() {
+    const accents = {
+      earth: { acc: '#D6BC82', deep: '#8A7448', fg: '#33290F', grad: 'linear-gradient(145deg,#DFC996,#C8AC6E)' },
+      air:   { acc: '#97B5D2', deep: '#587A96', fg: '#223240', grad: 'linear-gradient(145deg,#A6C1DB,#84A5C4)' },
+      water: { acc: '#8FC3B9', deep: '#4E7E74', fg: '#1C2E2A', grad: 'linear-gradient(145deg,#A0CDC4,#7DB1A6)' },
+      fire:  { acc: '#DC9877', deep: '#A05C3E', fg: '#3A1F12', grad: 'linear-gradient(145deg,#E2A585,#CE8763)' },
+      candy: { acc: '#F0B5D2', deep: '#A85C87', fg: '#2E1522', grad: 'linear-gradient(145deg,#F3C0D9,#D8A2BC)' },
+      rose:  { acc: '#D9A0A5', deep: '#B57F84', fg: '#45272A', grad: 'linear-gradient(145deg,#E3AFB3,#CD8F94)' },
+      moss:  { acc: '#A9C4A0', deep: '#6F8A66', fg: '#26301F', grad: 'linear-gradient(145deg,#B8CFAF,#98B58E)' },
+      lilac: { acc: '#C9C0E4', deep: '#8E83B8', fg: '#2E2840', grad: 'linear-gradient(145deg,#D3CBEA,#B7ADD6)' },
+    };
+    const a = accents[this.props.accent] || accents.earth;
+    const s = this.state;
+    const groups = this.filteredGroups();
+
+    // save morph
+    const sp = s.savePhase;
+    const saveBtnStyle = sp === 'done'
+      ? 'background:linear-gradient(145deg,#B8CFAF,#98B58E);color:#26301F;'
+      : 'background:var(--acc-grad,linear-gradient(145deg,#DFC996,#C8AC6E));color:var(--acc-fg,#33290F);' + (sp === 'loading' ? 'opacity:0.85;cursor:wait;' : 'cursor:pointer;');
+    let saveBtnInner;
+    if (sp === 'loading') {
+      saveBtnInner = React.createElement(React.Fragment, null,
+        React.createElement('span', { style: { width: 17, height: 17, display: 'inline-flex', animation: 'logoSpin 3.5s linear infinite' } }, this.lotus({ stroke: 'currentColor', sw: 7 })),
+        'Saving…');
+    } else if (sp === 'done') {
+      saveBtnInner = React.createElement(React.Fragment, null,
+        React.createElement('svg', { viewBox: '0 0 24 24', style: { width: 15, height: 15, overflow: 'visible' } },
+          React.createElement('path', { d: 'M5 12.5 L10 17.5 L19 6.5', pathLength: 1, strokeDasharray: 1, fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round', style: { animation: 'checkDraw 400ms cubic-bezier(0.22,1,0.36,1) both' } })),
+        'Saved');
+    } else {
+      saveBtnInner = 'Save changes';
+    }
+
+    const tileOn = 'background:var(--acc-grad,linear-gradient(145deg,#DFC996,#C8AC6E));box-shadow:2px 2px 6px rgba(166,156,140,0.28),-2px -2px 6px rgba(255,255,255,0.65);';
+    const tileOff = 'background:#ECE8E1;box-shadow:inset 2px 2px 4px rgba(166,156,140,0.3),inset -2px -2px 4px rgba(255,255,255,0.65);';
+
+    return {
+      tweakVars: '--acc:' + a.acc + ';--acc-deep:' + a.deep + ';--acc-fg:' + a.fg + ';--acc-grad:' + a.grad + ';',
+
+      // 01 palette
+      query: s.query,
+      onQuery: (e) => this.setState({ query: e.target.value, sel: 0 }),
+      onPaletteKey: (e) => {
+        const n = groups._count || 0;
+        if (e.key === 'ArrowDown') { e.preventDefault(); this.setState({ sel: Math.min(n - 1, s.sel + 1) }); }
+        if (e.key === 'ArrowUp') { e.preventDefault(); this.setState({ sel: Math.max(0, s.sel - 1) }); }
+        if (e.key === 'Enter') {
+          let flat = 0;
+          groups.forEach((g) => g.items.forEach((it) => { if (flat++ === s.sel) it.pick(); }));
+        }
+      },
+      paletteGroups: groups,
+      paletteEmpty: groups.length === 0,
+      lastAction: s.lastAction,
+
+      // 02 tasks
+      tasks: s.tasks.map((t) => ({
+        label: t.label, chip: t.chip,
+        rowStyle: this.taskPhStyle(t.ph),
+        tileStyle: t.done ? tileOn : tileOff,
+        checkStyle: t.done ? 'stroke-dashoffset:0;animation:checkDraw 400ms cubic-bezier(0.22,1,0.36,1) both;' : 'stroke-dashoffset:1;',
+        labelStyle: t.done ? 'color:#ABA396;text-decoration:line-through;opacity:0.75;' : 'color:#38332B;',
+        toggle: () => this.mutateTask(t.id, (x) => { x.done = !x.done; return x; }),
+        remove: () => this.removeTask(t.id),
+      })),
+      addTask: () => {
+        const pool = ["Book the Amalfi transfer for Elif", 'Follow up on the Kapoor proposal', 'Send villa shortlist to Amara', 'Reserve the sunset slot at Nammos', 'Arrange the tasting-menu preview'];
+        const id = s.taskSeq;
+        const task = { id, label: pool[id % pool.length], chip: 'New', done: false, ph: 'enter' };
+        this.setState((st) => ({ tasks: [task, ...st.tasks], taskSeq: st.taskSeq + 1 }));
+        requestAnimationFrame(() => requestAnimationFrame(() => this.mutateTask(id, (x) => { x.ph = 'in'; return x; })));
+      },
+
+      // 03 success
+      saveBtnStyle, saveBtnInner,
+      saveMorph: () => {
+        if (s.savePhase !== 'idle') return;
+        this.setState({ savePhase: 'loading' });
+        setTimeout(() => this.setState({ savePhase: 'done' }), 1400);
+        setTimeout(() => this.setState({ savePhase: 'idle' }), 3200);
+      },
+      bigTileStyle: (s.bigCheck ? tileOn + 'animation:ringPulse 700ms ease-out 150ms;' : tileOff),
+      bigCheckStyle: s.bigCheck ? 'stroke-dashoffset:0;animation:checkDraw 450ms cubic-bezier(0.22,1,0.36,1) 100ms both;' : 'stroke-dashoffset:1;',
+      toggleBigCheck: () => this.setState({ bigCheck: !s.bigCheck }),
+      petals: s.petals,
+      dealChipStyle: s.dealWon ? 'background:#DCE8D6;color:#5F7D57;' : 'background:#D9E4EE;color:#5E7F9B;',
+      dealChipLabel: s.dealWon ? 'Won' : 'In discussion',
+      wonBtnLabel: s.dealWon ? '↻ Replay' : 'Mark as won',
+      markWon: () => {
+        if (s.dealWon) { this.setState({ dealWon: false, petals: [] }); return; }
+        this.setState({ dealWon: true });
+        this.spawnPetals();
+      },
+
+      // 04 numbers
+      numRevenue: '€' + Math.round(s.nums.revenue).toLocaleString('en-US'),
+      numLeads: String(Math.round(s.nums.leads)),
+      numWin: s.nums.win.toFixed(1) + '%',
+      numResp: s.nums.resp.toFixed(1) + 'h',
+      replayNums: () => this.animateNums(),
+
+      // 05 tooltips
+      mandalaTipIcon: this.lotus({ from: '#8A7448', to: '#C08A4E' }),
+      tipAEnter: () => this.setState({ tipA: true }), tipALeave: () => this.setState({ tipA: false }),
+      tipBEnter: () => this.setState({ tipB: true }), tipBLeave: () => this.setState({ tipB: false }),
+      tipCEnter: () => this.setState({ tipC: true }), tipCLeave: () => this.setState({ tipC: false }),
+      tipAStyle: s.tipA ? 'opacity:1;transform:translateY(-50%) translateX(0);' : 'opacity:0;transform:translateY(-50%) translateX(-5px);',
+      tipBStyle: s.tipB ? 'opacity:1;transform:translateX(-50%) translateY(0);' : 'opacity:0;transform:translateX(-50%) translateY(5px);',
+      tipCStyle: s.tipC ? 'opacity:1;transform:translateX(-50%) translateY(0);' : 'opacity:0;transform:translateX(-50%) translateY(-5px);',
+
+      // 06 undo
+      noteRowStyle: s.noteState === 'present' ? 'max-height:110px;opacity:1;transform:none;' : 'max-height:0px;opacity:0;transform:translateX(24px);',
+      noteGone: s.noteState === 'gone',
+      toastOn: s.toastOn,
+      deleteNote: () => {
+        this.setState({ noteState: 'pending', toastOn: true });
+        clearTimeout(this._noteTimer);
+        this._noteTimer = setTimeout(() => this.setState({ noteState: 'gone', toastOn: false }), 5000);
+      },
+      undoDelete: () => { clearTimeout(this._noteTimer); this.setState({ noteState: 'present', toastOn: false }); },
+      restoreNote: () => this.setState({ noteState: 'present' }),
+
+      // 07 condense
+      onFrameScroll: (e) => {
+        const c = e.target.scrollTop > 24;
+        if (c !== s.condensed) this.setState({ condensed: c });
+      },
+      headStyle: s.condensed
+        ? 'padding:12px 22px;background:rgba(236,232,225,0.82);backdrop-filter:blur(10px);box-shadow:0 1px 0 rgba(166,156,140,0.22);gap:0px;'
+        : 'padding:24px 22px 14px;background:transparent;gap:4px;',
+      headTitleStyle: s.condensed ? 'font-size:17px;' : 'font-size:26px;',
+      headSubStyle: s.condensed ? 'opacity:0;max-height:0px;' : 'opacity:1;max-height:20px;',
+      fakeRows: [
+        { initials: 'AC', name: 'Amara Chen', meta: 'Nurturing · 2d' },
+        { initials: 'RK', name: 'Rohan Kapoor', meta: 'New · 4h' },
+        { initials: 'ED', name: 'Elif Demir', meta: 'In discussion · 1d' },
+        { initials: 'MB', name: 'Mateo Bianchi', meta: 'Nurturing · 3d' },
+        { initials: 'SO', name: 'Sofia Oliveira', meta: 'New · 6h' },
+        { initials: 'LN', name: 'Lars Nyström', meta: 'Needs attention · 5d' },
+        { initials: 'YT', name: 'Yuki Tanaka', meta: 'In discussion · 2d' },
+        { initials: 'NA', name: 'Noor Al-Farsi', meta: 'Nurturing · 1w' },
+      ],
+
+      // 08 empty
+      mandalaWatermark: this.lotus({}),
+      mandalaEmpty: this.lotus({}),
+    };
+  }
+}
+</script>
+</body>
+</html>

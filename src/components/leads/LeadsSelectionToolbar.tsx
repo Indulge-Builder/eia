@@ -107,7 +107,8 @@ export function LeadsSelectionToolbar({
         marginBottom: 'var(--space-2)',
         borderRadius: 'var(--radius-sm)',
         background:   'var(--theme-accent-surface)',
-        border:       '1px solid var(--theme-paper-border)',
+        border:       '1px solid var(--neu-edge)',
+        boxShadow:    'var(--neu-shadow-chip)',
       }}
     >
       <span

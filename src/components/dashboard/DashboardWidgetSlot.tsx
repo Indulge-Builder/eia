@@ -164,7 +164,7 @@ export function DashboardWidgetSlot({
             position: "absolute",
             inset: 0,
             zIndex: "var(--z-raised)",
-            borderRadius: "var(--radius-lg)",
+            borderRadius: "var(--neu-radius-card)",
             border: "2px dashed var(--theme-accent)",
             pointerEvents: "none",
           }}

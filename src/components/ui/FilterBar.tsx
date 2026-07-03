@@ -105,13 +105,22 @@ function dateTriggerStyle(
     gap:          'var(--space-2)',
     height:       '2.25rem',
     padding:      'var(--space-1) var(--space-3)',
-    background:   active ? 'var(--theme-accent-surface)' : 'var(--theme-paper-subtle)',
-    border:       `1px solid ${accented ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
+    // Raised trigger; applied dates FLOAT on an accent wash + chip shadow —
+    // never marked by a coloured border. Open = 1px accent ring layer.
+    background:   active
+      ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
+      : 'var(--neu-surface)',
+    border:       '1px solid var(--theme-paper-border)',
+    boxShadow:    accented
+      ? '0 0 0 1px var(--theme-accent), var(--neu-shadow-raised-sm)'
+      : active
+      ? 'var(--neu-shadow-chip)'
+      : 'var(--neu-shadow-raised-sm)',
     borderRadius: 'var(--radius-md)',
     fontSize:     'var(--text-sm)',
     fontFamily:   'var(--font-sans)',
     fontWeight:   'var(--weight-medium)',
-    color:        active ? 'var(--theme-accent)' : 'var(--theme-text-secondary)',
+    color:        active ? 'var(--neu-accent-deep)' : 'var(--theme-text-secondary)',
     cursor:       'pointer',
     whiteSpace:   'nowrap',
     outline:      'none',

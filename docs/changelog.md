@@ -12,6 +12,615 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-07-03 — WhatsApp conversation pane: neumorphic polish pass
+
+**Why:** the chat pane that opens when a conversation is selected still wore the flat pre-neumorphic
+chrome (plain paper header, bare hairline date rules, a fixed sage outbound bubble) and read dull
+next to the rest of the soft-UI surfaces.
+
+- **`ConversationPanel` header** now uses the themed header treatment — `--neu-header-wash`
+  background + `--neu-header-edge` hairline (the CardHeader convention: the header is the
+  theme-coloured zone of the surface).
+- **Date separators** became soft raised pill chips (`--neu-surface` + `--neu-edge` +
+  `--neu-shadow-chip`, `--neu-radius-pill`) floating centred on the well, replacing the flanking
+  hairline rules.
+- **Composer dock** is grounded on `--theme-paper` with a top hairline, bookending the header so
+  the message well reads as the sunken zone between two grounded strips.
+- **Outbound bubbles** moved off the fixed `--neu-chip-sage-bg` onto `--neu-chat-user-bg` — THE
+  chat sender-bubble token (theme-coordinated accent wash, the same contract `ElayaMessageBubble`
+  follows; dark mode inherits its lifted-accent override for free).
+- **Delivery ticks** now distinguish states: sent = single tertiary check, delivered = double
+  tertiary check, read = double `--neu-info-deep` (powder) check — previously delivered and read
+  were identical sage.
+- **Empty thread state** composes `<EmptyState variant="inline">` instead of a hand-rolled italic
+  style object (Never-Do fix); the **conversation-loading spinner** swapped the ad-hoc spinning
+  `MessageCircle` for the mandated `LogoSpinner`.
+- Accent-on-well micro-text (the outbound "Elaya" bot label, the media-chip "View" link) moved to
+  the text-safe `--neu-accent-deep`.
+
+Files: `src/components/whatsapp/ConversationPanel.tsx`, `MessageBubble.tsx`, `WhatsAppShell.tsx`.
+
+---
+
+## 2026-07-03 — Serene Mobile system: the Indulge client-app mobile layer (`/m`, design_handoff_mobile_system)
+
+**Why:** the mobile handoff package (`design_handoff_mobile_system/` — README + `Serene Mobile.dc.html`
+specimen) defines the client-facing Indulge app in the soft-UI language: navigation architecture
+(4-tab floating bar + Elaya knob + logo-drawer), mobile touch scale, the component inventory and
+three reference screens. This lands that layer as a new, self-contained surface in the repo.
+
+- **New route group `src/app/(client)/m/`** — the client app shell, separate from the staff
+  dashboard. Routes: `/m` (Home), `/m/requests` (+ `/m/requests/[ref]` detail), `/m/activity`,
+  `/m/profile`, `/m/elaya` (chat). Customers have no auth yet (Elaya customer persona still
+  stubbed), so the `(client)` layout gates behind a staff session as an internal preview; screens
+  run on specimen demo data (`components/mobile/demo-data.ts` — butler voice, requests never tasks).
+- **New feature folder `src/components/mobile/`** — display-only, consumes `--neu-*` tokens
+  exclusively (zero hex): `IndulgeMark` (the 9-circle stroked mark — THE drawer button, no
+  hamburger anywhere), `MobileTabBar` (EXACTLY four rooms — Home/Requests/Activity/Profile — active
+  = raised 46×46 r16 accent tile; Elaya = 52Ø accent knob riding −20 above the bar, navigation not
+  a tab), `MobileDrawer` (76% panel, r 0 30 30 0, 380ms soft-out, swipe-left + scrim dismiss;
+  profile row · ROOMS · THE HOUSE · Sign out in clay), app bars (home/detail/greeting), floating
+  fields (search pill keeps the cream surface — accent only on glyphs), segmented/chips/toggle
+  (54×32)/stepper/setting rows, request rows with the status-dot language (sage settled ·
+  accent-breathe waiting · clay attention), vertical tiles (Global powder · House sage · Shop
+  butter · Legacy lilac), inset progress, toast pills, placing-request loader (✦ halo), bottom
+  sheet (420ms rise, 44-touch grabber, NEW REQUEST composition) and action sheet (54 rows,
+  destructive in clay never red, cancel as its own raised pill).
+- **New `src/styles/serene-mobile.css`** (imported after the neu tokens in `globals.css`) — only
+  what the base layer lacks: mobile scrim/drawer/sheet shadow tokens (with `data-neu="dark"`
+  overrides), the halo ring keyframe + mobile idle-loop timings (breathe 2.2/2.6s, dots 1.3s/0.18s
+  stagger, halo 3/3.4s), and the `.neu-m-touch(-knob/-quiet)` press recipes (220ms spring
+  transform / 300ms soft-out shadow, press = pressed inset + scale 0.98, knobs 0.94) — all
+  `prefers-reduced-motion` gated.
+- Touch scale enforced by construction: primary 56 · secondary/field 52 · knob 44 floor · list row
+  64 · tab bar 64 · FAB 60; 20px edge padding, 14px card gap, one scroll axis per screen. Drawer +
+  sheets ride framer (`m as motion`, A-17) with the handoff curves; entrances reuse `.neu-reveal`.
+- Verified: `tsc --noEmit` clean, eslint clean, all six routes compile and serve behind the auth
+  gate on the dev server; hex/forbidden-pattern scans clean. Theme re-tint rides `--neu-accent*`
+  end-to-end (active tab tile, Elaya knob, toggles, chips, progress, user bubbles, mark stroke,
+  drawer washes); dark mode inherits via the token layer.
+
+## 2026-07-03 — UI polish batch: suggestions tabs, group-task expand area, leads filter bar → deals config, leads table lifted surface
+
+**Why:** four visual defects reported on review — the suggestions status tabs stretched into a
+full-width empty tray, the group-task accordion's expanded region rendered as a sunken well band,
+the leads filter bar's compact single-row variant read as cramped/misplaced next to the deals bar,
+and the leads table card sat at the same tone as the shell paper beneath it (dull/flat).
+
+- `SuggestionInboxClient.tsx`: the pill `TabSelector` is a child of a column flex, so it stretched
+  to the full row width. Pinned with `alignSelf: flex-start` — the tray is content-sized again.
+- `GroupTasksTab.tsx` (expanded subtasks area): the region's `--theme-paper-subtle` fill (→
+  `--neu-well` under the bridge) is gone — it sits on the card's own material, separated by the
+  existing hairline (the same well-band removal as the 2026-07-03 card-header pass). Interior
+  pieces re-contrasted: the add-subtask input row is now the sunken well tone (input track), the
+  "Add subtask" hover fill is well tone (was paper-on-paper — invisible), and the loading shimmer
+  bars moved off `--theme-paper-border` (now a white hairline) onto the well tone.
+- `LeadsFilters.tsx`: retired the compact single-row scroll configuration — the bar now uses the
+  SAME FilterBar config as `DealsFilters` (default wrap layout + `--space-3` gaps, badge date
+  triggers, sliders count badge, no divider, standard search focus chrome, deals `searchStyle`).
+  `menuPortal` stays on every dropdown (below md the wrap layout still auto-collapses to scroll).
+  Contract updated in `src/components/leads/CLAUDE.md`.
+- `LeadsTable.tsx` (+ `LeadsTableSkeleton`, `leads/loading.tsx`): the table card moved from
+  `--theme-paper` + `--shadow-1` to `--neu-surface-high` + `--neu-shadow-raised` — the sanctioned
+  lifted-surface pairing (dialogs/panels/menus) so the table floats off the shell paper instead of
+  blending into it. Skeletons synced so loading doesn't flash the old flat card.
+
+## 2026-07-03 — Table `previewRows` reveal + /escalations adoption (rule P-03)
+
+**Why:** `/escalations` fed `Table<T>` uncapped breach lists (service reads allow up to
+500 timers / 100 tasks / 100 cold leads) and the SLA-breaches section hit 140 rows,
+tripping the P-03 dev warning ("rendering N rows without virtualisation") and rendering
+the full DOM on every visit.
+
+- `src/components/ui/Table.tsx`: new optional `previewRows` prop — THE built-in P-03
+  "paginated approach". When rows exceed it, only the first N render, followed by a
+  full-width "Show all N" expander row (one-way client reveal, quiet secondary→accent
+  text button). Setting the prop counts as handling P-03, so the dev warn is suppressed;
+  the warn copy now mentions the prop. Default behaviour without the prop is unchanged.
+- `EscalationSections.tsx`: all three sections pass `previewRows={SECTION_PREVIEW_ROWS}`
+  (50). Lists are newest-first, so the preview is the live story; counts stay honest —
+  the header `CountPill` always shows the full total. The `/budget` tables are candidate
+  adopters if their volumes grow.
+- `docs/pages/escalations.md`: the "no per-section pagination" open item resolved; the
+  service read caps still stand.
+
+## 2026-07-03 — Leads filter-bar height alignment + sidebar hover = icon accent fill
+
+**Why:** the leads filter bar read as misaligned — the search input was the only element in the
+row at the `sm` scale (2rem tall, `--text-xs`), while the filter chips, the Range/Dates triggers
+and the Clear button all sit at 2.25rem / `--text-sm`. And the sidebar's hover state still painted
+a background wash behind the row, which fights the clean no-chrome nav look (active state was
+already reduced to the accent icon tile earlier today).
+
+- `LeadsFilters.tsx`: dropped the `searchSize="sm"` override — the search now renders at the
+  default `md` (2.25rem, `--text-sm`, 16px icon), matching every other element in the row and
+  every other filter bar (deals, campaigns, tasks already used `md`).
+- `Sidebar.tsx`: hover no longer sets `--theme-sidebar-hover-bg` anywhere. The hover vocabulary
+  is now **bold icon accent fill**: an inactive `NavLink`'s icon turns `--neu-accent-deep` on
+  hover with a heavier stroke (1.5 → 2.2) — the pastel `--theme-accent` read too faint on the
+  cream rail (tracked via local `hovered` state so the icon tile can react; the §6.3
+  translateX(2px) nudge stays; label colour no longer changes). Same deep-accent treatment on
+  the footer — Send feedback and Sign-out colour their icon on hover (no bg); the profile row
+  keeps just the cursor (avatar, no icon). The active tile (`--neu-accent-gradient` +
+  `--theme-accent-fg`) is untouched.
+  `--theme-sidebar-hover-bg` stays defined in the token files (the auth card lamplight wash
+  still uses it).
+
+## 2026-07-03 — Neumorphic consistency pass: floating paper restored, well-tone card headers flattened, RouteVeil retired, clean sidebar active state
+
+**Why:** the neumorphic restyle introduced a handful of regressions against the intended feel:
+the two-layer shell (canvas gutter + floating paper) was flattened away, every card header strip
+turned into a sunken well band (the bridged `--theme-paper-subtle` now resolves to `--neu-well`,
+and inset marks state only — Rule 4), the full-page route veil put a spinning logo over every
+navigation, and the sidebar's active tab stacked four indicators (wash + border/shadow chip +
+left pill + chevron).
+
+**Shell — the floating paper is back (soft-UI form):**
+
+- `.serene-shell-paper` (globals.css) is again a raised sheet on the canvas gutter:
+  `--neu-surface` + `--neu-radius-card` + `--neu-shadow-raised` + `--neu-edge` hairline.
+  Below `md` it stays full-bleed (border/radius/shadow reset). Cards keep raising themselves
+  a step further via their own shadow pairs.
+
+**Card headers — no more well bands:**
+
+- `leads/CardHeader.tsx` (THE dossier header strip — Lead Information, Form Responses and all
+  seven dossier cards) now sits on the card's own material (`transparent`), keeping only the
+  hairline bottom border. Same fix applied to the `SubTaskModal` **Action Items** and **Details**
+  card headers, the `LeadsTable` toolbar strip + `<thead>` row, and the two table skeletons
+  (`leads/loading.tsx`, `LeadsTableSkeleton`).
+- Radius consistency: `DynamicFormResponses`, the `LeadsTable` card and both table skeletons
+  moved to `--neu-radius-card` (32 — the Marshmallow card role) matching `LeadInfoCard`/
+  `SectionCard`; the table card also gained its missing explicit `--theme-paper` background.
+
+**Motion calm-down:**
+
+- **`RouteVeil` deleted** (component + layout mount) — the full-page cream veil with the spinning
+  seed mandala on every route change. Navigation feedback is each route's `loading.tsx` skeleton
+  again; never reintroduce a route-change overlay. (`AppBootScreen` — once per hard load — stays.)
+- **`.neu-reveal` removed from consumers** — all dossier cards (`LeadInfoCard`,
+  `PersonalDetailsCard`, `StatusActionPanel`, `ServiceInterestCard`, `LeadWhatsAppCard`,
+  `LeadNotesSection`, `LeadJourneyTimeline`, `LeadActivityLog`) and the shared `SectionCard`,
+  so cards no longer rise/replay on every navigation. The keyframes stay defined in
+  `serene-neumorphic-tokens.css` (spec reference, currently unconsumed).
+
+**Card headers are the THEMED zone (follow-up, same day):**
+
+- Every dossier/task card header was theme-blind: the strip's fill and its micro-label/icon all
+  used theme-INVARIANT tokens (`--theme-paper-subtle` well fill, `--theme-text-tertiary` grey
+  text) — only the Notes (Add Note) card followed the theme, because it alone overrode all three
+  `CardHeader` slots with the `--theme-accent*` family (the ONE family that re-tints per theme).
+- Fix: the Notes treatment is now `CardHeader`'s DEFAULT — themed accent-wash background,
+  accent-tinted hairline border-bottom, accent icon, and an accent `.label-micro` label
+  (`style`/`iconStyle`/`labelStyle` escape hatches unchanged). Adopted verbatim by the
+  `SubTaskModal` **Action Items**/**Details** headers and `SectionCard`'s header strip
+  (Gia Tasks, /profile, admin detail cards). `LeadNotesInput` dropped its now-redundant
+  overrides (and its card radius joined `--neu-radius-card`); `PersonalDetailsCard` dropped its
+  rest-state grey icon override.
+- Wash strength: the first cut used `--theme-accent-surface` (12% accent over transparent) and
+  read washed-out — 12% of an already-softened pastel over cream is nearly invisible. New
+  dedicated tokens in `serene-neumorphic-tokens.css`: **`--neu-header-wash`** (22% accent mixed
+  into `--neu-surface`, opaque) + **`--neu-header-edge`** (32% accent hairline); all three header
+  sites read them, so header intensity is tuned in ONE place. Dark mode adapts automatically (the
+  mix resolves from the dark `--neu-accent`/`--neu-surface` at use time). A full
+  `--neu-accent-gradient` fill variant was tried and rolled back the same day — too heavy.
+  Rule going forward: the header strip is the theme-coloured zone of a card —
+  `--neu-header-wash` + accent label, never paper-subtle/tertiary grey.
+
+**Sidebar — one active indicator:**
+
+- The active nav item keeps ONLY the accent-gradient icon tile (+ active label colour/medium
+  weight). The `--theme-sidebar-active-bg` wash, hairline+chip shadow, the travelling left pill
+  (`layoutId="sidebar-active-pill"`), and the trailing chevron are removed; the dead
+  `.serene-nav-chevron` class was dropped from globals.css. Hover behaviour unchanged.
+
+Verified with `pnpm lint` + `tsc --noEmit` (both clean).
+
+---
+
+## 2026-07-03 — Dark mode — warm charcoal (`data-neu="dark"`), three-state appearance preference, dark token deltas
+
+**Why:** the design department shipped `design_handoff_dark_mode/` — the dark variant of the
+neumorphic system ("candlelight, not moonlight"). The `[data-neu="dark"]` token block already
+existed in `serene-neumorphic-tokens.css`; this change is (a) the mode-switch wiring, (b) the
+handoff's dark-specific token deltas, and (c) the audit that every surface resolves through
+tokens so ONE attribute flip re-skins the app. Reference specimen: `Serene Dark.dc.html`.
+
+**Mode switch (the wiring):**
+
+- **`lib/constants/appearance.ts`** — THE appearance vocabulary (`light`/`dark`/`system` via
+  `defineEnum`; `system` follows `prefers-color-scheme`, UI label "Auto"), `APPEARANCE_COOKIE`
+  `serene-appearance` + `persistAppearanceCookie()` (the `serene-theme` pattern),
+  `NEU_CANVAS_LIGHT` `#ECE8E1` / `NEU_CANVAS_DARK` `#28241C` (the sanctioned meta/manifest hex
+  mirrors of `--neu-canvas`), and `applyAppearanceToDom()` — the ONLY place `data-neu` flips
+  (sets/removes the attribute + rewrites `<meta name="theme-color">`; `system` writes two
+  media-scoped metas so the chrome tracks the OS without JS).
+- **Migration 0158** (`profiles.appearance`, CHECK `light`/`dark`/`system`, default `light`) —
+  mirrors `profiles.theme` end-to-end; rides the existing `updateProfile` action (schema +
+  action + `updateProfileFields` extended; hand-written `Profile` type carries the union until
+  the next `database.ts` regen). **Applied to prod via MCP + verified.**
+- **Root layout** — stamps `data-neu="dark"` server-side from the cookie (zero flash); `system`
+  renders a tiny inline pre-paint script (matchMedia cannot run on the server). `viewport` became
+  `generateViewport()` reading the cookie (`#ECE8E1` ↔ `#28241C`; `system` → both media-scoped).
+- **`ThemeInitializer`** — corrective appearance sync beside the theme sync (DB truth vs stale
+  cookie) + owns the live `prefers-color-scheme` listener while `system` is active.
+- **`manifest.ts` + `/api/manifest`** — `buildManifest(icon, appearance)` now sets
+  `background_color`/`theme_color` per mode. The stale `EARTH_CANVAS #0d0c0a` export (the retired
+  pre-neumorphic canvas) is gone.
+- **Profile ▸ Appearance** — new **`AppearanceSelector`** (segmented Light · Dark · Auto via
+  `TabSelector variant="connected"`) above the `ThemeSelector` swatches; instant DOM apply with
+  the same `serene-theme-transition` cross-dissolve, cookie mirror, background DB persist.
+
+**Dark token deltas (all in `serene-neumorphic-tokens.css`; light values in `:root`, dark
+overrides in the `[data-neu="dark"]` block — components read roles, never `isDark` branches):**
+
+- **Tooltip inverts** — `--neu-tooltip-bg/text/shadow/kbd-bg`: charcoal-on-cream in light, cream
+  pill `#ECE8E1` / ink `#38332B` / `4px 4px 14px rgba(0,0,0,0.5)` in dark. `Tooltip.tsx` re-pointed.
+- **Undo/action toast** — `--neu-toast-action-*` + `--neu-toast-undo-*`: charcoal in light;
+  `--neu-surface-high` + raised-lg + `--neu-edge-strong` hairline + `rgba(255,240,214,0.06)` undo
+  pill in dark (charcoal-on-charcoal would vanish). `UndoToastItem` re-pointed (+ gained the
+  border). The standard toast was already token-clean (`--neu-surface-high`).
+- **Command palette** — `--neu-palette-bg/shadow` (surface/floating → surface-high/modal in
+  dark) plus `--neu-palette-scrim` deepening to `rgba(12,10,7,0.5)`. `CommandPalette.tsx`
+  re-pointed; its icon tiles/kbd chips already inset on `--neu-well` (auto-flip).
+- **Chat** — `--neu-chat-user-bg`: the sender bubble wash (12% accent on surface in light,
+  `--neu-accent-wash` = 14% lifted accent in dark). `ElayaMessageBubble` re-pointed; incoming
+  bubbles were already `--neu-surface-high` (matches the specimen `#332E24`), WhatsApp outbound
+  stays the semantic sage chip mix.
+- **Accent-fill hairline** — `--neu-accent-btn-edge` (`rgba(255,255,255,0.25)` → candle
+  `rgba(255,240,214,0.09)`): `.neu-btn-primary`, `.serene-btn-primary`, `TabSelector` accent chip.
+- **Accents auto-lift for legacy consumers** — dark re-points `--theme-accent-muted` (→
+  `--neu-accent-deep`, the 66%-white lift), `--theme-accent-hover` (lifts lighter instead of
+  darker), `--theme-accent-surface` (→ `--neu-accent-wash`) so on-cream "text-safe" tones stay
+  legible on charcoal; `--theme-accent` itself and `--theme-accent-fg` (dark ink) are untouched.
+- **Charcoal-family shadows** go black-based in dark; `--overlay-bg`/`--overlay-scrim` deepen to
+  `rgba(12,10,7,…)` in a small post-bridge block (source order beats the bridge's
+  equal-specificity `[data-theme]` selector — comment in the file explains).
+- Skeleton shimmer, toggle/tab tracks, chart grid (`rgba(255,240,214,0.10)`), scrims, chips, and
+  status pills were already token-driven — they flip with zero component edits.
+
+**SeedMandala dark variants (brand-fixed, never theme-tinted):** gradient stops now resolve
+through `--neu-mandala-from/to` (+ the `-disc-` pair) via `style={{ stopColor }}` (CSS vars don't
+resolve in SVG presentation attributes) — light keeps `#2B1D10→#C08A4E` (disc `#E8CFA0→#C08A4E`),
+dark lifts to `#5A4426→#D6AF6E` (disc `#7A5C30→#E8CFA0` on the `#221E17` glyph disc, which the
+existing dark block already deepens). `--neu-watermark-opacity` 0.08 → 0.10 (`EmptyState`
+watermark) and `--neu-boot-glow` (accent 28% mix → brand gold `rgba(214,175,110,0.18)`;
+`AppBootScreen`). One component, both modes.
+
+**Charts re-tint:** `useChartTokens` and both `resolveColorMap` observers (`BarChart`,
+`ManagerLeadVolumeWidget`) now watch `data-neu` alongside `data-theme`, so grid/axis/tooltip/series
+re-resolve on a mode flip without a remount.
+
+**Audit:** repo-wide sweep for the handoff's light literals (`#ECE8E1`, `#F1EDE6`, `#F3EFE8`,
+`#E9E4DB`, `#38332B`, `#8A8274`, `#ABA396`, `rgba(166,156,140`, `rgba(255,255,255`) — components were already clean except
+the `TabSelector` accent-chip border (fixed via `--neu-accent-btn-edge`); the `useChartTokens`
+pre-resolve FALLBACK constants stay by design. `pnpm check:tokens` ✓, `tsc --noEmit` ✓,
+`pnpm lint` ✓ (the design-handoff bundles' generated `support.js` runtimes joined the eslint
+ignore list beside the existing neumorphic one).
+
+**Semantic scope unchanged:** status chips and the `--domain-*` chart palette never theme-tint in
+dark either; `--theme-accent-fg` stays the theme's dark ink on every accent fill.
+
+## 2026-07-03 — Polish layer — ⌘K palette, list choreography, success moments, living numbers, tooltips, undo, header condense, brand empty states
+
+**Why:** the design department shipped `design_handoff_polish_layer/` — eight refinement
+patterns that move the app from "nice neumorphic CRM" to expensive-feeling product. Builds
+on the neumorphic FINAL system and the logo/loading handoff (SeedMandala, `--neu-*` tokens).
+All timings/easings are fixed per the handoff's global rules (named constants in
+`lib/constants/motion.ts`); everything honors `prefers-reduced-motion`.
+
+**Tokens & keyframes:**
+
+- `serene-neumorphic-tokens.css` — the charcoal family (`--neu-charcoal` `#2D2920`,
+  `--neu-charcoal-text`, two charcoal shadows, `--neu-palette-scrim`,
+  `--neu-shadow-floating`) + BRAND/SEMANTIC-FIXED celebration values that never
+  theme-tint: `--neu-success-gradient` (save-morph sage) + `--neu-success-ink`,
+  `--neu-petal-gradient` (won gold — the SeedMandala darkDisc stops).
+- `design-tokens.css` — `--z-tooltip: 75`; keyframes + classes `serene-check-draw`
+  (400ms), `serene-ring-pulse` (700ms accent halo, once), `serene-petal-fall`
+  (transform/opacity only); all three rest at done / skip under reduced motion.
+- `motion.ts` — `PALETTE_DURATION` 320ms, `ROW_DURATION` 380ms, `TOOLTIP_DURATION` 180ms
+  with `TOOLTIP_INTENT_MS` 500, `CONDENSE_DURATION` 300ms, `COUNT_UP_MS` 1.4s,
+  `UNDO_WINDOW_MS` 5s, and `ROW_VARIANTS` (the §02 row choreography — Framer's measured
+  height:auto tween is the handoff-sanctioned exception to the height-animation ban).
+
+**New primitives (`src/components/ui/`):**
+
+- **`Tooltip.tsx`** — THE charcoal hover pill (§05): 500ms hover intent, instant reshow
+  between adjacent triggers, 180ms fade + 5px directional slide, focus-visible support,
+  NEVER on coarse pointers (`MQ.finePointer`, new in `useMediaQuery`). Deliberately not
+  `usePortalAnchor` (hover-driven, side-placed, pointer-events none) — shares only the
+  body portal. Wired: collapsed sidebar rail items (right; disabled outside rail mode,
+  replacing the native `title`), PageControls bell (bottom). Truncated table cells are the
+  documented next call sites.
+- **`AnimatedNumber.tsx`** — living numbers (§04): rAF count-up, 1.4s ease-out-cubic,
+  tabular-nums; takes the ALREADY-FORMATTED string (numbers.ts stays the only formatter),
+  animates the numeric run, settles on the original string verbatim; animates from the
+  previous value on change. Adopted: `StatTile` (both variants), `StatAtom`,
+  `CoreFourGrid` MetricCard, `DomainTargetMeter` centre label, `SnapshotCountWidget`.
+- **`CheckTile.tsx`** — THE completion tile (§03): inset well ↔ accent-gradient flip +
+  check draw + ONE ring pulse (user toggles only). Adopted in the SubTaskModal checklist;
+  `TaskCompletionCircle` (task rows) keeps its radio identity but gains the ring pulse.
+- **`PetalFall.tsx`** — the deal-won celebration (§03): ~14 brand-gold petals, randomized
+  1.6–2.7s, overflow-hidden pointer-events-none layer, DOM removed after 3.2s. RESERVED
+  exclusively for Won. `DealCard` fires it once via a sessionStorage handshake
+  (`DEAL_CELEBRATE_STORAGE_KEY`) that `NewDealModal` stamps on success — surviving the
+  RSC `router.refresh()`.
+- **`RowMotion.tsx`** — `<MotionRow>`, THE list-row choreography wrapper (§02): enter
+  height 0→auto + y −8→0 (380ms spring-out), exit collapse + x +24 drift. Caller owns
+  `<AnimatePresence initial={false}>`. Row motion WINS inside lists — never stack
+  `.neu-reveal` on individual rows. Adopted: `/notes` list.
+- **`CommandPalette.tsx` + `layout/CommandPaletteProvider.tsx`** — ⌘K/Ctrl-K global
+  palette (§01), mounted once in the dashboard layout; panel chunk loads on first open
+  (G-1). 640px `--neu-surface` panel, `--neu-shadow-floating`, 320ms spring rise over the
+  charcoal scrim with blur(3px) — a SANCTIONED backdrop-blur surface. Groups: Actions ·
+  live leads/deals/tasks (new `paletteSearchAction` in `lib/actions/search.ts` — Zod
+  `PaletteSearchSchema` → `requireProfile` → the EXISTING `getLeadsByRole` /
+  `getDealsByRole` / `getPersonalTasks` reads, R-01; each group best-effort) · Go to
+  (pages filtered via `canAccessRoute` + role gates). ↑↓/↵/esc; accent color-mix wash on
+  the active row; serif-italic "Nothing matches — Elaya can look wider." Actions ROUTE to
+  their page in v1 (cross-page modal-open wiring is the documented follow-up).
+- **`layout/CondensingPageHeader.tsx`** — sticky page header that condenses past ~24px
+  scroll (§07): title → 17px, subtitle folds, canvas-tinted blur(10px) backdrop + bottom
+  hairline (`.serene-condense-header` in globals.css — a handoff-sanctioned blur surface).
+  IntersectionObserver sentinel rooted on `.serene-shell-paper` with re-armed rootMargin
+  hysteresis (24px in / 4px out). Adopted: Leads, Deals, Tasks, Notes ( `/whatsapp` is the
+  documented full-bleed exception; Budget/Helpdesk/Escalations roll out next).
+
+**Extended components:**
+
+- **`Button.tsx`** — `status: 'idle' | 'pending' | 'success'` + `successLabel` (§03 save
+  morph): pending = the existing mandala treatment; success re-tints to the SEMANTIC sage
+  gradient + draws the check (400ms) + "Saved", `loading` maps onto pending. New
+  `useButtonStatus()` hook (pending → success → 1.8s → idle; ActionResult-aware).
+  Reference migration: `ProfileDetailsForm` (form folds back to read view after the sage
+  hold).
+- **Toast system** — new `undo` type (§06): `toast.undo(title, { action, onTimeout })` —
+  charcoal toast, accent Undo pill, 2.5px accent depletion bar (scaleX, 5s linear — the
+  bar IS the countdown, so no hover-pause and no X; timeout runs the deferred commit).
+  `/notes` delete converted to optimistic-remove + undo (ConfirmDialog dropped there);
+  task deletes stay on ConfirmDialog for now (multi-call-site surgery — documented
+  follow-up). ConfirmDialog remains THE surface for irreversible admin operations.
+- **`EmptyState.tsx`** — `brand` prop (§08): 76px gradient SeedMandala + 240px corner
+  watermark (opacity .08, 120s/rev, class-driven spin so reduced-motion rests it) +
+  the existing Playfair-italic voice + exactly one primary action. Adopted with
+  per-module copy: `/notes` first-note empty (+ Add-a-note action, Elaya named),
+  `/deals` no-deals empty.
+
+**Notes:** `pnpm check:tokens` ✓ (zero stray hex — celebration values live in the token
+sheets; the SeedMandala stops remain the only sanctioned component hex). `tsc` + `eslint
+src` clean. The specimen (`Serene Polish.dc.html`) remains the visual reference for QA.
+
+---
+
+## 2026-07-03 — Logo, loading & boot motion system — SeedMandala, LogoSpinner, boot screen, route veil
+
+**Why:** the design department shipped `design_handoff_logo_loading_motion/` — the app's
+whole waiting layer rebuilt around the company logo (the seed mandala). One boot sequence
+(draw → breathe → turn → glow) is the source of truth; every other waiting state is a
+smaller quotation of it. Supersedes the generic arc `Spinner` and any earlier lotus render.
+
+**What:**
+
+- **`SeedMandala` (`src/components/ui/SeedMandala.tsx`)** — THE procedural brand mark.
+  8 stroked circles, r=46, centers on a ring of radius exactly 46 around (100,100) at 45°
+  steps from −90° (offset === r → every circle passes through the exact center; the
+  crossings form the 8-petal seed flower — verified pixel-side-by-side against
+  `assets/serene-seed-mandala-1254.webp`). Variants: `gradient` (one linearGradient across
+  the whole mark, umber `#2B1D10` → gold `#C08A4E`, stroke 2.2), `currentColor` (stroke 7,
+  tiny in-control sizes), `darkDisc` (`#E8CFA0 → #C08A4E`, stroke 4, charcoal/scrim
+  grounds). `draw` (pathLength=1 trace, 1.15s `cubic-bezier(0.22,1,0.36,1)`, 90ms stagger)
+  and `spin` (s/rev) props. The three gradient stops are the ONLY sanctioned component hex
+  (brand-fixed, never theme-tinted). Spin/draw are class-driven (`.serene-logo-spin` /
+  `.serene-logo-draw` + `serene-logo-trace` keyframe in `design-tokens.css` §15) so
+  `prefers-reduced-motion` kills them — the mark rests finished and still.
+- **`AppBootScreen` (`components/layout/`, mounted in the dashboard layout)** — full-viewport
+  boot on `--neu-canvas`: 190px mark draws then breathes (scale 1→1.035, 4s, from 2.6s)
+  wrapping a 90s/rev turn (two nested wrappers so transforms compose); 420px accent glow
+  pulsing .25→.6 in phase with the breath; "SERENE" Playfair 600 26px with letter-spacing
+  opening .1em→.42em (1.4s, delay 1.5s); tagline fade-up at 2.1s; 220×8 inset progress
+  track (`--neu-well` + `--neu-shadow-inset`) with a 35% accent sweep from 2.4s. SSRs with
+  the shell (visible from first paint), plays once per hard load, fades out at ~3.4s
+  (~0.5s under reduced motion). Soft navigations never replay it (the layout persists).
+  New tokens: `--z-boot: 95`, `--z-veil: 90`.
+- **`LogoSpinner` (`src/components/ui/LogoSpinner.tsx`) replaces the arc `Spinner` —
+  `Spinner.tsx` is DELETED, never recreate it.** Mark at a fixed calm 3.5s/rev; sizes
+  `lg` 38-in-56 / `md` 27-in-40 inset cream wells (`--neu-surface` + `--neu-shadow-inset`),
+  `sm` 24 bare. All 22 call-site files swapped: centered loading regions (5 performance
+  drill modals, CompletedTasksModal, AdCreativeFormModal, TrainingAssetFormModal) →
+  `LogoSpinner md`; text-adjacent pending rows (WonDealModal, NewDealModal,
+  MyTasksCalendarView) → `LogoSpinner sm`; tiny in-control indicators (MessageBar send,
+  DictationButton, LeadInfoCard save states, PersonalDetailsCard, LeadNotesInput,
+  ElayaTrainingManager/NotesManager/AdCreativesManager delete buttons) → inline 14–16px
+  `currentColor` SeedMandala at 3.5s; ProfileAvatarSection's dark upload scrim → 27px
+  `darkDisc`.
+- **Button pending state** — 18px `currentColor` mark spinning 3.5s replaces the iconLeft
+  slot; `cursor: wait` (pointer events stay on so it shows; the disabled attribute still
+  swallows clicks); primary drops to opacity 0.85; new optional `loadingLabel` prop for
+  the progressive verb ("Saving…").
+- **Elaya thinking** — `ElayaGlyphDisc` gains `thinking`: the disc's static logo image
+  swaps for a spinning `darkDisc` mark at 8s/rev (30/44 of the disc). Wired to
+  `ElayaChatShell`'s in-transcript status row (28px, on the message-glyph rail) —
+  replaces the small static compass glyph while she thinks / runs tools.
+- **PageSkeleton shimmer** — the `.skeleton` opacity pulse is gone: the neu layer now
+  paints a left→right sheen (`--neu-well` 25% / `--neu-surface-high` 50% / `--neu-well`
+  75%, 200% background sweep, 1.8s linear, `serene-shimmer-sweep`), reduced-motion falls
+  back to the flat well tone. `skeletonStagger` now steps 150ms (capped 600ms).
+  New `SkeletonWatermark` — 150px mark top-right at opacity .10 turning 40s/rev — mounted
+  structurally by `PageHeaderSkeleton` (opt-out `watermark={false}`), so every composing
+  `loading.tsx` gets it for free.
+- **`RouteVeil` (`components/layout/`, mounted in the dashboard layout)** — full-page
+  route transitions: a cream gradient veil (`--neu-surface → --neu-well`) rises over the
+  outgoing page with a 56px mark spinning 3.5s, holds while the route resolves, lifts off
+  the top (2.6s choreography split rise 1.17s / hold ≥260ms / lift 1.17s on
+  `cubic-bezier(0.65,0,0.35,1)` — the hold stretches to real navigation time). Intent =
+  capture-phase click on same-origin links whose **pathname** differs (search-param-only
+  pushes — filter bars — never veil); arrival = `usePathname()` commit; 8s safety lift.
+  Skipped entirely under reduced motion.
+- **Spin speeds are law:** boot 90s · spinners/buttons/veil 3.5s · Elaya 8s · watermark
+  40s — never faster than 3.5s/rev. Every loop honors `prefers-reduced-motion: reduce`
+  (finished static mark, no loops).
+- The auth-layout mandala mask (`.serene-auth-mandala`) already used the correct
+  offset===r construction and stays as background atmosphere.
+- Registry updated in `src/components/CLAUDE.md` (SeedMandala + LogoSpinner rows; the
+  "every loading indicator" rule now points at LogoSpinner).
+
+---
+
+## 2026-07-03 — Neumorphic FINAL revision — Whisper/Marshmallow, 8-theme lineup, motion layer, logo glyph
+
+**Why:** the design department shipped the FINAL revision of the neumorphic handoff
+(`design_handoff_neumorphic_system/`), superseding the same-day first drop. Where the
+old values conflict, this package wins.
+
+**What:**
+
+- **Token layer superseded** (`src/styles/serene-neumorphic-tokens.css` rewritten):
+  the FINAL feel is **Whisper shadows** (raised `3px/8px .26/.70`, raised-sm `2px/6px`,
+  raised-lg `6px/16px`, hover `5px/12px`, pressed `2px/4px`) + **Marshmallow radii**
+  (`--neu-radius-card` 32 / panel 28 / field 22 / tile 18 / chip 14 / pill 999) — the
+  previous "Reference" depth (6/14px, .38/.42 alphas) and 24px card radii are obsolete;
+  exactly ONE depth and ONE radius scale exist. The legacy radius scale is bridged
+  (`--radius-md`→14, `--radius-lg`→22, `--radius-xl`→32) and card/panel shells were
+  re-pointed at the explicit `--neu-radius-card/-panel` roles (SectionCard, stat tiles,
+  domain cards, FloatingPanel, dropdown menus, NotificationPanel, toasts).
+- **Softened theme accents (design-approved):** the stock accents read too heavy on the
+  cream material. The neu layer now overrides each theme's `--theme-accent*` family —
+  earth honey gold `#D6BC82`, air powder sky `#97B5D2`, water seafoam `#8FC3B9`, fire
+  terracotta peach `#DC9877`, candy soft pink `#F0B5D2` — all with dark-ink `accent-fg`
+  (pastels never hold white). Stock values stay in `design-tokens.css` for the revert path.
+- **Eight-theme lineup; martini retired.** New full `[data-theme]` blocks in
+  `design-tokens.css`: **rose** (`#D9A0A5` — the system's reference accent), **moss**
+  (matcha sage `#A9C4A0`), **lilac** (`#C9C0E4` — the single purple). `themes.ts`
+  THEME_KEYS updated (ThemeSelector renders from it automatically); martini's blocks
+  removed; **migration 0157** moves `profiles.theme='martini'` → `'lilac'` and narrows
+  the CHECK to the eight keys; the hand-written `Profile.theme` union updated.
+  Theme scope rule: accent-role elements re-tint; surfaces/shadows/text, semantic
+  status chips, and `--domain-*` chart palettes never do.
+- **Dark mode:** `data-neu="dark"` accents now auto-lift lighter via `color-mix` so
+  they hold on charcoal.
+- **Motion layer (README appendix, shipped in the tokens file):** `.neu-reveal`
+  scroll-driven card entrance (`animation-timeline: view()`, `@supports` one-shot
+  fallback, ends at `transform: none`; adopted on SectionCard + dossier/helpdesk card
+  shells — never on react-grid-layout items), `.neu-draw`/`.neu-grow`/`.neu-sweep`
+  chart recipes, `.neu-interactive` springy transitions (also folded into the bridged
+  `--transition-interactive` so every Button consumer inherits the 220ms spring +
+  300ms shadow bloom), idle loops (breathe 3s, typing dots 1.2s/150ms, marquee 30s,
+  halo 2.6s, ✦ twinkle 5s) — all reduced-motion-gated.
+- **Elaya glyph = the company logo.** `public/elaya-glyph-192.png` (gold lotus mandala
+  on near-black); `ElayaGlyphDisc` now renders it as a circular image filling the
+  charcoal disc with the 3s breathe — chat assistant avatar, chat header, identity
+  card, and the floating widget FAB all inherit; tiny inline mentions (< 24px) keep
+  the ✦/compass mark via `ElayaGlyph`.
+- **Stray-value audit:** grepped components for old putty alphas (.38/.42), 14px
+  offsets, literal 24px card radii, and hardcoded `#D9A0A5` — none survived (the
+  first drop was token-disciplined); the only hit is `useChartTokens`' documented SSR
+  fallback, which matches the final grid spec.
+- Root `CLAUDE.md` Theme Quick Reference + `lib/CLAUDE.md` themes row updated to the
+  eight-theme lineup.
+
+---
+
+## 2026-07-03 — Neumorphic (Soft UI) restyle — token layer, global ground, full component sweep
+
+**Why:** the design department handed off a complete neumorphic design system
+(`design_handoff_neumorphic_system/` — README, token file, two high-fidelity HTML
+specimens covering the entire component inventory). The brief: recreate the look inside
+the existing React/Tailwind/CSS-variable conventions, keeping all six theme accents live.
+
+**What:**
+
+- **New token layer** `src/styles/serene-neumorphic-tokens.css`, imported after
+  `design-tokens.css` in `globals.css`. Ships the cream material (`--neu-canvas` #ECE8E1,
+  `--neu-surface`, `--neu-well`), the paired-shadow recipes (`--neu-shadow-raised-sm/
+  raised/raised-lg/hover/inset/pressed/chip/knob/input/track/tab-active/modal`), the 1px
+  white hairline `--neu-edge`, the floating-input recipe (`--neu-input-bg` gradient
+  sheen plus inner top highlight), the pastel support family (sage/powder/butter/lilac/
+  peach/teal plus danger, each with a text-safe `-deep`), exact specimen chip pairs
+  (`--neu-chip-*-bg/-fg`), the Elaya charcoal disc tokens, and the warm-charcoal
+  `data-neu="dark"` variant. **Departure from the handoff, by request:** the English-rose
+  accent is not hardcoded — `--neu-accent*` derives from the active theme's
+  `--theme-accent*` family (gradient via `color-mix`), so Earth/Air/Water/Fire/Martini/
+  Candy accents all work on the neumorphic material.
+- **Legacy token bridge** (same file): re-points `--theme-canvas/paper/paper-subtle/
+  paper-border`, all text tokens, the sidebar family, `--shadow-1/2/3/4/inset/focus/
+  accent-*`, overlays, the semantic `--color-*` family, and the `--status-*` family
+  (pastel fills + deep labels; solids → pastel bases for charts) at the neu system —
+  converting every token-compliant component in one move. Also restyles the
+  `.serene-btn-*` variants (rose-gradient primary, raised secondary, soft-pastel
+  danger/success), `.status-pill` (chip shadow + hairline), `.skeleton` (flat pulse on
+  the well), section labels (`.type-eyebrow`/`.label-micro` → accent-deep), scrollbars
+  (warm putty thumbs), and adds the reference keyframes (`serene-neu-dot` typing dots,
+  `serene-neu-halo` 2.6s MotionButton halo, `serene-neu-listening`), all
+  reduced-motion-gated.
+- **Global ground** (`globals.css`): `color-scheme` light (dark under `data-neu="dark"`),
+  the dark-canvas + floating-paper shell split retires (`.serene-shell-paper` becomes the
+  cream ground, no radius/shadow), `.serene-input`/`.serene-input-auth` become floating
+  fields (Rule 3), the auth card becomes a raised-lg cream panel, the auth grain is
+  removed, mobile trigger + Elaya FAB become raised soft tiles with hover lift.
+- **Sidebar** becomes the cream raised rail: floating card on the canvas (md+ margins +
+  radius, drawer rounds its right edge), active nav item = accent wash + chip lift +
+  accent-gradient icon tile (selection grammar — never inset), dark-ink logo variant.
+- **Core primitives** restyled to the specimen grammar: Toggle (inset well track, accent
+  gradient knob), TabSelector (satin inset tray, active tab floats as a gradient pill),
+  SearchBar (floating pill with sheen), FilterDropdown (applied = accent wash + float;
+  selected options wash + chip shadow; gradient check tiles), FloatingPanel +
+  dropdown menus (surface-high, hairline, raised-lg), Dialog/ConfirmDialog (warm
+  `--neu-scrim` + 3px blur — the sanctioned scrim treatment for this system — and
+  raised modal panels), plus a parallel sweep across the remaining `ui/` primitives,
+  dashboard/performance widgets, leads/deals/campaigns/intelligence components,
+  whatsapp/elaya/notifications/settings/admin surfaces, and the auth screens.
+- **Charts:** `useChartTokens` series → theme accent + pastel family, warm putty dashed
+  gridlines (`--neu-chart-grid`), tooltip on surface-high + hairline; `ChartFrame`
+  becomes the raised gradient chart panel (never a well); bar corner radius 6.
+- **Elaya:** new `ElayaGlyphDisc` export (`ui/elaya-glyph.tsx`) — the breathing glyph on
+  the charcoal disc, the one dark-first surface that survives (`--neu-glyph-disc`).
+- **Grammar polish batch (chat + settings + auth):** WhatsApp `MessageBubble` — outbound
+  bubbles = soft sage fill (`--neu-chip-sage-bg`), inbound = surface-high, both with
+  hairline + chip shadow + 20px/6px-tail radius, delivery double-ticks in
+  `--neu-sage-deep`, media chip fill moves off the (now-hairline) border token to
+  `--neu-well`; `ConversationRow` active = accent-wash float (chip shadow + hairline,
+  `--neu-accent-deep` label); `ElayaMessageBubble` (assistant surface-high / user accent
+  wash, same chip chrome) and the glyph mounts in the chat header, identity card, and
+  bubble rail move onto `ElayaGlyphDisc`; `NotificationPanel` → surface-high raised-lg
+  panel (18px), `NotificationItem` hover = faint accent wash (never the well tone);
+  selected-state grammar (wash + chip shadow + hairline, never a coloured border) applied
+  to `ThemeSelector`/`IconSelector` swatches (accent ring kept), `AgentSettingsTable`
+  work-day picker, `ElayaPersonaSettings` chips, `SuggestionComposerModal` type chips
+  (also drops its one hardcoded `#fff`); `SettingsLinkCard` hover lift →
+  `--neu-shadow-hover`; `PasswordChangeForm` focus/blur handlers stop sinking the field
+  (accent ring over `--neu-shadow-input`); `SubTaskModal` backdrop → `--neu-scrim` +
+  3px blur (the old canvas-72% formula no longer dims); `ProfileAvatarSection` camera
+  overlay icon → `--neu-on-accent-soft` (canvas-text is now a dark ink); auth brand
+  serif titles → `--neu-text-primary` explicitly.
+
+**Contracts kept:** component APIs, data flow, copy, `m as motion`, transform/opacity
+animation rule, reduced-motion gates, hover gated to fine pointers, the z-scale, and all
+six themes. The old theme-token *values* in `design-tokens.css` are untouched — removing
+the one `@import` line reverts the entire restyle.
+
+---
+
+## 2026-07-03 — Docs: `docs/design/design.md` — design-department handoff file (docs-only)
+
+**Why:** the design team needs one file that maps the entire UI (vision, tokens, all
+primitives, modals, cards, feature surfaces, guardrails) and gives them a structured place
+to log enhancement proposals without destabilising production.
+
+**What:** new `docs/design/design.md`. It is a guided tour plus an enhancement workflow,
+not a new authority: it points at `DESIGN-DNA.md`, `design-tokens.css`,
+`src/components/CLAUDE.md`, and `The_Rules.md` as the law (Section 19 authority map).
+Contents: the five-point vision, the surface contract, the six themes, the full token
+system (type, spacing, radius, elevation, z, motion), the motion rules and vocabulary,
+layout anatomy, the 12 core components with the complete `ui/` primitive inventory, the
+modal/toast/chart systems, the ten micro-details, a screen-by-screen feature-surface
+inventory (leads, dashboard, tasks, whatsapp, elaya, and the rest), the Elaya design
+language, data-display and loading rules, the design-edition never-do list, deferred
+design targets, and Sections 20 to 22: the enhancement proposal template, the backlog,
+and the shipped log.
+
+---
+
 ## 2026-07-02 — Docs: full-tree audit, restructure, and rewrite (docs-only)
 
 **Why:** the docs tree had drifted 19 migrations behind the code (last verified 2026-06-20

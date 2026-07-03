@@ -84,9 +84,13 @@ export function ChartFrame({ height, className, style, children }: ChartFramePro
   return (
     <div
       className={className}
+      // Charts sit RAISED on the gradient chart panel — never in a well
+      // (README §Charts; the .neu-chart-panel recipe).
       style={{
-        background:   'var(--theme-paper)',
-        borderRadius: 'var(--radius-md)',
+        background:   'var(--neu-input-bg)',
+        border:       '1px solid var(--neu-input-edge)',
+        boxShadow:    'var(--neu-shadow-input)',
+        borderRadius: 'var(--radius-lg)',
         ...(isFill
           ? { position: 'relative', width: '100%', height: '100%', minHeight: 0 }
           : null),

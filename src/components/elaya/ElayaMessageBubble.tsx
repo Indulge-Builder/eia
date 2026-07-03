@@ -1,16 +1,16 @@
 'use client';
 
-// Display-only chat bubble (A-06). User bubbles sit right on --theme-accent-surface;
-// Elaya bubbles sit left on --theme-paper-subtle (mirrors the WhatsApp bubble
-// surface contract). Radius scale is --radius-lg with the sender-side corner
-// tightened to --radius-xs — the DESIGN-DNA §15.4 "tail detail" (one scale, V-07);
-// a hairline shadow (--shadow-1) gives the gentle lift the DNA spec calls for.
-// `showGlyph` renders Elaya's breathing mark in a soft accent disc beside her
+// Display-only chat bubble (A-06). User bubbles sit right on the accent wash;
+// Elaya bubbles sit left on --neu-surface-high (mirrors the WhatsApp bubble
+// surface contract). 20px radius with the sender-side corner tightened to a
+// 6px tail — the DESIGN-DNA §15.4 "tail detail" (one scale, V-07); the paired
+// chip shadow (--neu-shadow-chip) gives the gentle lift the soft-UI spec calls for.
+// `showGlyph` mounts Elaya's breathing mark on her charcoal disc beside her
 // bubbles (her presence, not an avatar; a static glyph = absent).
 
 import { m as motion } from 'framer-motion';
 import { ChatMarkdown } from '@/components/ui/ChatMarkdown';
-import { ElayaGlyph } from '@/components/ui/elaya-glyph';
+import { ElayaGlyphDisc } from '@/components/ui/elaya-glyph';
 import { FAST_DURATION, EASE_OUT_EXPO } from '@/lib/constants/motion';
 
 export type ElayaUiMessage = {
@@ -37,36 +37,26 @@ export function ElayaMessageBubble({
       style={{ gap: 'var(--space-3)' }}
     >
       {!isUser && showGlyph && (
-        <span
-          aria-hidden="true"
-          className="flex items-center justify-center"
-          style={{
-            color: 'var(--theme-accent)',
-            flexShrink: 0,
-            width: '28px',
-            height: '28px',
-            marginTop: '0.1rem',
-            borderRadius: 'var(--radius-full)',
-            background: 'var(--theme-accent-surface)',
-            border: '1px solid color-mix(in srgb, var(--theme-accent) 16%, transparent)',
-          }}
-        >
-          <ElayaGlyph size={16} />
+        <span aria-hidden="true" style={{ display: 'inline-flex', marginTop: '0.1rem' }}>
+          <ElayaGlyphDisc size={28} glyphSize={16} />
         </span>
       )}
       <div
         className="max-w-[82%] md:max-w-[72%]"
         style={{
-          background: isUser ? 'var(--theme-accent-surface)' : 'var(--theme-paper-subtle)',
-          border: isUser
-            ? '1px solid color-mix(in srgb, var(--theme-accent) 20%, transparent)'
-            : '1px solid var(--theme-paper-border)',
+          // User floats on the accent wash (--neu-chat-user-bg — lifted-accent
+          // wash under [data-neu="dark"]); Elaya on the raised high surface
+          // (neumorphic chip chrome — paired shadow + hairline, never inset).
+          background: isUser
+            ? 'var(--neu-chat-user-bg)'
+            : 'var(--neu-surface-high)',
+          border: '1px solid var(--neu-edge)',
           // Refined asymmetric radius — the corner nearest the sender's edge is
-          // tighter, the chat-bubble convention (one radius value, V-07).
+          // tighter, the chat-bubble convention (one scale, V-07).
           borderRadius: isUser
-            ? 'var(--radius-lg) var(--radius-lg) var(--radius-xs) var(--radius-lg)'
-            : 'var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs)',
-          boxShadow: 'var(--shadow-1)',
+            ? '20px 20px 6px 20px'
+            : '20px 20px 20px 6px',
+          boxShadow: 'var(--neu-shadow-chip)',
           padding: 'var(--space-3) var(--space-4)',
           color: 'var(--theme-text-primary)',
           fontSize: 'var(--text-sm)',

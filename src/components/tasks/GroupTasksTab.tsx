@@ -821,7 +821,10 @@ const GroupRow = memo(function GroupRow({
           <CollapseReveal key={`subtasks-${group.id}`} duration={EXIT_DURATION}>
             <div style={{ height: 1, background: 'var(--theme-paper-border)' }} />
 
-            <div style={{ background: 'var(--theme-paper-subtle)' }}>
+            {/* Expanded area sits on the card's own material — the well tone
+                (--theme-paper-subtle → --neu-well) is state-only (neu Rule 4)
+                and read as a dull band here. The hairline above is the divider. */}
+            <div style={{ background: 'transparent' }}>
 
               {isLoadingSubtasks && (
                 <div style={{ padding: 'var(--space-3) var(--space-5) var(--space-2)' }}>
@@ -832,7 +835,7 @@ const GroupRow = memo(function GroupRow({
                         height:       10,
                         width:        `${w}%`,
                         borderRadius: 'var(--radius-full)',
-                        background:   'var(--theme-paper-border)',
+                        background:   'var(--theme-paper-subtle)',
                         marginBottom: i < 2 ? 'var(--space-3)' : 0,
                         animation:    `pulse 1.5s ${i * 0.1}s ease-in-out infinite`,
                       }}
@@ -1014,7 +1017,8 @@ const GroupRow = memo(function GroupRow({
                         gap:        'var(--space-2)',
                         padding:      'var(--space-3) var(--space-4)',
                         borderRadius: 'var(--radius-md)',
-                        background:   'var(--theme-paper)',
+                        // Sunken input row against the card paper (well = track/input state)
+                        background:   'var(--theme-paper-subtle)',
                         border:       '1px solid color-mix(in srgb, var(--theme-paper-border) 70%, transparent)',
                       }}
                     >
@@ -1127,7 +1131,8 @@ const GroupRow = memo(function GroupRow({
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.color = 'var(--theme-text-secondary)';
-                      e.currentTarget.style.background = 'var(--theme-paper)';
+                      // Hover fill against the card paper (was paper-on-paper — invisible)
+                      e.currentTarget.style.background = 'var(--theme-paper-subtle)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.color = 'var(--theme-text-tertiary)';

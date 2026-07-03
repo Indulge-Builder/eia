@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&amp;family=Geist:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; background: #ECE8E1; }
+    * { box-sizing: border-box; }
+    ::selection { background: rgba(217,160,165,0.28); }
+    input::placeholder { color: #ABA396; }
+  </style>
+</helmet>
+
+<div style="min-height:100vh;background:#ECE8E1;font-family:'Geist',system-ui,sans-serif;color:#38332B;padding:64px 48px 96px;display:flex;justify-content:center;">
+<div style="width:100%;max-width:1320px;display:flex;flex-direction:column;gap:72px;">
+
+  <!-- ═══════════ MASTHEAD ═══════════ -->
+  <div data-screen-label="Masthead" style="display:flex;flex-direction:column;gap:18px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="color:#D9A0A5;font-size:18px;">✦</span>
+      <span style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;letter-spacing:0.34em;padding-left:0.34em;color:#38332B;">SERENE</span>
+    </div>
+    <div style="font-family:'Playfair Display',serif;font-size:52px;font-weight:500;line-height:1.08;color:#38332B;max-width:720px;text-wrap:balance;">Soft UI — the neumorphic system</div>
+    <div style="font-size:16px;color:#8A8274;max-width:640px;line-height:1.6;">Every surface is carved from one warm material. Light arrives from the top-left; depth — not borders, not color — separates what you can touch from where content lives.</div>
+    <div style="display:flex;gap:12px;margin-top:8px;">
+      <div style="height:36px;padding:0 18px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;font-size:12px;font-weight:500;letter-spacing:0.08em;color:#8A8274;">DEPTH 4 / 10</div>
+      <div style="height:36px;padding:0 18px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;font-size:12px;font-weight:500;letter-spacing:0.08em;color:#8A8274;">CREAM + DARK</div>
+      <div style="height:36px;padding:0 18px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;font-size:12px;font-weight:500;letter-spacing:0.08em;color:#8A8274;">FULL NEUMORPHIC</div>
+    </div>
+  </div>
+
+  <!-- ═══════════ FOUNDATIONS ═══════════ -->
+  <div data-screen-label="Foundations" style="display:flex;flex-direction:column;gap:28px;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-size:12px;font-weight:600;letter-spacing:0.22em;color:#B57F84;text-transform:uppercase;padding-left:0.22em;">01 · Foundations</div>
+      <div style="font-family:'Playfair Display',serif;font-size:30px;font-weight:600;color:#38332B;">One material, one light</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;">
+      <!-- Palette -->
+      <div style="background:#F1EDE6;border-radius:24px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:32px;display:flex;flex-direction:column;gap:24px;">
+        <div style="font-size:12px;font-weight:600;letter-spacing:0.18em;color:#8A8274;text-transform:uppercase;">Surfaces &amp; ink</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:20px;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+            <div style="width:64px;height:64px;border-radius:50%;background:#ECE8E1;box-shadow:5px 5px 12px rgba(166,156,140,0.38),-5px -5px 12px rgba(255,255,255,0.85);"></div>
+            <div style="font-size:12px;font-weight:500;color:#38332B;">Canvas</div>
+            <div style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">#ECE8E1</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+            <div style="width:64px;height:64px;border-radius:50%;background:#F1EDE6;box-shadow:5px 5px 12px rgba(166,156,140,0.38),-5px -5px 12px rgba(255,255,255,0.85);"></div>
+            <div style="font-size:12px;font-weight:500;color:#38332B;">Surface</div>
+            <div style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">#F1EDE6</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+            <div style="width:64px;height:64px;border-radius:50%;background:#E9E4DB;box-shadow:inset 3px 3px 7px rgba(166,156,140,0.38),inset -3px -3px 7px rgba(255,255,255,0.85);"></div>
+            <div style="font-size:12px;font-weight:500;color:#38332B;">Well</div>
+            <div style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">#E9E4DB</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+            <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(145deg,#E3AFB3,#CD8F94);box-shadow:5px 5px 12px rgba(166,156,140,0.42),-5px -5px 12px rgba(255,255,255,0.85);"></div>
+            <div style="font-size:12px;font-weight:500;color:#38332B;">Rose</div>
+            <div style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">#D9A0A5</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;"><div style="width:16px;height:16px;border-radius:50%;background:#38332B;"></div><span style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">ink #38332B</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><div style="width:16px;height:16px;border-radius:50%;background:#8A8274;"></div><span style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">secondary #8A8274</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><div style="width:16px;height:16px;border-radius:50%;background:#93B48C;"></div><span style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">success #93B48C</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><div style="width:16px;height:16px;border-radius:50%;background:#CE8073;"></div><span style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">danger #CE8073</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><div style="width:16px;height:16px;border-radius:50%;background:#A79FCE;"></div><span style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">info #A79FCE</span></div>
+        </div>
+      </div>
+
+      <!-- Type + rules -->
+      <div style="background:#F1EDE6;border-radius:24px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:32px;display:flex;flex-direction:column;gap:20px;">
+        <div style="font-size:12px;font-weight:600;letter-spacing:0.18em;color:#8A8274;text-transform:uppercase;">Type &amp; rules</div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="font-family:'Playfair Display',serif;font-size:30px;font-weight:600;color:#38332B;">Good morning, Arfam</div>
+          <div style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">Playfair Display 600 — display, numbers</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div style="font-size:15px;color:#38332B;">Here's what's happening with Indulge today.</div>
+          <div style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">Geist 400/500 — UI body, labels</div>
+        </div>
+        <div style="height:1px;background:rgba(166,156,140,0.25);"></div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;color:#8A8274;line-height:1.55;">
+          <div style="display:flex;gap:10px;"><span style="color:#B57F84;">—</span><span>Shadows come in pairs: dark at 135°, highlight at 315°. Never a lone drop shadow.</span></div>
+          <div style="display:flex;gap:10px;"><span style="color:#B57F84;">—</span><span>The canvas is a warm midtone. Pure white or black kills the relief.</span></div>
+          <div style="display:flex;gap:10px;"><span style="color:#B57F84;">—</span><span>Raised = touchable — inputs float too, with a fine top highlight. Inset marks only pressed, selected and track states.</span></div>
+          <div style="display:flex;gap:10px;"><span style="color:#B57F84;">—</span><span>Radii: 24 cards · 14 tiles · 999 pills. Borders are a 1px white hairline, nothing more.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ DEPTH VARIATIONS ═══════════ -->
+  <div data-screen-label="Depth variations" style="display:flex;flex-direction:column;gap:28px;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-size:12px;font-weight:600;letter-spacing:0.22em;color:#B57F84;text-transform:uppercase;padding-left:0.22em;">02 · Depth</div>
+      <div style="font-family:'Playfair Display',serif;font-size:30px;font-weight:600;color:#38332B;">Three recipes, one default</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px;">
+
+      <!-- A — Whisper -->
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <div style="display:flex;align-items:baseline;gap:10px;">
+          <span style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:#38332B;">A · Whisper</span>
+          <span style="font-size:12px;color:#ABA396;">depth 2</span>
+        </div>
+        <div style="background:#ECE8E1;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:18px;">
+          <div style="background:#F1EDE6;border-radius:20px;border:1px solid rgba(255,255,255,0.5);box-shadow:3px 3px 8px rgba(166,156,140,0.28),-3px -3px 8px rgba(255,255,255,0.7);padding:20px;display:flex;align-items:center;gap:14px;">
+            <div style="width:40px;height:40px;border-radius:13px;background:#F1EDE6;box-shadow:2px 2px 6px rgba(166,156,140,0.25),-2px -2px 6px rgba(255,255,255,0.65);display:flex;align-items:center;justify-content:center;color:#B57F84;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px;">
+              <div style="font-size:12px;color:#8A8274;">Total Tasks</div>
+              <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:600;color:#38332B;">48</div>
+            </div>
+          </div>
+          <div style="height:44px;border-radius:999px;background:linear-gradient(180deg,#F6F3EC,#F0ECE4);border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.24),-3px -3px 8px rgba(255,255,255,0.65),inset 0 1px 0 rgba(255,255,255,0.8);display:flex;align-items:center;padding:0 18px;font-size:13px;color:#ABA396;">Search anything…</div>
+          <div style="height:44px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.5);box-shadow:3px 3px 8px rgba(166,156,140,0.28),-3px -3px 8px rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#38332B;">View all activities</div>
+        </div>
+        <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+          <div style="font-family:ui-monospace,monospace;font-size:10px;line-height:1.7;color:#ABA396;">3px 3px 8px rgba(166,156,140,.28)<br>-3px -3px 8px rgba(255,255,255,.70)</div>
+        </sc-if>
+      </div>
+
+      <!-- B — Reference (default) -->
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <div style="display:flex;align-items:baseline;gap:10px;">
+          <span style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:#38332B;">B · Reference</span>
+          <span style="font-size:12px;color:#ABA396;">depth 4</span>
+          <span style="height:22px;padding:0 12px;border-radius:999px;background:linear-gradient(145deg,#E3AFB3,#CD8F94);display:inline-flex;align-items:center;font-size:10px;font-weight:600;letter-spacing:0.1em;color:#45272A;">DEFAULT</span>
+        </div>
+        <div style="background:#ECE8E1;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:18px;box-shadow:0 0 0 1px rgba(217,160,165,0.35);">
+          <div style="background:#F1EDE6;border-radius:20px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:20px;display:flex;align-items:center;gap:14px;">
+            <div style="width:40px;height:40px;border-radius:13px;background:#F1EDE6;box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;color:#B57F84;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px;">
+              <div style="font-size:12px;color:#8A8274;">Total Tasks</div>
+              <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:600;color:#38332B;">48</div>
+            </div>
+          </div>
+          <div style="height:44px;border-radius:999px;background:linear-gradient(180deg,#F7F4EE,#F1EDE6);border:1px solid rgba(255,255,255,0.65);box-shadow:4px 4px 10px rgba(166,156,140,0.3),-4px -4px 10px rgba(255,255,255,0.85),inset 0 1px 0 rgba(255,255,255,0.9);display:flex;align-items:center;padding:0 18px;font-size:13px;color:#ABA396;">Search anything…</div>
+          <div style="height:44px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#38332B;">View all activities</div>
+        </div>
+        <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+          <div style="font-family:ui-monospace,monospace;font-size:10px;line-height:1.7;color:#ABA396;">6px 6px 14px rgba(166,156,140,.38)<br>-6px -6px 14px rgba(255,255,255,.85)</div>
+        </sc-if>
+      </div>
+
+      <!-- C — Sculpted -->
+      <div style="display:flex;flex-direction:column;gap:20px;">
+        <div style="display:flex;align-items:baseline;gap:10px;">
+          <span style="font-family:'Playfair Display',serif;font-size:20px;font-weight:600;color:#38332B;">C · Sculpted</span>
+          <span style="font-size:12px;color:#ABA396;">depth 6</span>
+        </div>
+        <div style="background:#ECE8E1;border-radius:24px;padding:28px;display:flex;flex-direction:column;gap:18px;">
+          <div style="background:#F1EDE6;border-radius:20px;border:1px solid rgba(255,255,255,0.6);box-shadow:12px 12px 28px rgba(158,146,126,0.5),-12px -12px 28px rgba(255,255,255,0.95);padding:20px;display:flex;align-items:center;gap:14px;">
+            <div style="width:40px;height:40px;border-radius:13px;background:#F1EDE6;box-shadow:5px 5px 12px rgba(158,146,126,0.45),-5px -5px 12px rgba(255,255,255,0.9);display:flex;align-items:center;justify-content:center;color:#B57F84;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px;">
+              <div style="font-size:12px;color:#8A8274;">Total Tasks</div>
+              <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:600;color:#38332B;">48</div>
+            </div>
+          </div>
+          <div style="height:44px;border-radius:999px;background:linear-gradient(180deg,#F7F4EE,#F0ECE4);border:1px solid rgba(255,255,255,0.7);box-shadow:8px 8px 18px rgba(158,146,126,0.45),-8px -8px 18px rgba(255,255,255,0.95),inset 0 1px 0 rgba(255,255,255,0.95);display:flex;align-items:center;padding:0 18px;font-size:13px;color:#ABA396;">Search anything…</div>
+          <div style="height:44px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.6);box-shadow:12px 12px 28px rgba(158,146,126,0.5),-12px -12px 28px rgba(255,255,255,0.95);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#38332B;">View all activities</div>
+        </div>
+        <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+          <div style="font-family:ui-monospace,monospace;font-size:10px;line-height:1.7;color:#ABA396;">12px 12px 28px rgba(158,146,126,.50)<br>-12px -12px 28px rgba(255,255,255,.95)</div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ COMPONENTS ═══════════ -->
+  <div data-screen-label="Components — cream" style="display:flex;flex-direction:column;gap:28px;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-size:12px;font-weight:600;letter-spacing:0.22em;color:#B57F84;text-transform:uppercase;padding-left:0.22em;">03 · Components</div>
+      <div style="font-family:'Playfair Display',serif;font-size:30px;font-weight:600;color:#38332B;">The working set</div>
+    </div>
+
+    <!-- Stat tiles -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:28px;">
+      <div style="background:#F1EDE6;border-radius:24px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:24px;display:flex;align-items:center;gap:16px;">
+        <div style="width:46px;height:46px;border-radius:15px;background:#F1EDE6;box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;color:#B57F84;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div style="font-size:13px;font-weight:500;color:#8A8274;">Total Tasks</div>
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#38332B;line-height:1.1;">48</div>
+          <div style="font-size:11px;font-weight:500;color:#93B48C;">↑ 12% from yesterday</div>
+        </div>
+      </div>
+      <div style="background:#F1EDE6;border-radius:24px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:24px;display:flex;align-items:center;gap:16px;">
+        <div style="width:46px;height:46px;border-radius:15px;background:#F1EDE6;box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;color:#A79FCE;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div style="font-size:13px;font-weight:500;color:#8A8274;">Clients</div>
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#38332B;line-height:1.1;">24</div>
+          <div style="font-size:11px;font-weight:500;color:#93B48C;">↑ 8% from last week</div>
+        </div>
+      </div>
+      <div style="background:#F1EDE6;border-radius:24px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:24px;display:flex;align-items:center;gap:16px;">
+        <div style="width:46px;height:46px;border-radius:15px;background:#F1EDE6;box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;color:#CE8073;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path></svg>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div style="font-size:13px;font-weight:500;color:#8A8274;">Revenue</div>
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#38332B;line-height:1.1;">₹ 12.8L</div>
+          <div style="font-size:11px;font-weight:500;color:#93B48C;">↑ 15% from last month</div>
+        </div>
+      </div>
+      <div style="background:#F1EDE6;border-radius:24px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:24px;display:flex;align-items:center;gap:16px;">
+        <div style="width:46px;height:46px;border-radius:15px;background:#F1EDE6;box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;color:#8A8274;flex-shrink:0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <div style="font-size:13px;font-weight:500;color:#8A8274;">Team Members</div>
+          <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#38332B;line-height:1.1;">18</div>
+          <div style="font-size:11px;font-weight:500;color:#ABA396;">— No change</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar + line chart -->
+    <div style="display:grid;grid-template-columns:300px 1fr;gap:28px;align-items:start;">
+      <!-- Sidebar specimen -->
+      <div style="background:#F1EDE6;border-radius:28px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:24px 20px;display:flex;flex-direction:column;gap:24px;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0 4px;">
+          <span style="color:#D9A0A5;font-size:14px;">✦</span>
+          <span style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;letter-spacing:0.34em;padding-left:0.34em;color:#38332B;">SERENE</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:18px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);cursor:pointer;">
+            <div style="width:38px;height:38px;border-radius:13px;background:linear-gradient(145deg,#E3AFB3,#CD8F94);box-shadow:3px 3px 8px rgba(166,156,140,0.45),-2px -2px 6px rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;color:#FDF9F0;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </div>
+            <span style="font-size:14px;font-weight:600;color:#38332B;">Dashboard</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:18px;cursor:pointer;" style-hover="background:rgba(217,160,165,0.08);">
+            <div style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;color:#8A8274;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </div>
+            <span style="font-size:14px;font-weight:500;color:#8A8274;">Tasks</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:18px;cursor:pointer;" style-hover="background:rgba(217,160,165,0.08);">
+            <div style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;color:#8A8274;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></rect></svg>
+            </div>
+            <span style="font-size:14px;font-weight:500;color:#8A8274;">Calendar</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:18px;cursor:pointer;" style-hover="background:rgba(217,160,165,0.08);">
+            <div style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;color:#8A8274;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </div>
+            <span style="font-size:14px;font-weight:500;color:#8A8274;">Clients</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:18px;cursor:pointer;" style-hover="background:rgba(217,160,165,0.08);">
+            <div style="width:38px;height:38px;display:flex;align-items:center;justify-content:center;color:#8A8274;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <span style="font-size:14px;font-weight:500;color:#8A8274;">Finance</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);">
+          <div style="width:36px;height:36px;border-radius:50%;background:#F3EFE8;border:1px solid rgba(255,255,255,0.6);box-shadow:2px 2px 6px rgba(166,156,140,0.35),-2px -2px 6px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#B57F84;">AA</div>
+          <div style="display:flex;flex-direction:column;gap:0px;">
+            <span style="font-size:13px;font-weight:600;color:#38332B;">Arfam Alam</span>
+            <span style="font-size:11px;color:#ABA396;">Administrator</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Line chart card -->
+      <div style="background:#F1EDE6;border-radius:28px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:28px;display:flex;flex-direction:column;gap:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:600;color:#38332B;">Task Overview</div>
+          <div style="height:38px;padding:0 18px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;gap:8px;font-size:12px;font-weight:500;color:#8A8274;cursor:pointer;" style-hover="box-shadow:5px 5px 12px rgba(166,156,140,0.42),-5px -5px 12px rgba(255,255,255,0.9);" style-active="box-shadow:inset 2px 2px 5px rgba(166,156,140,0.45),inset -2px -2px 5px rgba(255,255,255,0.7);">
+            This Week
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </div>
+        </div>
+        <div style="position:relative;background:linear-gradient(180deg,#F6F3EC,#EFEAE2);border:1px solid rgba(255,255,255,0.55);border-radius:20px;box-shadow:3px 3px 8px rgba(166,156,140,0.22),-3px -3px 8px rgba(255,255,255,0.7),inset 0 1px 0 rgba(255,255,255,0.8);padding:24px 20px 14px;">
+          <svg viewBox="0 0 560 200" style="width:100%;height:auto;display:block;">
+            <defs>
+              <linearGradient id="neuArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#D9A0A5" stop-opacity="0.28"></stop>
+                <stop offset="100%" stop-color="#D9A0A5" stop-opacity="0"></stop>
+              </linearGradient>
+            </defs>
+            <line x1="20" y1="45" x2="540" y2="45" stroke="rgba(166,156,140,0.22)" stroke-width="1" stroke-dasharray="2 5"></line>
+            <line x1="20" y1="110" x2="540" y2="110" stroke="rgba(166,156,140,0.22)" stroke-width="1" stroke-dasharray="2 5"></line>
+            <line x1="20" y1="175" x2="540" y2="175" stroke="rgba(166,156,140,0.3)" stroke-width="1"></line>
+            <path d="M20,152 C55,124 75,92 105,92 C138,92 155,104 190,103 C232,102 245,58 275,56 C310,54 330,84 360,83 C398,82 420,62 445,62 C482,62 508,92 540,97 L540,175 L20,175 Z" fill="url(#neuArea)"></path>
+            <path d="M20,152 C55,124 75,92 105,92 C138,92 155,104 190,103 C232,102 245,58 275,56 C310,54 330,84 360,83 C398,82 420,62 445,62 C482,62 508,92 540,97" fill="none" stroke="#D9A0A5" stroke-width="2.2" stroke-linecap="round"></path>
+            <circle cx="105" cy="92" r="4" fill="#F1EDE6" stroke="#D9A0A5" stroke-width="2"></circle>
+            <circle cx="190" cy="103" r="4" fill="#F1EDE6" stroke="#D9A0A5" stroke-width="2"></circle>
+            <circle cx="275" cy="56" r="4.5" fill="#D9A0A5" stroke="#F1EDE6" stroke-width="2"></circle>
+            <circle cx="360" cy="83" r="4" fill="#F1EDE6" stroke="#D9A0A5" stroke-width="2"></circle>
+            <circle cx="445" cy="62" r="4" fill="#F1EDE6" stroke="#D9A0A5" stroke-width="2"></circle>
+          </svg>
+          <div style="position:absolute;left:42%;top:2%;height:32px;padding:0 14px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.6);box-shadow:4px 4px 10px rgba(166,156,140,0.4),-4px -4px 10px rgba(255,255,255,0.85);display:flex;align-items:center;font-size:11px;font-weight:600;color:#38332B;">42 Tasks</div>
+          <div style="display:flex;justify-content:space-between;padding:10px 6px 0;font-size:11px;color:#ABA396;">
+            <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+          </div>
+        </div>
+        <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+          <div style="font-family:ui-monospace,monospace;font-size:10px;color:#ABA396;">chart panel: raised, gradient sheen · line: rose 2.2px · area: rose 28% → 0%</div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- Donut + activity list -->
+    <div style="display:grid;grid-template-columns:440px 1fr;gap:28px;align-items:stretch;">
+      <div style="background:#F1EDE6;border-radius:28px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:28px;display:flex;flex-direction:column;gap:20px;">
+        <div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:600;color:#38332B;">Revenue Overview</div>
+        <div style="display:flex;align-items:center;gap:28px;">
+          <div style="position:relative;width:180px;height:180px;flex-shrink:0;">
+            <div style="position:absolute;inset:0;border-radius:50%;background:#F1EDE6;border:1px solid rgba(255,255,255,0.6);box-shadow:8px 8px 20px rgba(166,156,140,0.42),-8px -8px 20px rgba(255,255,255,0.9);"></div>
+            <svg viewBox="0 0 180 180" style="position:absolute;inset:0;transform:rotate(-90deg);">
+              <circle cx="90" cy="90" r="70" fill="none" stroke="#D9A0A5" stroke-width="22" stroke-dasharray="263.9 439.8" stroke-dashoffset="0"></circle>
+              <circle cx="90" cy="90" r="70" fill="none" stroke="#E6CFA3" stroke-width="22" stroke-dasharray="110 439.8" stroke-dashoffset="-263.9"></circle>
+              <circle cx="90" cy="90" r="70" fill="none" stroke="#9FBF9C" stroke-width="22" stroke-dasharray="44 439.8" stroke-dashoffset="-373.9"></circle>
+              <circle cx="90" cy="90" r="70" fill="none" stroke="#A79FCE" stroke-width="22" stroke-dasharray="21.9 439.8" stroke-dashoffset="-417.9"></circle>
+            </svg>
+            <div style="position:absolute;inset:34px;border-radius:50%;background:#F3EFE8;border:1px solid rgba(255,255,255,0.55);box-shadow:5px 5px 12px rgba(166,156,140,0.38),-5px -5px 12px rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+              <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:#38332B;">₹ 12.8L</div>
+              <div style="font-size:10px;color:#ABA396;">Total Revenue</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;flex:1;">
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+              <div style="display:flex;align-items:center;gap:10px;color:#8A8274;"><div style="width:12px;height:12px;border-radius:50%;background:#D9A0A5;box-shadow:1px 1px 3px rgba(166,156,140,0.4);"></div>Projects</div>
+              <span style="font-weight:600;color:#38332B;">60%</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+              <div style="display:flex;align-items:center;gap:10px;color:#8A8274;"><div style="width:12px;height:12px;border-radius:50%;background:#E6CFA3;box-shadow:1px 1px 3px rgba(166,156,140,0.4);"></div>Retainers</div>
+              <span style="font-weight:600;color:#38332B;">25%</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+              <div style="display:flex;align-items:center;gap:10px;color:#8A8274;"><div style="width:12px;height:12px;border-radius:50%;background:#9FBF9C;box-shadow:1px 1px 3px rgba(166,156,140,0.4);"></div>Services</div>
+              <span style="font-weight:600;color:#38332B;">10%</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;font-size:13px;">
+              <div style="display:flex;align-items:center;gap:10px;color:#8A8274;"><div style="width:12px;height:12px;border-radius:50%;background:#A79FCE;box-shadow:1px 1px 3px rgba(166,156,140,0.4);"></div>Others</div>
+              <span style="font-weight:600;color:#38332B;">5%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity list -->
+      <div style="background:#F1EDE6;border-radius:28px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:28px;display:flex;flex-direction:column;gap:16px;">
+        <div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:600;color:#38332B;">Recent Activities</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:18px;background:#F3EFE8;border:1px solid rgba(255,255,255,0.5);box-shadow:3px 3px 8px rgba(166,156,140,0.22),-3px -3px 8px rgba(255,255,255,0.7);">
+            <div style="width:40px;height:40px;border-radius:13px;background:#F1EDE6;box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;color:#A79FCE;flex-shrink:0;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px;flex:1;">
+              <span style="font-size:13px;font-weight:600;color:#38332B;">New client onboarded</span>
+              <span style="font-size:11px;color:#ABA396;">Acme Corporation</span>
+            </div>
+            <span style="font-size:11px;color:#ABA396;">2m ago</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:18px;background:#F3EFE8;border:1px solid rgba(255,255,255,0.5);box-shadow:3px 3px 8px rgba(166,156,140,0.22),-3px -3px 8px rgba(255,255,255,0.7);">
+            <div style="width:40px;height:40px;border-radius:13px;background:#F1EDE6;box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;color:#93B48C;flex-shrink:0;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px;flex:1;">
+              <span style="font-size:13px;font-weight:600;color:#38332B;">Task completed</span>
+              <span style="font-size:11px;color:#ABA396;">Website Redesign</span>
+            </div>
+            <span style="font-size:11px;color:#ABA396;">15m ago</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:18px;background:#F3EFE8;border:1px solid rgba(255,255,255,0.5);box-shadow:3px 3px 8px rgba(166,156,140,0.22),-3px -3px 8px rgba(255,255,255,0.7);">
+            <div style="width:40px;height:40px;border-radius:13px;background:#F1EDE6;box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;color:#CE8073;flex-shrink:0;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:1px;flex:1;">
+              <span style="font-size:13px;font-weight:600;color:#38332B;">Invoice generated</span>
+              <span style="font-size:11px;color:#ABA396;">INV-2026-145</span>
+            </div>
+            <span style="font-size:11px;color:#ABA396;">1h ago</span>
+          </div>
+        </div>
+        <div style="height:44px;border-radius:999px;background:#F3EFE8;border:1px solid rgba(255,255,255,0.6);box-shadow:3px 3px 8px rgba(166,156,140,0.3),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#8A8274;cursor:pointer;margin-top:auto;" style-hover="color:#B57F84;">View all activities</div>
+      </div>
+    </div>
+
+    <!-- Buttons + inputs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:stretch;">
+      <!-- Buttons -->
+      <div style="background:#F1EDE6;border-radius:28px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:28px;display:flex;flex-direction:column;gap:24px;">
+        <div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:600;color:#38332B;">Buttons</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
+          <button style="height:48px;padding:0 28px;border-radius:999px;background:linear-gradient(145deg,#E3AFB3,#CD8F94);border:1px solid rgba(255,255,255,0.25);box-shadow:6px 6px 14px rgba(166,156,140,0.42),-6px -6px 14px rgba(255,255,255,0.85);font-family:'Geist',sans-serif;font-size:14px;font-weight:600;color:#45272A;cursor:pointer;" style-hover="box-shadow:8px 8px 18px rgba(166,156,140,0.48),-8px -8px 18px rgba(255,255,255,0.9);transform:translateY(-1px);" style-active="box-shadow:inset 3px 3px 7px rgba(120,62,66,0.4),inset -3px -3px 7px rgba(255,228,230,0.5);transform:scale(0.98);">Confirm request</button>
+          <button style="height:48px;padding:0 28px;border-radius:999px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);font-family:'Geist',sans-serif;font-size:14px;font-weight:500;color:#38332B;cursor:pointer;" style-hover="box-shadow:8px 8px 18px rgba(166,156,140,0.42),-8px -8px 18px rgba(255,255,255,0.9);transform:translateY(-1px);" style-active="box-shadow:inset 2px 2px 5px rgba(166,156,140,0.45),inset -2px -2px 5px rgba(255,255,255,0.7);transform:scale(0.98);">View calendar</button>
+          <button style="height:48px;padding:0 24px;border-radius:999px;background:transparent;border:none;font-family:'Geist',sans-serif;font-size:14px;font-weight:500;color:#8A8274;cursor:pointer;" style-hover="box-shadow:inset 2px 2px 5px rgba(166,156,140,0.3),inset -2px -2px 5px rgba(255,255,255,0.7);" style-active="box-shadow:inset 3px 3px 7px rgba(166,156,140,0.4),inset -3px -3px 7px rgba(255,255,255,0.7);">Dismiss</button>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;">
+          <button style="width:52px;height:52px;border-radius:50%;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);display:flex;align-items:center;justify-content:center;color:#8A8274;cursor:pointer;" style-hover="color:#B57F84;transform:translateY(-1px);" style-active="box-shadow:inset 2px 2px 5px rgba(166,156,140,0.45),inset -2px -2px 5px rgba(255,255,255,0.7);transform:scale(0.98);">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          </button>
+          <button style="width:52px;height:52px;border-radius:50%;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);display:flex;align-items:center;justify-content:center;color:#8A8274;cursor:pointer;" style-hover="color:#B57F84;transform:translateY(-1px);" style-active="box-shadow:inset 2px 2px 5px rgba(166,156,140,0.45),inset -2px -2px 5px rgba(255,255,255,0.7);transform:scale(0.98);">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </button>
+          <button style="width:52px;height:52px;border-radius:50%;background:#E9E4DB;border:none;box-shadow:inset 2px 2px 5px rgba(166,156,140,0.45),inset -2px -2px 5px rgba(255,255,255,0.7);display:flex;align-items:center;justify-content:center;color:#B57F84;cursor:pointer;">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+          </button>
+          <span style="font-size:11px;color:#ABA396;">← pressed / selected state</span>
+        </div>
+        <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+          <div style="font-family:ui-monospace,monospace;font-size:10px;line-height:1.7;color:#ABA396;">hover: raise + translateY(-1px) · press: --neu-shadow-pressed + scale(.98) · focus: 1px rose ring</div>
+        </sc-if>
+      </div>
+
+      <!-- Inputs -->
+      <div style="background:#F1EDE6;border-radius:28px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:28px;display:flex;flex-direction:column;gap:20px;">
+        <div style="font-family:'Playfair Display',serif;font-size:21px;font-weight:600;color:#38332B;">Inputs</div>
+        <div style="display:flex;align-items:center;gap:12px;height:48px;padding:0 20px;border-radius:999px;background:linear-gradient(180deg,#F7F4EE,#F1EDE6);border:1px solid rgba(255,255,255,0.65);box-shadow:4px 4px 10px rgba(166,156,140,0.3),-4px -4px 10px rgba(255,255,255,0.85),inset 0 1px 0 rgba(255,255,255,0.9);">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ABA396" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" placeholder="Search anything…" style="flex:1;background:transparent;border:none;outline:none;font-family:'Geist',sans-serif;font-size:14px;color:#38332B;">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label style="font-size:12px;font-weight:500;letter-spacing:0.06em;color:#8A8274;padding-left:4px;">CLIENT NAME</label>
+          <input type="text" value="Acme Corporation" style="height:48px;padding:0 20px;border-radius:16px;background:linear-gradient(180deg,#F7F4EE,#F1EDE6);border:1px solid rgba(255,255,255,0.65);outline:none;box-shadow:4px 4px 10px rgba(166,156,140,0.3),-4px -4px 10px rgba(255,255,255,0.85),inset 0 1px 0 rgba(255,255,255,0.9);font-family:'Geist',sans-serif;font-size:14px;color:#38332B;">
+        </div>
+        <div style="display:flex;gap:16px;align-items:end;">
+          <div style="display:flex;flex-direction:column;gap:8px;flex:1;">
+            <label style="font-size:12px;font-weight:500;letter-spacing:0.06em;color:#8A8274;padding-left:4px;">PERIOD</label>
+            <div style="height:48px;padding:0 20px;border-radius:16px;background:#F1EDE6;border:1px solid rgba(255,255,255,0.55);box-shadow:3px 3px 8px rgba(166,156,140,0.35),-3px -3px 8px rgba(255,255,255,0.8);display:flex;align-items:center;justify-content:space-between;font-size:14px;color:#38332B;cursor:pointer;" style-hover="box-shadow:5px 5px 12px rgba(166,156,140,0.42),-5px -5px 12px rgba(255,255,255,0.9);">
+              This Month
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8A8274" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;align-items:center;">
+            <label style="font-size:12px;font-weight:500;letter-spacing:0.06em;color:#8A8274;">NOTIFY</label>
+            <div style="display:flex;gap:14px;align-items:center;">
+              <div style="position:relative;width:54px;height:32px;border-radius:999px;background:#E9E4DB;box-shadow:inset 2px 2px 5px rgba(166,156,140,0.4),inset -2px -2px 5px rgba(255,255,255,0.75);cursor:pointer;">
+                <div style="position:absolute;top:4px;left:26px;width:24px;height:24px;border-radius:50%;background:linear-gradient(145deg,#E3AFB3,#CD8F94);box-shadow:2px 2px 5px rgba(166,156,140,0.5),-1px -1px 3px rgba(255,255,255,0.6);"></div>
+              </div>
+              <div style="position:relative;width:54px;height:32px;border-radius:999px;background:#E9E4DB;box-shadow:inset 2px 2px 5px rgba(166,156,140,0.4),inset -2px -2px 5px rgba(255,255,255,0.75);cursor:pointer;">
+                <div style="position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;background:#F1EDE6;box-shadow:2px 2px 5px rgba(166,156,140,0.45),-1px -1px 3px rgba(255,255,255,0.7);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+          <div style="font-family:ui-monospace,monospace;font-size:10px;line-height:1.7;color:#ABA396;">inputs float with a gradient sheen + hairline top highlight · inset marks only pressed/selected · knobs are rose when on</div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ DARK VARIANT ═══════════ -->
+  <sc-if value="{{ showDark }}" hint-placeholder-val="{{ true }}">
+  <div data-screen-label="Dark variant" style="display:flex;flex-direction:column;gap:28px;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-size:12px;font-weight:600;letter-spacing:0.22em;color:#B57F84;text-transform:uppercase;padding-left:0.22em;">04 · Dark variant</div>
+      <div style="font-family:'Playfair Display',serif;font-size:30px;font-weight:600;color:#38332B;">Candlelit charcoal</div>
+      <div style="font-size:14px;color:#8A8274;max-width:620px;line-height:1.6;">Not the app's near-black — a warm midtone charcoal, so highlights still register. The light source stays top-left; the highlight becomes candle-warm.</div>
+    </div>
+
+    <div style="background:#28241C;border-radius:32px;box-shadow:12px 12px 32px rgba(120,110,92,0.45),-8px -8px 24px rgba(255,255,255,0.7);padding:44px;display:flex;flex-direction:column;gap:32px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:28px;">
+        <!-- Dark stat tile -->
+        <div style="background:#2D2920;border-radius:24px;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.5),-6px -6px 14px rgba(255,240,214,0.05);padding:24px;display:flex;align-items:center;gap:16px;">
+          <div style="width:46px;height:46px;border-radius:15px;background:#2D2920;box-shadow:3px 3px 8px rgba(0,0,0,0.45),-3px -3px 8px rgba(255,240,214,0.045);display:flex;align-items:center;justify-content:center;color:#DFA9AE;flex-shrink:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="font-size:13px;font-weight:500;color:#A39A88;">Total Tasks</div>
+            <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:600;color:#E8E0D4;line-height:1.1;">48</div>
+            <div style="font-size:11px;font-weight:500;color:#8FAF8C;">↑ 12% from yesterday</div>
+          </div>
+        </div>
+        <!-- Dark search -->
+        <div style="display:flex;flex-direction:column;gap:16px;justify-content:center;">
+          <div style="display:flex;align-items:center;gap:12px;height:48px;padding:0 20px;border-radius:999px;background:linear-gradient(180deg,#353024,#2D2920);border:1px solid rgba(255,240,214,0.08);box-shadow:5px 5px 12px rgba(0,0,0,0.5),-5px -5px 12px rgba(255,240,214,0.05),inset 0 1px 0 rgba(255,240,214,0.08);">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6E675C" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span style="font-size:14px;color:#6E675C;">Search anything…</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:18px;background:#2D2920;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.5),-6px -6px 14px rgba(255,240,214,0.05);">
+            <div style="width:38px;height:38px;border-radius:13px;background:linear-gradient(145deg,#E7B6BA,#D29A9E);box-shadow:3px 3px 8px rgba(0,0,0,0.5),-2px -2px 6px rgba(255,240,214,0.08);display:flex;align-items:center;justify-content:center;color:#45272A;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </div>
+            <span style="font-size:14px;font-weight:600;color:#E8E0D4;">Dashboard</span>
+          </div>
+        </div>
+        <!-- Dark buttons + toggle -->
+        <div style="display:flex;flex-direction:column;gap:16px;justify-content:center;">
+          <div style="display:flex;gap:14px;">
+            <button style="height:48px;padding:0 24px;border-radius:999px;background:linear-gradient(145deg,#E7B6BA,#D29A9E);border:1px solid rgba(255,240,214,0.15);box-shadow:6px 6px 14px rgba(0,0,0,0.5),-6px -6px 14px rgba(255,240,214,0.05);font-family:'Geist',sans-serif;font-size:14px;font-weight:600;color:#45272A;cursor:pointer;" style-hover="transform:translateY(-1px);" style-active="box-shadow:inset 3px 3px 7px rgba(95,58,62,0.5);transform:scale(0.98);">Confirm</button>
+            <button style="height:48px;padding:0 24px;border-radius:999px;background:#2D2920;border:1px solid rgba(255,240,214,0.06);box-shadow:6px 6px 14px rgba(0,0,0,0.5),-6px -6px 14px rgba(255,240,214,0.05);font-family:'Geist',sans-serif;font-size:14px;font-weight:500;color:#E8E0D4;cursor:pointer;" style-hover="transform:translateY(-1px);" style-active="box-shadow:inset 2px 2px 5px rgba(0,0,0,0.55),inset -2px -2px 5px rgba(255,240,214,0.04);transform:scale(0.98);">Later</button>
+          </div>
+          <div style="display:flex;gap:14px;align-items:center;">
+            <div style="position:relative;width:54px;height:32px;border-radius:999px;background:#221E17;box-shadow:inset 2px 2px 5px rgba(0,0,0,0.55),inset -2px -2px 5px rgba(255,240,214,0.04);">
+              <div style="position:absolute;top:4px;left:26px;width:24px;height:24px;border-radius:50%;background:linear-gradient(145deg,#E7B6BA,#D29A9E);box-shadow:2px 2px 5px rgba(0,0,0,0.5);"></div>
+            </div>
+            <span style="font-size:12px;color:#A39A88;">Concierge on call</span>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showAnnotations }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;gap:32px;flex-wrap:wrap;font-family:ui-monospace,monospace;font-size:10px;line-height:1.7;color:#6E675C;">
+          <span>canvas #28241C · surface #2D2920 · well #221E17</span>
+          <span>raised: 6px 6px 14px rgb(0 0 0 / .50) · -6px -6px 14px rgb(255 240 214 / .05)</span>
+          <span>rose lifts to #DFA9AE</span>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ═══════════ HANDOFF ═══════════ -->
+  <div data-screen-label="Handoff" style="display:flex;flex-direction:column;gap:28px;">
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-size:12px;font-weight:600;letter-spacing:0.22em;color:#B57F84;text-transform:uppercase;padding-left:0.22em;">05 · Handoff</div>
+      <div style="font-family:'Playfair Display',serif;font-size:30px;font-weight:600;color:#38332B;">For the Serene codebase</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;">
+      <div style="background:#F1EDE6;border-radius:24px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:28px;display:flex;flex-direction:column;gap:14px;">
+        <div style="font-size:12px;font-weight:600;letter-spacing:0.18em;color:#8A8274;text-transform:uppercase;">Token layer</div>
+        <div style="font-family:ui-monospace,monospace;font-size:12px;line-height:2;color:#38332B;">
+          --neu-canvas · --neu-surface · --neu-well<br>
+          --neu-shadow-raised-sm / -raised / -raised-lg<br>
+          --neu-shadow-inset · --neu-shadow-pressed<br>
+          --neu-shadow-hover · --neu-focus-ring<br>
+          --neu-accent · --neu-accent-gradient<br>
+          .neu-card · .neu-tile · .neu-well · .neu-btn
+        </div>
+        <div style="font-size:13px;color:#8A8274;line-height:1.6;">Shipped as <span style="font-family:ui-monospace,monospace;font-size:12px;">export/serene-neumorphic-tokens.css</span> — additive next to design-tokens.css. Dark variant activates via <span style="font-family:ui-monospace,monospace;font-size:12px;">data-neu="dark"</span>.</div>
+      </div>
+      <div style="background:#F1EDE6;border-radius:24px;border:1px solid rgba(255,255,255,0.55);box-shadow:6px 6px 14px rgba(166,156,140,0.38),-6px -6px 14px rgba(255,255,255,0.85);padding:28px;display:flex;flex-direction:column;gap:14px;">
+        <div style="font-size:12px;font-weight:600;letter-spacing:0.18em;color:#8A8274;text-transform:uppercase;">Integration notes</div>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px;color:#8A8274;line-height:1.6;">
+          <div style="display:flex;gap:10px;"><span style="color:#B57F84;">—</span><span><span style="font-family:ui-monospace,monospace;font-size:12px;">--neu-surface</span> maps to <span style="font-family:ui-monospace,monospace;font-size:12px;">--theme-paper</span>; the page ground becomes <span style="font-family:ui-monospace,monospace;font-size:12px;">--neu-canvas</span>. Accent becomes English-rose #D9A0A5.</span></div>
+          <div style="display:flex;gap:10px;"><span style="color:#B57F84;">—</span><span>Replace <span style="font-family:ui-monospace,monospace;font-size:12px;">--shadow-1/2/3</span> usages with raised-sm/raised/raised-lg; <span style="font-family:ui-monospace,monospace;font-size:12px;">--shadow-inset</span> → <span style="font-family:ui-monospace,monospace;font-size:12px;">--neu-shadow-inset</span>.</span></div>
+          <div style="display:flex;gap:10px;"><span style="color:#B57F84;">—</span><span>Hairline borders retire; raised surfaces carry a 1px white edge (<span style="font-family:ui-monospace,monospace;font-size:12px;">--neu-edge</span>) instead.</span></div>
+          <div style="display:flex;gap:10px;"><span style="color:#B57F84;">—</span><span>Motion tokens unchanged — press/hover recipes reuse <span style="font-family:ui-monospace,monospace;font-size:12px;">--ease-spring</span> and existing durations.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showAnnotations&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Specimen&quot;}, &quot;showDark&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Specimen&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showAnnotations: this.props.showAnnotations ?? true,
+      showDark: this.props.showDark ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>

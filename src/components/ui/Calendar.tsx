@@ -154,9 +154,12 @@ function YearMonthPicker({ year, month, onPick, onClose }: PickerProps) {
                   style={{
                     padding:      'var(--space-2) 0',
                     borderRadius: 'var(--radius-sm)',
-                    border:       active ? '1px solid var(--theme-accent)' : '1px solid transparent',
-                    background:   active ? 'var(--theme-accent-surface)' : 'var(--theme-paper-subtle)',
-                    color:        active ? 'var(--theme-accent)' : 'var(--theme-text-secondary)',
+                    border:       active ? '1px solid var(--neu-edge)' : '1px solid transparent',
+                    background:   active
+                      ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
+                      : 'var(--theme-paper-subtle)',
+                    boxShadow:    active ? 'var(--neu-shadow-chip)' : 'none',
+                    color:        active ? 'var(--neu-accent-deep)' : 'var(--theme-text-secondary)',
                     fontFamily:   'var(--font-sans)',
                     fontSize:     'var(--text-xs)',
                     fontWeight:   active ? 'var(--weight-semibold)' : 'var(--weight-normal)',
@@ -204,8 +207,9 @@ function YearMonthPicker({ year, month, onPick, onClose }: PickerProps) {
                   style={{
                     padding:      'var(--space-2) 0',
                     borderRadius: 'var(--radius-sm)',
-                    border:       active ? '1px solid var(--theme-accent)' : '1px solid transparent',
-                    background:   active ? 'var(--theme-accent)' : 'var(--theme-paper-subtle)',
+                    border:       '1px solid transparent',
+                    background:   active ? 'var(--neu-accent-gradient)' : 'var(--theme-paper-subtle)',
+                    boxShadow:    active ? 'var(--neu-shadow-chip)' : 'none',
                     color:        active ? 'var(--theme-accent-fg)' : 'var(--theme-text-secondary)',
                     fontFamily:   'var(--font-sans)',
                     fontSize:     'var(--text-xs)',
@@ -448,30 +452,37 @@ export function Calendar({
                   ...(hasTaskDots
                     ? { height: 40, aspectRatio: 'unset' as const }
                     : { aspectRatio: '1' as const }),
-                  borderRadius:   isToday && !isAccented
-                    ? 'var(--radius-sm)'
+                  // Selected day = raised accent knob; today (unselected) floats
+                  // on an accent wash — never an inset, never a coloured border.
+                  borderRadius:   isAccented || (isToday && !isAccented)
+                    ? 'var(--radius-full)'
                     : 'var(--radius-sm)',
-                  border:         isToday && !isAccented
-                    ? '1px solid color-mix(in srgb, var(--theme-accent) 30%, transparent)'
-                    : 'none',
+                  border:         'none',
                   background:     isAccented
-                    ? 'var(--theme-accent)'
+                    ? 'var(--neu-accent-gradient)'
                     : isInRange
                     ? 'var(--theme-accent-surface)'
+                    : isToday
+                    ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
                     : 'transparent',
+                  boxShadow:      isAccented
+                    ? 'var(--neu-shadow-knob)'
+                    : isToday
+                    ? 'var(--neu-shadow-chip)'
+                    : 'none',
                   color:          isAccented
                     ? 'var(--theme-accent-fg)'
                     : isInRange
-                    ? 'var(--theme-accent)'
+                    ? 'var(--neu-accent-deep)'
                     : isToday
-                    ? 'var(--theme-accent)'
+                    ? 'var(--neu-accent-deep)'
                     : 'var(--theme-text-primary)',
                   fontFamily:   'var(--font-sans)',
                   fontSize:     'var(--text-xs)',
                   fontWeight:   isToday || isAccented ? 'var(--weight-semibold)' : 'var(--weight-normal)',
                   cursor:       isDisabled ? 'not-allowed' : 'pointer',
                   opacity:      isDisabled ? 0.3 : 1,
-                  transition:   'background var(--duration-fast) var(--ease-in-out)',
+                  transition:   'background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out)',
                 }}
               >
                 {date.getDate()}

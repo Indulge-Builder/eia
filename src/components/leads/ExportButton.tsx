@@ -91,7 +91,7 @@ export function ExportButton({ filters }: ExportButtonProps) {
           transition:   'background var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out), transform var(--duration-instant) var(--ease-spring)',
         }}
         onMouseEnter={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.background = 'var(--theme-paper-subtle)';
+          (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--theme-accent) 5%, transparent)';
           (e.currentTarget as HTMLButtonElement).style.color = 'var(--theme-text-primary)';
         }}
         onMouseLeave={(e) => {

@@ -105,7 +105,7 @@ export function ManagerCampaignWidget({
   return (
     <div
       style={{
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         border: "1px solid var(--theme-paper-border)",
         background: "var(--theme-paper)",
         boxShadow: "var(--shadow-1)",
@@ -207,7 +207,7 @@ export function ManagerCampaignWidget({
                 fontSize: "var(--text-xs)",
                 color: "var(--theme-text-primary)",
               },
-              cursor: { fill: "var(--theme-paper-subtle)" },
+              cursor: { fill: "color-mix(in srgb, var(--theme-accent) 8%, transparent)" },
             }}
             style={{ background: "transparent", borderRadius: 0 }}
           />
@@ -234,6 +234,7 @@ export function ManagerCampaignWidget({
                 background:   STATUS_BG[s],
                 border:       "1px solid var(--theme-paper-border)",
                 borderRadius: "var(--radius-full)",
+                boxShadow:    "var(--neu-shadow-chip)",
                 padding:      "3px 8px 3px 6px",
               }}
             >

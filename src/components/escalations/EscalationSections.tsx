@@ -28,6 +28,11 @@ import type { LeadStatus, AppDomain, SlaRecipientRole } from "@/lib/types/databa
 
 // ── Shared bits ──────────────────────────────────────────────────────────────
 
+// The service caps are 500 timers / 100 tasks / 100 cold leads — any section can
+// exceed the P-03 render threshold. Newest-first ordering means the top rows are
+// the live story; the rest sit behind Table's "Show all N" reveal.
+const SECTION_PREVIEW_ROWS = 50;
+
 function CountPill({ count }: { count: number }) {
   return (
     <span
@@ -199,6 +204,7 @@ export function EscalatedLeadsSection({
           columns={columns}
           rows={rows}
           rowKey={(r) => r.leadId}
+          previewRows={SECTION_PREVIEW_ROWS}
           onRowClick={(r) => router.push(`/leads/${r.slug ?? r.leadId}`)}
         />
       )}
@@ -257,6 +263,7 @@ export function OverdueTasksSection({
           columns={columns}
           rows={rows}
           rowKey={(r) => r.taskId}
+          previewRows={SECTION_PREVIEW_ROWS}
           onRowClick={(r) => router.push(`/leads/${r.leadSlug ?? r.leadId}`)}
         />
       )}
@@ -330,6 +337,7 @@ export function GoingColdSection({
           columns={columns}
           rows={rows}
           rowKey={(r) => r.leadId}
+          previewRows={SECTION_PREVIEW_ROWS}
           onRowClick={(r) => router.push(`/leads/${r.slug ?? r.leadId}`)}
         />
       )}

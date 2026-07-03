@@ -14,10 +14,11 @@ export function LeadsTableSkeleton() {
   return (
     <div
       style={{
+        background:   'var(--neu-surface-high)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--neu-radius-card)',
         overflow:     'hidden',
-        boxShadow:    'var(--shadow-1)',
+        boxShadow:    'var(--neu-shadow-raised)',
       }}
     >
       {/* Filter bar skeleton — mirrors the real LeadsFilters bar */}
@@ -28,7 +29,7 @@ export function LeadsTableSkeleton() {
           gap:          'var(--space-3)',
           padding:      'var(--space-4) var(--space-5)',
           borderBottom: '1px solid var(--theme-paper-border)',
-          background:   'var(--theme-paper-subtle)',
+          background:   'transparent',
           flexWrap:     'wrap',
         }}
       >
@@ -55,7 +56,7 @@ export function LeadsTableSkeleton() {
           display:      'flex',
           gap:          'var(--space-4)',
           padding:      'var(--space-3) var(--space-4)',
-          background:   'var(--theme-paper-subtle)',
+          background:   'transparent',
           borderBottom: '1px solid var(--theme-paper-border)',
         }}
       >

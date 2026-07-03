@@ -66,7 +66,9 @@ export function ConfirmDialog({
             style={{
               position:   'fixed',
               inset:      0,
-              background: 'var(--overlay-bg-light)',
+              background: 'var(--neu-scrim)',
+              backdropFilter: 'blur(3px)',
+              WebkitBackdropFilter: 'blur(3px)',
               zIndex:     'var(--z-overlay)' as React.CSSProperties['zIndex'],
             }}
           />
@@ -85,9 +87,10 @@ export function ConfirmDialog({
               left:         '50%',
               transform:    'translate(-50%, -50%)',
               zIndex:       'var(--z-modal)' as React.CSSProperties['zIndex'],
-              background:   'var(--theme-paper)',
-              borderRadius: 'var(--radius-lg)',
-              boxShadow:    'var(--shadow-4)',
+              background:   'var(--neu-surface-high)',
+              border:       '1px solid var(--neu-edge)',
+              borderRadius: 'var(--radius-xl)',
+              boxShadow:    'var(--neu-shadow-modal)',
               width:        'min(420px, calc(100vw - var(--space-8)))',
               padding:      'var(--space-6)',
             }}
@@ -147,9 +150,10 @@ export function ConfirmDialog({
                   padding:      'var(--space-2) var(--space-4)',
                   borderRadius: 'var(--radius-sm)',
                   border:       'none',
+                  boxShadow:    'var(--neu-shadow-raised-sm)',
                   background:   pending
                     ? (danger ? 'var(--color-danger-light)' : 'var(--theme-accent-surface)')
-                    : (danger ? 'var(--color-danger)' : 'var(--theme-accent)'),
+                    : (danger ? 'var(--color-danger)' : 'var(--neu-accent-gradient)'),
                   fontFamily:   'var(--font-sans)',
                   fontSize:     'var(--text-sm)',
                   fontWeight:   'var(--weight-semibold)',

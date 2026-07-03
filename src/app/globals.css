@@ -1,4 +1,6 @@
 @import "../styles/design-tokens.css";
+@import "../styles/serene-neumorphic-tokens.css";
+@import "../styles/serene-mobile.css";
 @import "tailwindcss";
 
 /* ── Tailwind v4 default-theme isolation (design audit §3.3 / Phase 4.2) ──────
@@ -68,8 +70,13 @@
 
 html {
   background-color: var(--theme-canvas);
-  color-scheme: dark;
+  /* One warm material — the ground is cream, so native chrome renders light.
+     data-neu="dark" flips it back to the warm-charcoal variant. */
+  color-scheme: light;
   min-height: 100%;
+}
+[data-neu="dark"] {
+  color-scheme: dark;
 }
 
 body {
@@ -113,14 +120,19 @@ body {
   padding: 12px 12px 12px 0;
   background: var(--theme-canvas);
 }
+/* Neumorphic ground: the content region is the FLOATING PAPER SHEET raised
+   from the warm canvas gutter (the two-layer shell survives the restyle —
+   restored 2026-07-03). Raised cream surface + Whisper pair + hairline edge;
+   cards inside raise themselves a step further via their own shadow pairs. */
 .serene-shell-paper {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--theme-paper);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-paper);
+  background: var(--neu-surface);
+  border: 1px solid var(--neu-edge);
+  border-radius: var(--neu-radius-card);
+  box-shadow: var(--neu-shadow-raised);
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -133,6 +145,7 @@ body {
     padding: 0;
   }
   .serene-shell-paper {
+    border: none;
     border-radius: 0;
     box-shadow: none;
   }
@@ -169,6 +182,14 @@ body {
 .serene-sidebar {
   width: 240px;
 }
+/* md+ — the rail floats on the canvas as a raised cream card (the shell is
+   flex-stretch, so height resolves from the container minus these margins). */
+@media (min-width: 768px) { /* ≥ --bp-md */
+  .serene-sidebar {
+    margin: var(--space-3) 0 var(--space-3) var(--space-3);
+    border-radius: var(--radius-xl);
+  }
+}
 .serene-nav-link {
   position: relative;
   display: flex;
@@ -177,10 +198,6 @@ body {
   padding: 10px var(--space-3);
   border-radius: var(--radius-md);
   text-decoration: none;
-}
-.serene-nav-chevron {
-  display: flex;
-  flex-shrink: 0;
 }
 .serene-sidebar-section-label {
   display: block;
@@ -243,6 +260,7 @@ body {
     top: 0;
     bottom: 0;
     left: 0;
+    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
     transform: translateX(-100%);
     visibility: hidden;
     transition:
@@ -322,14 +340,13 @@ body {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  border: 1px solid var(--neu-edge);
   border-radius: var(--radius-full);
-  color: var(--theme-accent);
+  color: var(--neu-accent-deep);
   cursor: pointer;
-  box-shadow: var(--shadow-1);
-  /* Soft accent-washed paper — derives from --theme-accent, so it
-     follows the user's theme. */
-  background: color-mix(in srgb, var(--theme-accent) 7%, var(--theme-paper));
+  box-shadow: var(--neu-shadow-raised-sm);
+  /* Raised soft tile with a whisper of the theme accent */
+  background: color-mix(in srgb, var(--theme-accent) 7%, var(--neu-surface));
 }
 
 /* Floating Elaya presence — the corner OPPOSITE the top-left nav hamburger
@@ -348,19 +365,26 @@ body {
   justify-content: center;
   width: 56px;
   height: 56px;
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  border: 1px solid var(--neu-edge);
   border-radius: var(--radius-full);
-  color: var(--theme-accent);
+  color: var(--neu-accent-deep);
   cursor: pointer;
-  box-shadow: var(--shadow-2);
-  background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-paper));
+  box-shadow: var(--neu-shadow-raised);
+  background: color-mix(in srgb, var(--theme-accent) 8%, var(--neu-surface));
   transition: box-shadow var(--duration-base) var(--ease-out-soft),
-    border-color var(--duration-fast) var(--ease-in-out);
+    border-color var(--duration-fast) var(--ease-in-out),
+    transform var(--duration-fast) var(--ease-out-soft);
 }
 @media (hover: hover) and (pointer: fine) {
   .serene-elaya-fab:hover {
-    box-shadow: var(--shadow-3);
-    border-color: color-mix(in srgb, var(--theme-accent) 32%, transparent);
+    box-shadow: var(--neu-shadow-hover);
+    border-color: var(--neu-edge-strong);
+    transform: translateY(-1px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .serene-elaya-fab:hover {
+    transform: none;
   }
 }
 /* Below md the nav hamburger floats top-left and the toast stack docks to the
@@ -494,13 +518,11 @@ body {
   }
 }
 
-/* Atmosphere (mounted on the auth shell; marketing later). Never the dashboard shell. */
+/* Atmosphere (mounted on the auth shell; marketing later). Never the dashboard
+   shell. Neumorphic: the grain retires (noise reads as dirt on cream); the
+   accent orbs/mandala stay — quiet accent washes on the warm ground. */
 .layout-canvas {
-  background-color: var(--theme-canvas);
-  background-image:
-    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n' x='0' y='0'><feTurbulence type='fractalNoise' baseFrequency='0.68' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='0.055'/></svg>"),
-    var(--theme-canvas-gradient-1), var(--theme-canvas-gradient-2),
-    var(--theme-canvas-gradient-3);
+  background-color: var(--neu-canvas);
 }
 
 /* Back-link hover — dossier page breadcrumb */
@@ -508,16 +530,19 @@ body {
   color: var(--theme-accent) !important;
 }
 
-/* Base input style — used by form fields across the app */
+/* Base input style — used by form fields across the app.
+   Neumorphic Rule 3: text fields FLOAT — gradient sheen + 1px inner top
+   highlight distinguishes them from buttons. Never sunken. */
 .serene-input {
   width: 100%;
-  background-color: var(--theme-paper-subtle);
-  border: 1px solid var(--theme-paper-border);
-  border-radius: var(--radius-sm);
+  background: var(--neu-input-bg);
+  border: 1px solid var(--neu-input-edge);
+  border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-4);
   font-family: var(--font-sans);
   font-size: var(--text-sm);
-  color: var(--theme-text-primary);
+  color: var(--neu-text-primary);
+  box-shadow: var(--neu-shadow-input);
   outline: none;
   transition:
     var(--transition-focus),
@@ -525,18 +550,96 @@ body {
 }
 
 .serene-input::placeholder {
-  color: var(--theme-text-tertiary);
+  color: var(--neu-text-tertiary);
 }
 
 .serene-input:focus-visible {
   border-color: var(--theme-accent);
-  box-shadow: var(--shadow-focus);
+  box-shadow:
+    0 0 0 1px var(--theme-accent),
+    var(--neu-shadow-input);
 }
 
-/* Filter bars — keep paper border on focus (LeadsFilters passes this class) */
+/* Filter bars — keep the resting float on focus (LeadsFilters passes this class) */
 .serene-input.serene-input--no-focus-ring:focus-visible {
-  border-color: var(--theme-paper-border);
-  box-shadow: none;
+  border-color: var(--neu-input-edge);
+  box-shadow: var(--neu-shadow-input);
+}
+
+/* Bare input — no chrome at all (command palette query row); only the
+   placeholder tone, which ::placeholder can't get from an inline style. */
+.serene-input-bare::placeholder {
+  color: var(--neu-text-tertiary);
+}
+
+/* ================================================================
+   HEADER CONDENSE (polish handoff §07 — CondensingPageHeader.tsx)
+   Sticky page header that condenses past ~24px scroll: title 17px,
+   subtitle folds, canvas-tinted blur backdrop + bottom hairline.
+   The blur here is a HANDOFF-SANCTIONED backdrop-filter surface
+   (like the command palette scrim). Bleeds across the page-padding
+   ladder (p-4 → sm:p-6 → lg:p-8) so scrolled content never peeks
+   past the bar's edges.
+   ================================================================ */
+.serene-condense-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  /* Horizontal bleed only — the sticky bar spans the page-padding ladder
+     edge-to-edge; the vertical rhythm stays the page's own (top padding
+     scrolls away, then the bar sticks flush at top: 0). */
+  margin: 0 calc(var(--space-4) * -1);
+  padding: var(--space-2) var(--space-4) var(--space-6);
+  background: transparent;
+  transition:
+    padding 300ms var(--ease-spring),
+    background 300ms var(--ease-in-out),
+    box-shadow 300ms var(--ease-in-out);
+}
+@media (min-width: 640px) { /* ≥ --bp-sm */
+  .serene-condense-header {
+    margin: 0 calc(var(--space-6) * -1);
+    padding: var(--space-2) var(--space-6) var(--space-6);
+  }
+}
+@media (min-width: 1024px) { /* ≥ --bp-lg */
+  .serene-condense-header {
+    margin: 0 calc(var(--space-8) * -1);
+    padding: var(--space-2) var(--space-8) var(--space-6);
+  }
+}
+.serene-condense-header[data-condensed="true"] {
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+  background: color-mix(in srgb, var(--neu-canvas) 82%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 0 rgb(var(--neu-dark) / 0.22);
+}
+.serene-condense-header .type-page-title {
+  transition: font-size 300ms var(--ease-spring);
+}
+.serene-condense-header[data-condensed="true"] .type-page-title {
+  font-size: 17px;
+}
+.serene-condense-subtitle {
+  overflow: hidden;
+  max-height: 24px;
+  opacity: 1;
+  transition:
+    opacity 240ms var(--ease-in-out),
+    max-height 300ms var(--ease-spring);
+}
+.serene-condense-header[data-condensed="true"] .serene-condense-subtitle {
+  opacity: 0;
+  max-height: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .serene-condense-header,
+  .serene-condense-header .type-page-title,
+  .serene-condense-subtitle {
+    transition: none;
+  }
 }
 
 /* ================================================================
@@ -695,27 +798,20 @@ body {
    Surface: lamplight wash at top centre where the brand lives.
    Shadow: --shadow-3 plus a wide accent bloom beneath — the card sits in
    the mandala's light, not pasted over it. */
+/* Neumorphic: the jewel box becomes a floating cream panel — raised-lg pair,
+   hairline edge, a whisper of accent lamplight at the top arc. */
 .serene-auth-card {
   background:
     radial-gradient(
         ellipse 130% 55% at 50% -10%,
-        color-mix(in srgb, var(--theme-accent) 7%, transparent),
+        color-mix(in srgb, var(--theme-accent) 6%, transparent),
         transparent 60%
       )
       padding-box,
-    linear-gradient(var(--theme-sidebar-hover-bg), var(--theme-sidebar-hover-bg))
-      padding-box,
-    linear-gradient(
-        to bottom,
-        color-mix(in srgb, var(--theme-accent) 32%, var(--theme-sidebar-border)),
-        var(--theme-sidebar-border) 45%
-      )
-      border-box;
-  border: 1px solid transparent;
+    linear-gradient(var(--neu-surface), var(--neu-surface)) padding-box;
+  border: 1px solid var(--neu-edge);
   border-radius: var(--radius-xl);
-  box-shadow:
-    var(--shadow-3),
-    0 30px 90px -30px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  box-shadow: var(--neu-shadow-raised-lg);
   animation: serene-auth-card-enter var(--duration-page) var(--ease-out-expo) both;
 }
 
@@ -777,31 +873,34 @@ body {
   }
 }
 
-/* Auth dark input — canvas-surface field for dark card forms */
+/* Auth input — same floating field grammar as the app (Rule 3) */
 .serene-input-auth {
-  background: var(--theme-canvas);
-  border: 1px solid var(--theme-sidebar-border);
-  color: var(--theme-canvas-text);
-  border-radius: var(--radius-sm);
+  background: var(--neu-input-bg);
+  border: 1px solid var(--neu-input-edge);
+  color: var(--neu-text-primary);
+  border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-4);
   font-size: var(--text-sm);
   font-family: var(--font-sans);
   width: 100%;
   outline: none;
+  box-shadow: var(--neu-shadow-input);
   transition:
     border-color var(--duration-fast) var(--ease-in-out),
     box-shadow var(--duration-fast) var(--ease-in-out);
 }
 .serene-input-auth::placeholder {
-  color: var(--theme-sidebar-text);
+  color: var(--neu-text-tertiary);
 }
 .serene-input-auth:focus {
   border-color: var(--theme-accent);
-  box-shadow: 0 0 0 3px var(--theme-accent-surface);
+  box-shadow:
+    0 0 0 1px var(--theme-accent),
+    var(--neu-shadow-input);
 }
 @media (hover: hover) and (pointer: fine) {
   .serene-input-auth:hover:not(:focus) {
-    border-color: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-sidebar-border));
+    border-color: color-mix(in srgb, var(--theme-accent) 24%, var(--neu-input-edge));
   }
 }
 
@@ -828,8 +927,8 @@ body {
 }
 @media (hover: hover) and (pointer: fine) {
   .serene-activity-card:hover {
-    box-shadow: var(--shadow-2);
-    border-color: var(--theme-accent-muted);
+    box-shadow: var(--neu-shadow-hover);
+    border-color: var(--neu-edge-strong);
     transform: translateY(-1px);
   }
 }
@@ -1019,21 +1118,25 @@ body {
   overflow: hidden;
   text-decoration: none;
   border: 1px solid var(--theme-paper-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--neu-radius-card);
   background: var(--theme-paper);
   box-shadow: var(--shadow-1);
   transition:
     background-color var(--duration-fast) var(--ease-in-out),
-    box-shadow var(--duration-base) var(--ease-in-out);
+    box-shadow var(--duration-base) var(--ease-in-out),
+    transform var(--duration-fast) var(--ease-out-soft);
 }
 @media (hover: hover) and (pointer: fine) {
   .serene-stat-tile:hover {
-    background: var(--theme-paper-subtle);
-    box-shadow: var(--shadow-2);
+    box-shadow: var(--neu-shadow-hover);
+    transform: translateY(-1px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .serene-stat-tile {
     transition: none;
+  }
+  .serene-stat-tile:hover {
+    transform: none;
   }
 }

@@ -164,10 +164,14 @@ export function LeadsTable({ leads, userId, role, domain, filters, hasActiveFilt
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: EXIT_DURATION, delay: 0.1, ease: EASE_OUT_EXPO }}
       style={{
+        // Elevated surface + full raised pair — at plain --theme-paper the card
+        // was the same tone as the shell paper beneath it and read dull/flat
+        // (--neu-surface-high is THE lifted-surface token: dialogs, panels).
+        background:   'var(--neu-surface-high)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--neu-radius-card)',
         overflow:     'hidden',
-        boxShadow:    'var(--shadow-1)',
+        boxShadow:    'var(--neu-shadow-raised)',
       }}
     >
       {/* Table toolbar — view switcher (manager) · going cold | sort + columns + export. ONE line at
@@ -185,7 +189,7 @@ export function LeadsTable({ leads, userId, role, domain, filters, hasActiveFilt
           gap:                     'var(--space-2) var(--space-3)',
           padding:                 'var(--space-4) var(--space-5)',
           borderBottom:            '1px solid var(--theme-paper-border)',
-          background:              'var(--theme-paper-subtle)',
+          background:              'transparent',
           flexWrap:                'nowrap',
           overflowX:               'auto',
           scrollbarWidth:          'none',
@@ -227,14 +231,15 @@ export function LeadsTable({ leads, userId, role, domain, filters, hasActiveFilt
             height:       '2.25rem',
             padding:      '0 var(--space-3)',
             background:   goingCold ? 'var(--color-warning-light)' : 'transparent',
-            border:       `1px solid ${goingCold ? 'var(--color-warning)' : 'var(--theme-paper-border)'}`,
+            border:       '1px solid var(--neu-edge)',
+            boxShadow:    goingCold ? 'var(--neu-shadow-chip)' : 'none',
             borderRadius: 'var(--radius-sm)',
             fontSize:     'var(--text-sm)',
             fontFamily:   'var(--font-sans)',
             fontWeight:   'var(--weight-medium)',
             color:        goingCold ? 'var(--color-warning-text)' : 'var(--theme-text-secondary)',
             cursor:       'pointer',
-            transition:   'var(--transition-hover), border-color var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)',
+            transition:   'var(--transition-hover), box-shadow var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)',
             whiteSpace:   'nowrap',
             flexShrink:   0,
             outline:      'none',
@@ -263,15 +268,16 @@ export function LeadsTable({ leads, userId, role, domain, filters, hasActiveFilt
             gap:          'var(--space-1)',
             height:       '2.25rem',
             padding:      '0 var(--space-3)',
-            background:   sortOrder === 'asc' ? 'var(--theme-paper-subtle)' : 'transparent',
-            border:       `1px solid ${sortOrder === 'asc' ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
+            background:   sortOrder === 'asc' ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))' : 'transparent',
+            border:       '1px solid var(--neu-edge)',
+            boxShadow:    sortOrder === 'asc' ? 'var(--neu-shadow-chip)' : 'none',
             borderRadius: 'var(--radius-sm)',
             fontSize:     'var(--text-sm)',
             fontFamily:   'var(--font-sans)',
             fontWeight:   'var(--weight-medium)',
-            color:        sortOrder === 'asc' ? 'var(--theme-accent)' : 'var(--theme-text-secondary)',
+            color:        sortOrder === 'asc' ? 'var(--neu-accent-deep)' : 'var(--theme-text-secondary)',
             cursor:       'pointer',
-            transition:   'var(--transition-hover), border-color var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)',
+            transition:   'var(--transition-hover), box-shadow var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)',
             whiteSpace:   'nowrap',
             flexShrink:   0,
             outline:      'none',
@@ -339,7 +345,7 @@ export function LeadsTable({ leads, userId, role, domain, filters, hasActiveFilt
       <div className="hidden md:block" style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr style={{ background: 'var(--theme-paper-subtle)' }}>
+            <tr style={{ background: 'transparent' }}>
               {/* Fixed checkbox column — not in lead-columns.ts registry */}
               <th
                 style={{
@@ -859,8 +865,10 @@ function LeadCell({
 // ─────────────────────────────────────────────
 // Status badge — .status-pill--lead-* from design-tokens.css (theme-invariant)
 // ─────────────────────────────────────────────
+/* Ring layered over the pill's own paired chip shadow (never replaces it —
+   a lone flat ring would break the shadow-pair rule). */
 const STATUS_PILL_ACCENT_RING =
-  '0 0 0 2px var(--theme-paper), 0 0 0 4px var(--theme-accent)';
+  '0 0 0 2px var(--theme-paper), 0 0 0 4px var(--theme-accent), var(--neu-shadow-chip)';
 
 function StatusBadge({
   variant,

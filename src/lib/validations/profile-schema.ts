@@ -3,6 +3,7 @@ import { USER_ROLES } from "@/lib/constants/roles";
 import { APP_DOMAINS } from "@/lib/constants/domains";
 import { THEME_ENUM } from "@/lib/constants/themes";
 import { ICON_ENUM } from "@/lib/constants/app-icons";
+import { APPEARANCE_ENUM } from "@/lib/constants/appearance";
 import { uuidField } from "@/lib/validations/fields";
 
 const userRoleEnum = USER_ROLES as [string, ...string[]];
@@ -79,6 +80,9 @@ export const updateProfileSchema = z.object({
     .optional(),
   app_icon: z
     .enum(ICON_ENUM)
+    .optional(),
+  appearance: z
+    .enum(APPEARANCE_ENUM)
     .optional(),
   timezone: z
     .string()

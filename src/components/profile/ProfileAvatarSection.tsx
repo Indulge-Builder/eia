@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Camera } from "lucide-react";
-import { Spinner } from "@/components/ui/Spinner";
+import { SeedMandala } from "@/components/ui/SeedMandala";
 import { createClient }        from "@/lib/supabase/client";
 import { updateProfileAvatar } from "@/lib/actions/profiles";
 import { formErrors }          from "@/lib/validations/form-errors";
@@ -156,7 +156,9 @@ export function ProfileAvatarSection({ profile }: Props) {
             pointerEvents:  "none",
           }}
         >
-          <Camera style={{ width: "24px", height: "24px", strokeWidth: 1.5, color: "var(--theme-canvas-text)" }} />
+          {/* The scrim stays warm-dark, so the icon needs the warm-white ink —
+              --theme-canvas-text is bridged to a dark ink and would vanish here. */}
+          <Camera style={{ width: "24px", height: "24px", strokeWidth: 1.5, color: "var(--neu-on-accent-soft)" }} />
         </div>
 
         {/* Upload spinner */}
@@ -172,7 +174,7 @@ export function ProfileAvatarSection({ profile }: Props) {
               justifyContent: "center",
             }}
           >
-            <Spinner size="md" canvas />
+            <SeedMandala size={27} variant="darkDisc" spin={3.5} />
           </div>
         )}
       </button>

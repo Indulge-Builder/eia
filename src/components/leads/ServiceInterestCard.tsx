@@ -72,7 +72,7 @@ export function ServiceInterestCard({ interests, cases, hooks, domain }: Props) 
       style={{
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    'var(--shadow-1)',
         padding:      'var(--space-5)',
         display:       'flex',

@@ -66,7 +66,7 @@ export function SettingsLinkCard({
         padding:        "var(--space-5)",
         background:     "var(--theme-paper)",
         border:         "1px solid var(--theme-paper-border)",
-        borderRadius:   "var(--radius-lg)",
+        borderRadius:   "var(--neu-radius-card)",
         boxShadow:      "var(--shadow-1)",
         textDecoration: "none",
         color:          "inherit",
@@ -74,7 +74,7 @@ export function SettingsLinkCard({
         outline:        "none",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.boxShadow = "var(--shadow-2)";
+        (e.currentTarget as HTMLAnchorElement).style.boxShadow = "var(--neu-shadow-hover)";
         (e.currentTarget as HTMLAnchorElement).style.transform = "translateY(-1px)";
       }}
       onMouseLeave={(e) => {

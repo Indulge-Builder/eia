@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import { ElayaGlyph } from '@/components/ui/elaya-glyph';
+import { ElayaGlyphDisc } from '@/components/ui/elaya-glyph';
 import { MessageBar } from '@/components/ui/MessageBar';
 import { DictationButton } from '@/components/ui/DictationButton';
 import { useToast } from '@/hooks/useToast';
@@ -266,21 +266,7 @@ export function ElayaChatShell({
           className="flex items-center gap-3 px-5 py-4"
           style={{ borderBottom: '1px solid var(--theme-paper-border)' }}
         >
-          <span
-            className="flex items-center justify-center"
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: 'var(--radius-md)',
-              background: 'var(--theme-accent-surface)',
-              border: '1px solid color-mix(in srgb, var(--theme-accent) 20%, transparent)',
-              boxShadow: 'var(--shadow-accent-glow)',
-              color: 'var(--theme-accent)',
-              flexShrink: 0,
-            }}
-          >
-            <ElayaGlyph size={22} />
-          </span>
+          <ElayaGlyphDisc size={40} glyphSize={22} />
           <div className="flex flex-col min-w-0">
             <span
               style={{
@@ -371,9 +357,10 @@ export function ElayaChatShell({
             )}
             {statusLine && (
               <div className="flex items-center" style={{ gap: 'var(--space-2)' }}>
-                <span style={{ color: 'var(--theme-accent)', display: 'flex', flexShrink: 0 }}>
-                  <ElayaGlyph size={14} />
-                </span>
+                {/* While she thinks the charcoal disc's mark TURNS (8s/rev,
+                    logo-motion handoff) — 28px to sit on the same rail as the
+                    message-bubble glyphs. */}
+                <ElayaGlyphDisc size={28} thinking />
                 <span
                   className="italic"
                   style={{

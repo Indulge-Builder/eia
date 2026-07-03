@@ -7,7 +7,7 @@ import {
   useRef,
 } from "react";
 import { Send } from "lucide-react";
-import { Spinner } from "@/components/ui/Spinner";
+import { SeedMandala } from "./SeedMandala";
 
 const SEND_SIZE    = 32;
 const LINE_HEIGHT  = 20;
@@ -80,25 +80,27 @@ export const MessageBar = forwardRef<HTMLTextAreaElement, MessageBarProps>(
             display:      "flex",
             alignItems:   "center",
             gap:          "var(--space-2)",
-            background:   isNested ? "var(--theme-paper-subtle)" : "var(--theme-paper)",
-            border:       isNested ? "none" : "1px solid var(--theme-paper-border)",
+            // Inputs FLOAT (soft-UI rule 3): gradient sheen + paired input
+            // shadow — never a sunken paper-subtle well.
+            background:   "var(--neu-input-bg)",
+            border:       "1px solid var(--neu-input-edge)",
             borderRadius: isNested ? "var(--radius-md)" : "var(--radius-lg)",
             padding:      isNested
               ? "var(--space-2) var(--space-3)"
               : "var(--space-2) var(--space-3)",
-            boxShadow:    isNested ? "none" : "var(--shadow-2)",
+            boxShadow:    "var(--neu-shadow-input)",
             transition:   "border-color var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out)",
           }}
           onFocus={(e) => {
             if (isNested) return;
             (e.currentTarget as HTMLDivElement).style.borderColor = "var(--theme-accent)";
-            (e.currentTarget as HTMLDivElement).style.boxShadow   = "var(--shadow-accent-ring)";
+            (e.currentTarget as HTMLDivElement).style.boxShadow   = "0 0 0 1px var(--theme-accent), var(--neu-shadow-input)";
           }}
           onBlur={(e) => {
             if (isNested) return;
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               (e.currentTarget as HTMLDivElement).style.borderColor = "";
-              (e.currentTarget as HTMLDivElement).style.boxShadow   = "var(--shadow-2)";
+              (e.currentTarget as HTMLDivElement).style.boxShadow   = "var(--neu-shadow-input)";
             }
           }}
         >
@@ -143,19 +145,26 @@ export const MessageBar = forwardRef<HTMLTextAreaElement, MessageBarProps>(
             style={{
               width:          `${SEND_SIZE}px`,
               height:         `${SEND_SIZE}px`,
-              borderRadius:   "var(--radius-sm)",
+              // The send button is the ONLY accent-filled circle on screen.
+              borderRadius:   "var(--radius-full)",
               border:         "none",
               cursor:         canSend ? "pointer" : "not-allowed",
               display:        "flex",
               alignItems:     "center",
               justifyContent: "center",
               flexShrink:     0,
-              background:     canSend ? "var(--theme-accent)" : "var(--theme-paper-border)",
-              transition:     "background var(--duration-fast) var(--ease-in-out), transform var(--duration-instant) var(--ease-spring)",
+              background:     canSend ? "var(--neu-accent-gradient)" : "var(--neu-well)",
+              boxShadow:      canSend ? "var(--neu-shadow-raised-sm)" : "none",
+              transition:     "background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out), transform var(--duration-instant) var(--ease-spring)",
             }}
           >
             {loading ? (
-              <Spinner size="sm" />
+              <SeedMandala
+                size={16}
+                variant="currentColor"
+                spin={3.5}
+                style={{ color: canSend ? "var(--theme-accent-fg)" : "var(--theme-text-tertiary)" }}
+              />
             ) : (
               <Send
                 style={{

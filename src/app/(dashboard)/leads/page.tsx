@@ -10,6 +10,7 @@ import { getLeadFilterOptions } from '@/lib/services/leads-service';
 import { getNotifications } from '@/lib/services/notifications-service';
 import { TOP_BAR_ENABLED } from '@/lib/constants/feature-flags';
 import { PageControls } from '@/components/layout/PageControls';
+import { CondensingPageHeader } from '@/components/layout/CondensingPageHeader';
 import type { LeadFilters, LeadStatus, CallOutcome } from '@/lib/types/database';
 import { LeadsFilters } from '@/components/leads/LeadsFilters';
 import { LeadsTableAsync } from '@/components/leads/LeadsTableAsync';
@@ -119,28 +120,25 @@ export default async function LeadsPage({
     <>
       {/* DNA §9.2 page-padding ladder: px-4 mobile → px-6 tablet → px-8 desktop */}
       <main className="flex-1 p-4 sm:p-6 lg:p-8">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <h1 className="type-page-title m-0">Leads<span className="page-title-dot">.</span></h1>
-
-          <div className="flex items-center gap-3">
-            <AddLeadButton
-              callerProfile={{
-                id:        profile.id,
-                role:      profile.role,
-                domain:    profile.domain,
-                full_name: profile.full_name,
-              }}
-              initialAgents={initialAgents}
+        {/* Sticky header — condenses past 24px scroll (polish §07) */}
+        <CondensingPageHeader title="Leads">
+          <AddLeadButton
+            callerProfile={{
+              id:        profile.id,
+              role:      profile.role,
+              domain:    profile.domain,
+              full_name: profile.full_name,
+            }}
+            initialAgents={initialAgents}
+          />
+          {TOP_BAR_ENABLED && (
+            <PageControls
+              userId={profile.id}
+              isPrivileged={showDomainFilter}
+              notificationsPromise={getNotifications(profile.id)}
             />
-            {TOP_BAR_ENABLED && (
-              <PageControls
-                userId={profile.id}
-                isPrivileged={showDomainFilter}
-                notificationsPromise={getNotifications(profile.id)}
-              />
-            )}
-          </div>
-        </div>
+          )}
+        </CondensingPageHeader>
 
         <div className="px-5 py-4 mb-4 rounded-md border border-(--theme-paper-border) bg-(--theme-paper) shadow-(--shadow-1)">
           <LeadsFilters

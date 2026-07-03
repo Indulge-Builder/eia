@@ -4,12 +4,11 @@ import { Suspense, use, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, m as motion, useReducedMotion } from "framer-motion";
-import { SPRING_CONFIG, BASE_DURATION, EASE_OUT_EXPO } from "@/lib/constants/motion";
+import { BASE_DURATION, EASE_OUT_EXPO } from "@/lib/constants/motion";
 import {
   LayoutDashboard,
   UserRound,
   Shield,
-  ChevronRight,
   LogOut,
   BarChart2,
   TrendingUp,
@@ -35,6 +34,8 @@ import { ROLE_LABELS } from "@/lib/constants/roles";
 import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { canAccessRoute } from "@/lib/utils/route-access";
 import { Avatar } from "@/components/ui/Avatar";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { useMediaQuery, MQ } from "@/hooks/useMediaQuery";
 import { lockBodyScroll } from "@/lib/utils/scroll";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type { Profile, Notification } from "@/lib/types/database";
@@ -124,21 +125,31 @@ function NavLink({
   isActive,
 }: NavItem & { isActive: boolean }) {
   const reduceMotion = useReducedMotion();
+  // Hover feedback is the ICON colour fill (accent) — no background wash
+  // (removed 2026-07-03); tracked as state so the icon tile can react.
+  const [hovered, setHovered] = useState(false);
+  // md icon rail (md..lg) hides labels — the charcoal Tooltip (right side)
+  // carries them there; full sidebar / mobile drawer show the label inline,
+  // so the pill is disabled (never tooltip a visible label).
+  const tabletDown = useMediaQuery(MQ.tabletDown);
+  const mobile = useMediaQuery(MQ.mobile);
+  const isRail = tabletDown && !mobile;
   return (
+    <Tooltip label={label} side="right" wrap="block" disabled={!isRail}>
     <Link
       href={href}
       // Layout props live in .serene-nav-link (globals.css) so the md icon-rail
       // media query can centre the icon — inline styles would win otherwise.
       className="serene-nav-link"
-      title={label}
+      // Active nav item stays CLEAN (2026-07-03): no background wash, no
+      // border/shadow chip, no left pill — the accent icon tile below is the
+      // one active indicator. Label just firms up (active colour + medium).
       style={{
         color: isActive
           ? "var(--theme-sidebar-active)"
           : "var(--theme-sidebar-text)",
-        background: isActive ? "var(--theme-sidebar-active-bg)" : "transparent",
-        border: isActive
-          ? "1px solid color-mix(in srgb, var(--theme-accent) 18%, transparent)"
-          : "1px solid transparent",
+        background: "transparent",
+        border: "1px solid transparent",
         fontFamily: "var(--font-sans)",
         fontSize: "var(--text-sm)",
         fontWeight: isActive ? "var(--weight-medium)" : "var(--weight-normal)",
@@ -148,62 +159,61 @@ function NavLink({
       }}
       onMouseEnter={(e) => {
         if (!isActive) {
-          e.currentTarget.style.background = "var(--theme-sidebar-hover-bg)";
-          e.currentTarget.style.color = "var(--theme-canvas-text)";
+          setHovered(true);
           // design-dna §6.3 — nav item hover nudge, x: 2
           if (!reduceMotion) e.currentTarget.style.transform = "translateX(2px)";
         }
       }}
       onMouseLeave={(e) => {
         if (!isActive) {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = "var(--theme-sidebar-text)";
+          setHovered(false);
           e.currentTarget.style.transform = "translateX(0)";
         }
       }}
     >
-      {/* Active left pill — design-dna §5.99 #01: it does not toggle, it travels.
-          top is offset-positioned (not translateY) so Framer owns transform. */}
-      {isActive && (
-        <motion.span
-          layoutId="sidebar-active-pill"
-          aria-hidden="true"
-          transition={reduceMotion ? { duration: 0 } : SPRING_CONFIG}
+      {/* Icon tile — THE active indicator: the current page's icon sits on a
+          small accent-gradient tile; inactive icons stay bare. (The left
+          travelling pill + active background wash were removed 2026-07-03.)
+          Hover on an inactive item fills the ICON with the theme accent —
+          no row background (removed 2026-07-03). */}
+      <span
+        aria-hidden="true"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "26px",
+          height: "26px",
+          borderRadius: "9px",
+          flexShrink: 0,
+          margin: "-4px 0",
+          background: isActive ? "var(--neu-accent-gradient)" : "transparent",
+          boxShadow: isActive ? "var(--neu-shadow-knob)" : "none",
+          // Hover fill uses the DEEP accent (the pastel --theme-accent is too
+          // faint on the cream rail) + a heavier stroke — bold and unmissable.
+          color: isActive
+            ? "var(--theme-accent-fg)"
+            : hovered
+              ? "var(--neu-accent-deep)"
+              : "inherit",
+          transition:
+            "background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)",
+        }}
+      >
+        <Icon
           style={{
-            position: "absolute",
-            left: 0,
-            top: "calc(50% - 8px)",
-            width: "3px",
-            height: "16px",
-            borderRadius: "0 var(--radius-full) var(--radius-full) 0",
-            background: "var(--theme-sidebar-active-pill)",
+            width: "15px",
+            height: "15px",
+            strokeWidth: hovered && !isActive ? 2.2 : 1.5,
+            flexShrink: 0,
+            transition: "stroke-width var(--duration-fast) var(--ease-in-out)",
           }}
         />
-      )}
-
-      <Icon
-        style={{
-          width: "15px",
-          height: "15px",
-          strokeWidth: 1.5,
-          flexShrink: 0,
-        }}
-      />
+      </span>
       {/* Hidden on the md icon rail — the title attr carries the label there */}
       <span className="serene-sidebar-rail-hide" style={{ flex: 1 }}>{label}</span>
-
-      {isActive && (
-        <motion.span
-          className="serene-sidebar-rail-hide serene-nav-chevron"
-          aria-hidden="true"
-          initial={reduceMotion ? false : { opacity: 0, x: -4 }}
-          animate={{ opacity: 0.5, x: 0 }}
-          transition={{ duration: BASE_DURATION, ease: EASE_OUT_EXPO }}
-        >
-          <ChevronRight style={{ width: "12px", height: "12px" }} />
-        </motion.span>
-      )}
     </Link>
+    </Tooltip>
   );
 }
 
@@ -358,10 +368,14 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
     <aside
       className="serene-sidebar"
       data-open={drawerOpen ? "true" : "false"}
+      // Cream raised rail (neumorphic Sidebar specimen): the dark shell
+      // retires — the rail floats on the canvas with the paired shadow +
+      // hairline edge. Height/margin/radius live in .serene-sidebar
+      // (globals.css) so the mobile drawer + md icon-rail modes can differ.
       style={{
-        height: "100dvh",
         background: "var(--theme-sidebar-bg)",
-        boxShadow: "var(--shadow-sidebar)",
+        border: "1px solid var(--neu-edge)",
+        boxShadow: "var(--neu-shadow-raised)",
         display: "flex",
         flexDirection: "column",
         flexShrink: 0,
@@ -396,16 +410,16 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
           }}
         >
           <img
-            src="/logo-light.avif"
+            // Dark-ink logo variant — the light-on-dark logo washes out on the
+            // cream rail (same asset the mobile trigger bubble uses).
+            src="/logo.webp"
             alt=""
             aria-hidden="true"
             className="serene-sidebar-logo-img"
             style={{
               objectFit: "contain",
-              filter: `
-                drop-shadow(0 0 8px  color-mix(in srgb, var(--theme-accent) 30%, transparent))
-                drop-shadow(0 0 20px color-mix(in srgb, var(--theme-accent) 12%, transparent))
-              `,
+              filter:
+                "drop-shadow(0 0 12px color-mix(in srgb, var(--theme-accent) 18%, transparent))",
             }}
           />
         </Link>
@@ -524,11 +538,10 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
               "color var(--duration-fast) var(--ease-in-out), background var(--duration-fast) var(--ease-in-out)",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--theme-sidebar-hover-bg)";
-            e.currentTarget.style.color = "var(--theme-canvas-text)";
+            // No hover background (2026-07-03) — the icon takes the deep accent fill.
+            e.currentTarget.style.color = "var(--neu-accent-deep)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
             e.currentTarget.style.color = "var(--theme-sidebar-text)";
           }}
         >
@@ -581,15 +594,8 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
                 : "1px solid transparent",
               transition: "background var(--duration-fast) var(--ease-in-out)",
             }}
-            onMouseEnter={(e) => {
-              if (!isOnProfile)
-                e.currentTarget.style.background =
-                  "var(--theme-sidebar-hover-bg)";
-            }}
-            onMouseLeave={(e) => {
-              if (!isOnProfile)
-                e.currentTarget.style.background = "transparent";
-            }}
+            // No hover background (2026-07-03) — the sidebar hover vocabulary
+            // is icon accent fill only; the avatar row keeps just the cursor.
           >
             {/* Avatar */}
             <Avatar
@@ -666,13 +672,11 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
                 "background var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out), transform var(--duration-base) var(--ease-spring)",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background =
-                "var(--theme-sidebar-hover-bg)";
-              e.currentTarget.style.color = "var(--theme-canvas-text)";
+              // No hover background (2026-07-03) — deep-accent icon fill only.
+              e.currentTarget.style.color = "var(--neu-accent-deep)";
               e.currentTarget.style.transform = "rotate(5deg) scale(1.05)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
               e.currentTarget.style.color =
                 "color-mix(in srgb, var(--theme-sidebar-text) 50%, transparent)";
               e.currentTarget.style.transform = "rotate(0deg) scale(1)";

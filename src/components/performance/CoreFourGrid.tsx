@@ -14,6 +14,7 @@ import type {
 } from "@/lib/services/performance-service";
 import { formatDuration } from "@/lib/utils/dates";
 import { formatPercent, formatCount } from "@/lib/utils/numbers";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { EXIT_DURATION, EASE_OUT_EXPO } from "@/lib/constants/motion";
 import { useChartTokens } from "@/components/ui/charts/useChartTokens";
 
@@ -160,7 +161,7 @@ function MetricCard({
       style={{
         background: "var(--theme-paper)",
         border: "1px solid var(--theme-paper-border)",
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         padding: "var(--space-5)",
         boxShadow: "var(--shadow-1)",
         display: "flex",
@@ -225,7 +226,7 @@ function MetricCard({
             flexShrink: 0,
           }}
         >
-          {value}
+          <AnimatedNumber value={value} />
         </p>
         {/* Sparkline — real daily series; only count metrics render it */}
         {hasSpark && (

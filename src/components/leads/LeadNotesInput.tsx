@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, Send } from 'lucide-react';
-import { Spinner } from '@/components/ui/Spinner';
+import { SeedMandala } from '@/components/ui/SeedMandala';
 import { DictationButton } from '@/components/ui/DictationButton';
 import { CardHeader } from '@/components/leads/CardHeader';
 import { addLeadNote } from '@/lib/actions/leads';
@@ -62,7 +62,7 @@ export function LeadNotesInput({ leadId, canAdd, onNoteAdded }: Props) {
       style={{
         background:    'var(--theme-paper)',
         border:        '1px solid var(--theme-paper-border)',
-        borderRadius:  'var(--radius-lg)',
+        borderRadius:  'var(--neu-radius-card)',
         boxShadow:     'var(--shadow-1)',
         overflow:      'hidden',
         display:       'flex',
@@ -70,17 +70,9 @@ export function LeadNotesInput({ leadId, canAdd, onNoteAdded }: Props) {
         flex:          1,
       }}
     >
-      {/* Accent-surface variant of the shared strip — deltas via the style merges */}
-      <CardHeader
-        icon={BookOpen}
-        label="Notes"
-        style={{
-          borderBottom: '1px solid color-mix(in srgb, var(--theme-accent) 18%, transparent)',
-          background:   'var(--theme-accent-surface)',
-        }}
-        iconStyle={{ color: 'var(--theme-accent)' }}
-        labelStyle={{ color: 'var(--theme-accent)' }}
-      />
+      {/* The accent-surface treatment this card pioneered is CardHeader's
+          default now (2026-07-03) — no overrides needed. */}
+      <CardHeader icon={BookOpen} label="Notes" />
 
       {/* Input area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -167,20 +159,21 @@ export function LeadNotesInput({ leadId, canAdd, onNoteAdded }: Props) {
                   gap:            'var(--space-2)',
                   padding:        'var(--space-2) var(--space-4)',
                   borderRadius:   'var(--radius-md)',
-                  border:         '1px solid color-mix(in srgb, var(--theme-accent) 30%, transparent)',
+                  border:         '1px solid var(--neu-edge)',
                   background:     content.trim() && !isBusy
-                    ? 'var(--theme-accent-surface)'
+                    ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
                     : 'transparent',
-                  color:          'var(--theme-accent)',
+                  boxShadow:      content.trim() && !isBusy ? 'var(--neu-shadow-chip)' : 'none',
+                  color:          'var(--neu-accent-deep)',
                   fontSize:       'var(--text-xs)',
                   fontWeight:     'var(--weight-medium)',
                   cursor:         content.trim() && !isBusy ? 'pointer' : 'not-allowed',
                   opacity:        content.trim() && !isBusy ? 1 : 0.45,
-                  transition:     'opacity 150ms, background 150ms',
+                  transition:     'opacity 150ms, background 150ms, box-shadow 150ms',
                 }}
               >
                 {isPending ? (
-                  <Spinner size="sm" />
+                  <SeedMandala size={14} variant="currentColor" spin={3.5} />
                 ) : (
                   <Send style={{ width: '0.75rem', height: '0.75rem', strokeWidth: 1.5 }} />
                 )}

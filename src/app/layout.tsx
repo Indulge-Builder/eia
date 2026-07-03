@@ -5,6 +5,13 @@ import { Inter, Playfair_Display } from "next/font/google";
 import { MotionProvider } from "@/components/layout/MotionProvider";
 import { DEFAULT_THEME, THEME_COOKIE, isThemeKey } from "@/lib/constants/themes";
 import {
+  APPEARANCE_COOKIE,
+  DEFAULT_APPEARANCE,
+  NEU_CANVAS_DARK,
+  NEU_CANVAS_LIGHT,
+  isAppearanceKey,
+} from "@/lib/constants/appearance";
+import {
   APP_ICON_COOKIE,
   DEFAULT_ICON,
   iconSrc,
@@ -48,20 +55,39 @@ export async function generateMetadata(): Promise<Metadata> {
       apple: iconHref,
     },
     // Installed-app chrome on iOS (no manifest `display` support there).
-    // black-translucent lets the dark canvas run under the status bar.
+    // default = dark status text — required on the cream neumorphic canvas
+    // (black-translucent's white text would vanish on #ECE8E1).
     appleWebApp: {
       capable: true,
       title: "Serene",
-      statusBarStyle: "black-translucent",
+      statusBarStyle: "default",
     },
   };
 }
 
-export const viewport: Viewport = {
-  // Hardcoded hex sanctioned only here + manifest.ts: meta theme-color cannot
-  // read CSS vars. Mirrors the Earth --theme-canvas token (#0d0c0a).
-  themeColor: "#0d0c0a",
-};
+// Dynamic (not a static export) so the browser/PWA chrome follows the saved
+// appearance from the first byte: light #ECE8E1 · dark #28241C · system emits
+// both media-scoped entries so the chrome tracks the OS without JS. Hardcoded
+// hex sanctioned only in appearance.ts (NEU_CANVAS_*): meta theme-color cannot
+// read CSS vars. AppearanceSelector rewrites the meta in the DOM on switch.
+export async function generateViewport(): Promise<Viewport> {
+  const cookieAppearance = (await cookies()).get(APPEARANCE_COOKIE)?.value;
+  const appearance = isAppearanceKey(cookieAppearance)
+    ? cookieAppearance
+    : DEFAULT_APPEARANCE;
+
+  return {
+    themeColor:
+      appearance === "system"
+        ? [
+            { media: "(prefers-color-scheme: light)", color: NEU_CANVAS_LIGHT },
+            { media: "(prefers-color-scheme: dark)",  color: NEU_CANVAS_DARK  },
+          ]
+        : appearance === "dark"
+          ? NEU_CANVAS_DARK
+          : NEU_CANVAS_LIGHT,
+  };
+}
 
 export default async function RootLayout({
   children,
@@ -71,17 +97,39 @@ export default async function RootLayout({
   // SSR mirror of profiles.theme (see lib/constants/themes.ts) — stamping the
   // user's theme here means the first paint is already correct; without it the
   // Earth default flashes until ThemeInitializer runs post-hydration.
-  const cookieTheme = (await cookies()).get(THEME_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const cookieTheme = cookieStore.get(THEME_COOKIE)?.value;
   const theme = isThemeKey(cookieTheme) ? cookieTheme : DEFAULT_THEME;
+
+  // SSR mirror of profiles.appearance (lib/constants/appearance.ts) — 'dark'
+  // stamps data-neu server-side (zero flash of light). 'system' cannot be
+  // resolved on the server, so it renders a tiny inline script FIRST in <body>:
+  // it runs before anything below it paints, matching the zero-flash guarantee.
+  const cookieAppearance = cookieStore.get(APPEARANCE_COOKIE)?.value;
+  const appearance = isAppearanceKey(cookieAppearance)
+    ? cookieAppearance
+    : DEFAULT_APPEARANCE;
 
   return (
     <html
       lang="en"
       data-theme={theme}
+      {...(appearance === "dark" ? { "data-neu": "dark" } : {})}
       suppressHydrationWarning
       className={`${inter.variable} ${playfairDisplay.variable}`}
     >
       <body suppressHydrationWarning>
+        {appearance === "system" && (
+          <script
+            // Pre-hydration OS-preference resolve for the 'system' appearance —
+            // the data-neu flip must land before first paint. ThemeInitializer
+            // owns the live prefers-color-scheme listener after hydration.
+            dangerouslySetInnerHTML={{
+              __html:
+                'try{if(window.matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.setAttribute("data-neu","dark")}catch(e){}',
+            }}
+          />
+        )}
         <ServiceWorkerRegistration />
         <MotionProvider>{children}</MotionProvider>
       </body>

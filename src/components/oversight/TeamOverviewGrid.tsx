@@ -60,7 +60,7 @@ export function TeamOverviewGrid({ rows }: { rows: TeamTaskOverviewRow[] }) {
                 padding: "var(--space-5)",
                 background: "var(--theme-paper)",
                 border: "1px solid var(--theme-paper-border)",
-                borderRadius: "var(--radius-lg)",
+                borderRadius: "var(--neu-radius-card)",
                 boxShadow: "var(--shadow-1)",
               }}
             >

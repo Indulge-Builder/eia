@@ -40,7 +40,7 @@ import { AssigneePickerModal } from '@/components/tasks/AssigneePickerModal';
 import type { AssignableUser } from '@/lib/types';
 import { CreatePersonalTaskModal } from '@/components/tasks/CreatePersonalTaskModal';
 import { Avatar } from '@/components/ui/Avatar';
-import { Spinner } from '@/components/ui/Spinner';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import type { PersonalTaskRow, PersonalTasksResult, TaskRemarkWithAuthor } from '@/lib/services/tasks-service';
 import type { Task, TaskStatus, UserRole, AppDomain } from '@/lib/types/database';
 import { EASE_OUT_EXPO } from '@/lib/constants/motion';
@@ -779,7 +779,7 @@ export function MyTasksCalendarView({
               color: 'var(--theme-text-tertiary)', fontSize: 'var(--text-sm)',
             }}
           >
-            <Spinner size="sm" />
+            <LogoSpinner size="sm" />
             Loading your tasks…
           </div>
         )}

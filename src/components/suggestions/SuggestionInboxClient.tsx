@@ -76,6 +76,9 @@ export function SuggestionInboxClient({
         onChange={(id) => setTab(id as FilterTab)}
         variant="pill"
         indicatorLayoutId="suggestions-status-tabs"
+        // Column-flex parent stretches children full-width; the pill tray must
+        // stay content-sized (the inline pill look) — never a full-row tray.
+        style={{ alignSelf: "flex-start" }}
       />
 
       {visible.length === 0 ? (

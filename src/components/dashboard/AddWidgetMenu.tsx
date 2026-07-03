@@ -114,7 +114,7 @@ export function AddWidgetMenu({
                   transition: 'background var(--duration-fast) var(--ease-in-out)',
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = 'var(--theme-paper-subtle)';
+                  (e.currentTarget as HTMLElement).style.background = 'var(--neu-accent-wash)';
                 }}
                 onMouseLeave={(e) => {
                   (e.currentTarget as HTMLElement).style.background = 'transparent';

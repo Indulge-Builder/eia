@@ -8,7 +8,7 @@
 
 import { m as motion } from 'framer-motion';
 import { Users, ListChecks, Handshake, TrendingUp, BookOpen } from 'lucide-react';
-import { ElayaGlyph } from '@/components/ui/elaya-glyph';
+import { ElayaGlyphDisc } from '@/components/ui/elaya-glyph';
 import { ELAYA_STARTER_PROMPTS } from '@/lib/constants/elaya';
 import { ENTER_DURATION, EASE_OUT_EXPO } from '@/lib/constants/motion';
 
@@ -44,19 +44,7 @@ export function ElayaIdentityCard({ busy, onPromptSelect }: Props) {
     >
       {/* Presence — the glyph always breathes while she occupies this card */}
       <div className="flex flex-col items-center text-center" style={{ gap: 'var(--space-3)' }}>
-        <span
-          className="flex items-center justify-center"
-          style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: 'var(--radius-lg)',
-            background: 'var(--theme-accent-surface)',
-            color: 'var(--theme-accent)',
-            flexShrink: 0,
-          }}
-        >
-          <ElayaGlyph size={32} />
-        </span>
+        <ElayaGlyphDisc size={64} glyphSize={32} style={{ borderRadius: 'var(--radius-lg)' }} />
         <span
           style={{
             fontFamily: 'var(--font-serif)',

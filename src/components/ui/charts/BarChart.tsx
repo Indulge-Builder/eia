@@ -96,19 +96,23 @@ export function BarChart({
     setResolvedColorMap(resolveColorMap(colorMap));
   }, [colorMap]);
 
-  // Re-resolve when theme switches (same MutationObserver pattern as useChartTokens)
+  // Re-resolve when theme OR dark mode switches (same MutationObserver
+  // pattern as useChartTokens — data-neu flips the pastel/status palettes)
   useEffect(() => {
     if (!colorMap) return;
     if (typeof MutationObserver === 'undefined') return;
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
-        if (m.type === 'attributes' && m.attributeName === 'data-theme') {
+        if (
+          m.type === 'attributes' &&
+          (m.attributeName === 'data-theme' || m.attributeName === 'data-neu')
+        ) {
           setResolvedColorMap(resolveColorMap(colorMap));
           break;
         }
       }
     });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-neu'] });
     return () => observer.disconnect();
   }, [colorMap]);
 
@@ -152,7 +156,7 @@ export function BarChart({
                 name={s.label}
                 fill={color}
                 stackId={stacked ? 'stack' : undefined}
-                radius={isTop ? topRadiusBar(4) : [0, 0, 0, 0]}
+                radius={isTop ? topRadiusBar(6) : [0, 0, 0, 0]}
               >
                 {/* Cell colouring for non-stacked bars only; colorMap fills go on Bar directly */}
                 {!stacked && !hasColorMap && data.map((_, ci) => (
@@ -168,7 +172,7 @@ export function BarChart({
                   for (let j = lastSeriesIdx; j >= 0; j--) {
                     if ((row[series[j].key] as number) > 0) { topIdx = j; break; }
                   }
-                  const cellRadius = topIdx === i ? topRadiusBar(4) : ([0, 0, 0, 0] as [number, number, number, number]);
+                  const cellRadius = topIdx === i ? topRadiusBar(6) : ([0, 0, 0, 0] as [number, number, number, number]);
                   return (
                     <Cell
                       key={`cell-${ci}`}

@@ -339,15 +339,15 @@ function PasswordField({
               : matchSuccess
               ? "var(--color-success)"
               : "var(--theme-accent)";
+            // Inputs float (soft-UI Rule 3) — focus adds the accent ring over
+            // the paired input shadow; never a flat glow, never a sunken fill.
             e.currentTarget.style.boxShadow = error
-              ? "0 0 0 3px var(--color-danger-light)"
-              : "var(--shadow-focus)";
-            e.currentTarget.style.background = "var(--theme-paper)";
+              ? "0 0 0 1px var(--color-danger), var(--neu-shadow-input)"
+              : "0 0 0 1px var(--theme-accent), var(--neu-shadow-input)";
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = borderColor;
-            e.currentTarget.style.boxShadow   = "none";
-            e.currentTarget.style.background   = "var(--theme-paper-subtle)";
+            e.currentTarget.style.boxShadow   = "var(--neu-shadow-input)";
           }}
         />
         <button

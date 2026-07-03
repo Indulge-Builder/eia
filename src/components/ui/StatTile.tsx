@@ -1,4 +1,7 @@
-// StatTile — THE labelled stat tile (dry-audit L-8). Server-component-safe.
+import { AnimatedNumber } from './AnimatedNumber';
+
+// StatTile — THE labelled stat tile (dry-audit L-8). Server-component-safe
+// (AnimatedNumber is a client leaf — fine to render from a server tree).
 //
 // Two variants cover the two existing anatomies:
 //   'card' — paper card chrome, micro label on top, 2xl semibold sans value,
@@ -41,17 +44,18 @@ export function StatTile({
       >
         <span
           style={{
-            fontFamily:         'var(--font-mono)',
+            // Playfair for numbers (soft-UI type rule); accent-deep is the text-safe accent.
+            fontFamily:         'var(--font-serif)',
             fontSize:           'var(--text-2xl)',
-            fontWeight:         'var(--weight-normal)',
+            fontWeight:         'var(--weight-semibold)',
             fontVariantNumeric: 'tabular-nums',
-            color:              'var(--theme-accent)',
+            color:              'var(--neu-accent-deep)',
             lineHeight:         1.1,
             marginBottom:       'var(--space-1)',
             whiteSpace:         'nowrap',
           }}
         >
-          {value}
+          <AnimatedNumber value={value} />
         </span>
         <span
           className="label-micro"
@@ -71,7 +75,7 @@ export function StatTile({
       style={{
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    'var(--shadow-1)',
         padding:      'var(--space-4)',
       }}
@@ -85,7 +89,8 @@ export function StatTile({
 
       <p
         style={{
-          fontFamily:  'var(--font-sans)',
+          // Playfair for numbers (soft-UI type rule).
+          fontFamily:  'var(--font-serif)',
           fontSize:    'var(--text-2xl)',
           fontWeight:  'var(--weight-semibold)',
           color:       'var(--theme-text-primary)',
@@ -93,7 +98,7 @@ export function StatTile({
           lineHeight:  'var(--leading-none)',
         }}
       >
-        {value}
+        <AnimatedNumber value={value} />
       </p>
 
       {sub && (

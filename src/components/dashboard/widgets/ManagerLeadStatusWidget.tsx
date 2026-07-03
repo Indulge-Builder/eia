@@ -88,7 +88,8 @@ function StackedBar({ mix, total }: { mix: Partial<Record<LeadStatus, number>>; 
         style={{
           height: "10px",
           borderRadius: "var(--radius-full)",
-          background: "var(--theme-paper-border)",
+          background: "var(--neu-well)",
+          boxShadow: "var(--neu-shadow-inset)",
           width: "100%",
         }}
       />
@@ -109,7 +110,8 @@ function StackedBar({ mix, total }: { mix: Partial<Record<LeadStatus, number>>; 
         style={{
           height: "10px",
           borderRadius: "var(--radius-full)",
-          background: "var(--theme-paper-border)",
+          background: "var(--neu-well)",
+          boxShadow: "var(--neu-shadow-inset)",
           width: "100%",
         }}
       />
@@ -150,7 +152,8 @@ function StackedBar({ mix, total }: { mix: Partial<Record<LeadStatus, number>>; 
           </div>
         ))}
       </div>
-      {/* Bar — no gap so percentages fill edge-to-edge without overflow clip eating a segment */}
+      {/* Bar — no gap so percentages fill edge-to-edge without overflow clip eating a segment.
+          Inset pill track + vertical pastel-gradient segments (soft-UI proportion bar). */}
       <div
         style={{
           display: "flex",
@@ -158,13 +161,20 @@ function StackedBar({ mix, total }: { mix: Partial<Record<LeadStatus, number>>; 
           borderRadius: "var(--radius-full)",
           overflow: "hidden",
           width: "100%",
+          background: "var(--neu-well)",
+          boxShadow: "var(--neu-shadow-inset)",
         }}
       >
         {segments.map(({ s }, i) => (
           <div
             key={s}
             title={`${LEAD_STATUS_LABELS[s]}: ${segments[i].count}`}
-            style={{ width: `${pcts[i]}%`, background: BAR_COLORS[s], flexShrink: 0, minWidth: 0 }}
+            style={{
+              width: `${pcts[i]}%`,
+              background: `linear-gradient(180deg, color-mix(in srgb, ${BAR_COLORS[s]} 72%, white), ${BAR_COLORS[s]})`,
+              flexShrink: 0,
+              minWidth: 0,
+            }}
           />
         ))}
       </div>
@@ -226,7 +236,7 @@ export function ManagerLeadStatusWidget({ userId, role, initialData, dateRange, 
   return (
     <div
       style={{
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         border: "1px solid var(--theme-paper-border)",
         background: "var(--theme-paper)",
         boxShadow: "var(--shadow-1)",
@@ -308,12 +318,13 @@ export function ManagerLeadStatusWidget({ userId, role, initialData, dateRange, 
                     alignItems:   "center",
                     gap:          "var(--space-1)",
                     border:       `1px solid ${STATUS_BORDER[s]}`,
+                    boxShadow:    "var(--neu-shadow-chip)",
                   }}
                 >
                   <span
                     style={{
                       fontSize:           "var(--text-xl)",
-                      fontFamily:         "var(--font-mono)",
+                      fontFamily:         "var(--font-serif)",
                       fontWeight:         "var(--weight-semibold)",
                       color:              STATUS_TEXT[s],
                       lineHeight:         1,
@@ -354,6 +365,7 @@ export function ManagerLeadStatusWidget({ userId, role, initialData, dateRange, 
                     borderRadius: "var(--radius-full)",
                     background:   STATUS_BG[s],
                     border:       `1px solid ${STATUS_BORDER[s]}`,
+                    boxShadow:    "var(--neu-shadow-chip)",
                   }}
                 >
                   <span

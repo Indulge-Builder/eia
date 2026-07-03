@@ -52,7 +52,7 @@ export function CaseListRow({ serviceCase: c, index = 0, onClick }: CaseListRowP
         padding:      'var(--space-3) var(--space-4)',
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    'var(--shadow-1)',
         cursor:       'pointer',
         transition:   'box-shadow var(--duration-base) var(--ease-in-out), transform var(--duration-base) var(--ease-in-out)',

@@ -4,12 +4,15 @@ import { getCurrentProfile } from "@/lib/services/profiles-service";
 import { getNotifications } from "@/lib/services/notifications-service";
 import { canAccessRoute } from "@/lib/utils/route-access";
 import { DEFAULT_THEME, isThemeKey } from "@/lib/constants/themes";
+import { DEFAULT_APPEARANCE, isAppearanceKey } from "@/lib/constants/appearance";
 import { DEFAULT_ICON, isIconKey } from "@/lib/constants/app-icons";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { ThemeInitializer } from "@/components/layout/ThemeInitializer";
 import { IconInitializer } from "@/components/layout/IconInitializer";
+import { AppBootScreen } from "@/components/layout/AppBootScreen";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { CommandPaletteProvider } from "@/components/layout/CommandPaletteProvider";
 import { ElayaWidget } from "@/components/elaya/ElayaWidget";
 import { UsagePresence } from "@/components/layout/UsagePresence";
 import { SuggestionFeedbackProvider } from "@/components/suggestions/SuggestionFeedbackProvider";
@@ -39,16 +42,26 @@ export default async function DashboardLayout({
     : getNotifications(profile.id);
 
   const safeTheme = isThemeKey(profile.theme) ? profile.theme : DEFAULT_THEME;
+  const safeAppearance = isAppearanceKey(profile.appearance)
+    ? profile.appearance
+    : DEFAULT_APPEARANCE;
   const safeIcon  = isIconKey(profile.app_icon) ? profile.app_icon : DEFAULT_ICON;
 
   return (
     <>
-      {/* The root layout already SSRs data-theme from the serene-theme cookie;
-          this corrects a missing/stale cookie against the DB truth and
-          re-writes it for the next request. */}
-      <ThemeInitializer theme={safeTheme} />
+      {/* The root layout already SSRs data-theme + data-neu from the
+          serene-theme / serene-appearance cookies; this corrects missing/stale
+          cookies against the DB truth and re-writes them for the next request. */}
+      <ThemeInitializer theme={safeTheme} appearance={safeAppearance} />
       {/* Same corrective sync for the app-icon cookie → next-request manifest link. */}
       <IconInitializer icon={safeIcon} />
+      {/* Boot sequence (logo-motion handoff) — SSRs with the shell, plays once
+          per app (hard) load, then fades itself out. The layout persists across
+          client navigations, so soft navs never replay it. */}
+      <AppBootScreen />
+      {/* Route transitions rely on each route's loading.tsx skeleton — the
+          full-page RouteVeil (spinning-mark cover on every nav) was removed
+          2026-07-03; never reintroduce a route-change overlay. */}
     {/* Responsive frame (.serene-shell* in globals.css — audit D-3): row with
         gutter+paper on md+, column with mobile top strip + full-bleed paper
         below md. The Sidebar renders its own three modes (full/rail/drawer).
@@ -61,6 +74,11 @@ export default async function DashboardLayout({
 
       {/* Toast stack — portal-like, sits at root of dashboard shell, outside scroll */}
       <ToastProvider />
+
+      {/* ⌘K command palette — global listener; panel chunk loads on first open */}
+      <CommandPaletteProvider
+        profile={{ id: profile.id, role: profile.role, domain: profile.domain }}
+      />
 
       {/* Floating Elaya presence — bottom-right circular button → modal with the
           SAME ElayaChatShell as /elaya (it portals to document.body and hides

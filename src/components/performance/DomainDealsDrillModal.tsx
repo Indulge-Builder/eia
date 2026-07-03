@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { DrillModalShell } from './DrillModalShell';
 import { DealDrillRow, type DealDrillRowItem } from './DealDrillRow';
-import { Spinner } from '@/components/ui/Spinner';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getDomainDealsDrillAction } from '@/lib/actions/performance';
 import { DOMAIN_LABELS } from '@/lib/constants/domains';
@@ -79,7 +79,7 @@ export function DomainDealsDrillModal({ open, domain, period, customFrom, custom
     >
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-8)' }}>
-          <Spinner size="md" />
+          <LogoSpinner size="md" />
         </div>
       ) : error ? (
         <EmptyState variant="inline" title="Couldn't load deals." size="sm" />

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/modal';
-import { Spinner } from '@/components/ui/Spinner';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { isGiaDomain, type GiaDomain, DOMAIN_LABELS } from '@/lib/constants/domains';
 import {
   DEAL_TYPE_LABELS,
@@ -113,7 +113,8 @@ export function WonDealModal({ open, leadId: _leadId, domain, isPending, error, 
             gap:          'var(--space-2)',
             padding:      'var(--space-3) var(--space-4)',
             background:   'var(--color-success-light)',
-            border:       '1px solid var(--color-success)',
+            border:       '1px solid var(--neu-edge)',
+            boxShadow:    'var(--neu-shadow-chip)',
             borderRadius: 'var(--radius-md)',
           }}
         >
@@ -149,9 +150,10 @@ export function WonDealModal({ open, leadId: _leadId, domain, isPending, error, 
                 width:        '100%',
                 height:       '2.5rem',
                 padding:      '0 var(--space-3)',
-                border:       '1px solid var(--theme-paper-border)',
-                borderRadius: 'var(--radius-sm)',
-                background:   'var(--theme-paper)',
+                border:       '1px solid var(--neu-input-edge)',
+                borderRadius: 'var(--radius-lg)',
+                background:   'var(--neu-input-bg)',
+                boxShadow:    'var(--neu-shadow-input)',
                 fontFamily:   'var(--font-sans)',
                 fontSize:     'var(--text-sm)',
                 color:        'var(--theme-text-primary)',
@@ -194,15 +196,16 @@ export function WonDealModal({ open, leadId: _leadId, domain, isPending, error, 
                   style={{
                     flex:         1,
                     height:       '2.5rem',
-                    border:       `1.5px solid ${duration === d ? 'var(--color-success)' : 'var(--theme-paper-border)'}`,
+                    border:       '1px solid var(--neu-edge)',
                     borderRadius: 'var(--radius-sm)',
                     background:   duration === d ? 'var(--color-success-light)' : 'var(--theme-paper)',
+                    boxShadow:    duration === d ? 'var(--neu-shadow-chip)' : 'none',
                     fontFamily:   'var(--font-sans)',
                     fontSize:     'var(--text-sm)',
                     fontWeight:   duration === d ? 'var(--weight-semibold)' : 'var(--weight-normal)',
                     color:        duration === d ? 'var(--color-success-text)' : 'var(--theme-text-primary)',
                     cursor:       isPending ? 'not-allowed' : 'pointer',
-                    transition:   'border-color 0.15s ease, background 0.15s ease',
+                    transition:   'box-shadow 0.15s ease, background 0.15s ease',
                     whiteSpace:   'nowrap',
                   }}
                 >
@@ -262,18 +265,20 @@ export function WonDealModal({ open, leadId: _leadId, domain, isPending, error, 
                 height:       '2.5rem',
                 paddingLeft:  'calc(var(--space-3) + 1.25rem)',
                 paddingRight: 'var(--space-3)',
-                border:       '1px solid var(--theme-paper-border)',
-                borderRadius: 'var(--radius-sm)',
-                background:   'var(--theme-paper)',
+                border:       '1px solid var(--neu-input-edge)',
+                borderRadius: 'var(--radius-lg)',
+                background:   'var(--neu-input-bg)',
+                boxShadow:    'var(--neu-shadow-input)',
                 fontFamily:   'var(--font-sans)',
                 fontSize:     'var(--text-sm)',
                 color:        'var(--theme-text-primary)',
                 outline:      'none',
                 boxSizing:    'border-box',
+                transition:   'box-shadow var(--duration-fast) var(--ease-in-out)',
                 opacity:      isPending ? 0.6 : 1,
               }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--theme-accent)'; }}
-              onBlur={(e)  => { e.currentTarget.style.borderColor = 'var(--theme-paper-border)'; }}
+              onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)'; }}
+              onBlur={(e)  => { e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)'; }}
             />
           </div>
         </div>
@@ -286,7 +291,7 @@ export function WonDealModal({ open, leadId: _leadId, domain, isPending, error, 
 
         {isPending && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-            <Spinner size="sm" />
+            <LogoSpinner size="sm" />
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--theme-text-tertiary)' }}>
               Recording deal and closing lead…
             </span>

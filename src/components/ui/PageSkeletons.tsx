@@ -8,14 +8,47 @@
 // own the chrome once; loading files compose them with page-specific interiors.
 //
 // Server-component-safe: no hooks, no Framer Motion — shimmer comes from the
-// global `.skeleton` CSS class. Bespoke interiors (dashboard bento, whatsapp
-// split-pane) stay bespoke — only the repeated blocks live here.
+// global `.skeleton` CSS class (left→right sheen since the logo-motion
+// handoff; the opacity pulse is gone). Bespoke interiors (dashboard bento,
+// whatsapp split-pane) stay bespoke — only the repeated blocks live here.
 
 import React from 'react';
+import { SeedMandala } from './SeedMandala';
 
-/** §11.4 stagger: 0/80/160/240/320ms, capped. */
+/** Logo-motion handoff shimmer stagger: 150ms per element, capped. */
 export function skeletonStagger(index: number): number {
-  return Math.min(index * 80, 320);
+  return Math.min(index * 150, 600);
+}
+
+export interface SkeletonWatermarkProps {
+  /** Mark edge in px (default 150). */
+  size?: number;
+}
+
+/**
+ * The faint seed-mandala watermark that sits top-right of a skeleton region,
+ * turning at 40s/rev (its fixed speed) at 10% opacity. Positioned absolutely —
+ * the nearest positioned ancestor is the region it stamps. Mounted structurally
+ * by `PageHeaderSkeleton`; bespoke skeletons (dashboard, whatsapp) mount it
+ * themselves inside a `position: relative` root.
+ */
+export function SkeletonWatermark({ size = 150 }: SkeletonWatermarkProps) {
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'absolute',
+        right: '-20px',
+        top: '-16px',
+        width: size,
+        height: size,
+        opacity: 0.1,
+        pointerEvents: 'none',
+      }}
+    >
+      <SeedMandala size={size} spin={40} />
+    </div>
+  );
 }
 
 export interface ShimmerProps {
@@ -52,10 +85,17 @@ export interface PageHeaderSkeletonProps {
   titleWidth?: number;
   /** Width of the top-right CTA block; omit for pages without a CTA. */
   actionWidth?: number;
+  /** The top-right seed-mandala watermark (default true) — every composing
+   *  loading page gets it structurally; opt out for cramped regions. */
+  watermark?: boolean;
 }
 
 /** Row 1 of the Standard Page Layout Contract — title left, optional CTA right. */
-export function PageHeaderSkeleton({ titleWidth = 80, actionWidth }: PageHeaderSkeletonProps) {
+export function PageHeaderSkeleton({
+  titleWidth = 80,
+  actionWidth,
+  watermark = true,
+}: PageHeaderSkeletonProps) {
   return (
     <div
       style={{
@@ -64,10 +104,14 @@ export function PageHeaderSkeleton({ titleWidth = 80, actionWidth }: PageHeaderS
         justifyContent: 'space-between',
         gap:            'var(--space-4)',
         marginBottom:   'var(--space-6)',
+        // Anchors the watermark to the top-right of the skeleton page region
+        // (it overhangs the rows below at 10% opacity by design).
+        position:       'relative',
       }}
     >
       <Shimmer w={titleWidth} h={36} />
       {actionWidth !== undefined && <Shimmer w={actionWidth} h={36} style={{ flexShrink: 0 }} />}
+      {watermark && <SkeletonWatermark />}
     </div>
   );
 }
@@ -152,7 +196,7 @@ export function SkeletonCard({ style, children }: SkeletonCardProps) {
         padding:      'var(--space-4) var(--space-5)',
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    'var(--shadow-1)',
         ...style,
       }}

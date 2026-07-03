@@ -109,8 +109,10 @@ task-reminder mechanism.
 
 ## 7. Open items
 
-- No per-section pagination (limits: 500 timers scanned / 100 tasks / 100 cold leads) —
-  revisit if a domain's breach volume ever approaches the caps.
+- ~~No per-section pagination~~: each section now renders the newest 50 rows with a
+  "Show all N" reveal (Table `previewRows`, 2026-07-03 — rule P-03). The service read
+  limits (500 timers scanned / 100 tasks / 100 cold leads) still stand; revisit those
+  if a domain's breach volume ever approaches the caps.
 - ~~Admin/founder domain filter dropdown~~: shipped 2026-06-25 via the global `DomainSelector`
   (see §2), not a page-level dropdown.
 

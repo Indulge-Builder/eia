@@ -73,7 +73,7 @@ function InvalidLinkCard({ expired = false }: { expired?: boolean }) {
               fontWeight: "var(--weight-light)",
               letterSpacing: "var(--tracking-tighter)",
               lineHeight: "var(--leading-tight)",
-              color: "var(--theme-canvas-text)",
+              color: "var(--neu-text-primary)",
               textAlign: "center",
               margin: 0,
             }}

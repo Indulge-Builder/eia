@@ -56,7 +56,8 @@ function inlineNodes(text: string, keyBase: string): React.ReactNode[] {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              color: 'var(--theme-accent)',
+              // Text-safe accent on the cream material (pastel accents fail as link text).
+              color: 'var(--neu-accent-deep)',
               textDecoration: 'underline',
               textUnderlineOffset: 2,
             }}

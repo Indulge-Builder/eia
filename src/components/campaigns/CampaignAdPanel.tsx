@@ -105,8 +105,9 @@ function EmptyAdTile({ canUpload, onAdd }: { canUpload: boolean; onAdd: () => vo
     aspectRatio:    '9 / 16',
     maxHeight:      '480px',
     borderRadius:   'var(--radius-md)',
-    background:     'var(--theme-paper-subtle)',
-    border:         '1px dashed var(--theme-paper-border)',
+    background:     'var(--neu-surface)',
+    border:         '1px dashed var(--neu-edge-strong)',
+    boxShadow:      'var(--neu-shadow-raised-sm)',
     display:        'flex',
     flexDirection:  'column',
     alignItems:     'center',
@@ -137,7 +138,7 @@ function EmptyAdTile({ canUpload, onAdd }: { canUpload: boolean; onAdd: () => vo
         e.currentTarget.style.color = 'var(--theme-text-secondary)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--theme-paper-border)';
+        e.currentTarget.style.borderColor = 'var(--neu-edge-strong)';
         e.currentTarget.style.color = 'var(--theme-text-tertiary)';
       }}
     >
