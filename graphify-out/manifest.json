@@ -1360,8 +1360,8 @@
     "semantic_hash": ""
   },
   "src/components/ui/PageSkeletons.tsx": {
-    "mtime": 1783063733.6106832,
-    "ast_hash": "2a86dbc6bb6871d021d5be5787ed8944",
+    "mtime": 1783293505.461811,
+    "ast_hash": "6c3abf49b8114bbd19e04c6b4f305459",
     "semantic_hash": ""
   },
   "src/components/ui/PasswordStrengthBar.tsx": {
@@ -3170,8 +3170,8 @@
     "semantic_hash": ""
   },
   "docs/changelog.md": {
-    "mtime": 1783292627.5818305,
-    "ast_hash": "4fa715200e84ae63973f66ae977c5d28",
+    "mtime": 1783293571.7225227,
+    "ast_hash": "c7d04e026157bc1d1c7ff08fc19a6218",
     "semantic_hash": ""
   },
   "docs/claude-project/1-product-and-status.md": {

@@ -64,7 +64,15 @@ stuttered and swallowed the drawer trigger, filter bars clipped and jammed, task
   span 100% while the chips hugged left) — `fit-content` on desktop, `fullWidth` even-split below md.
 - **/notes:** removed the Elaya intro paragraph under the title bar.
 
-Files: `src/app/layout.tsx`, `src/app/globals.css`, `src/components/ui/{FilterBar,Dialog,LogoSpinner}.tsx`,
+- **Skeleton watermark centered (`ui/PageSkeletons.tsx` + globals.css):** the faint spinning
+  seed-mandala on loading screens was pinned top-right of the ~36px header row (`right: -20px;
+  top: -16px`), reading as a corner scrap floating at the top. It now fills and centers within the
+  paper region: `.serene-shell-paper` became a `position: relative` containing block, and
+  `SkeletonWatermark` renders `absolute inset:0` with a centered mark, mounted OUTSIDE the header
+  flex row so its containing block is the paper region (not the thin header strip, not the
+  sidebar/gutter).
+
+Files: `src/app/layout.tsx`, `src/app/globals.css`, `src/components/ui/{FilterBar,Dialog,LogoSpinner,PageSkeletons}.tsx`,
 `src/components/tasks/{TasksFilters,CompletedTasksButton,MyTasksCalendarView,GroupTasksTab,GroupTaskWorkspace,SubTaskModal,CreatePersonalTaskModal}.tsx`,
 `src/app/(dashboard)/tasks/[id]/loading.tsx` (new), `src/components/mobile/screens/AgentTasksScreen.tsx`,
 `src/components/mobile/rooms/room-bits.tsx`, `src/components/performance/DomainOverviewPanel.tsx`,
