@@ -40,7 +40,7 @@ import { AssigneePickerModal } from '@/components/tasks/AssigneePickerModal';
 import type { AssignableUser } from '@/lib/types';
 import { CreatePersonalTaskModal } from '@/components/tasks/CreatePersonalTaskModal';
 import { Avatar } from '@/components/ui/Avatar';
-import { LogoSpinner } from '@/components/ui/LogoSpinner';
+import { LogoSpinner, LoadingVeil } from '@/components/ui/LogoSpinner';
 import type { PersonalTaskRow, PersonalTasksResult, TaskRemarkWithAuthor } from '@/lib/services/tasks-service';
 import type { Task, TaskStatus, UserRole, AppDomain } from '@/lib/types/database';
 import { EASE_OUT_EXPO } from '@/lib/constants/motion';
@@ -232,6 +232,12 @@ export function MyTasksCalendarView({
   const [selectedTask,        setSelectedTask]        = useState<PersonalTaskRow | null>(null);
   const [selectedTaskRemarks, setSelectedTaskRemarks] = useState<TaskRemarkWithAuthor[] | null>(null);
   const [taskModalOpen,       setTaskModalOpen]       = useState(false);
+
+  // Warm the SubTaskModal chunk after hydration (still out of the route chunk,
+  // G-1) — a first tap otherwise pays remarks fetch + chunk download in series.
+  useEffect(() => {
+    void import('@/components/tasks/SubTaskModal');
+  }, []);
 
   // ── Create modal ───────────────────────────────────────────────────────────
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -801,6 +807,11 @@ export function MyTasksCalendarView({
           if (task.tags.length > 0) onTagsMayHaveChanged?.();
         }}
       />
+
+      {/* Tap → modal gap: the modal is gated on the remarks fetch, which used
+          to leave the tap with zero feedback. The veil covers exactly that
+          in-flight window. */}
+      {selectedTask && taskModalOpen && selectedTaskRemarks === null && <LoadingVeil />}
 
       <AnimatePresence>
         {selectedTask && taskModalOpen && selectedTaskRemarks !== null && (

@@ -1321,8 +1321,13 @@ export function SubTaskModal({
                 }}
               >
 
-                {/* 2. Action Items card — checklist (personal + group subtasks) */}
+                {/* 2. Action Items card — checklist (personal + group subtasks).
+                    Below md the Details + metadata jump ABOVE the checklist
+                    (max-md:order-*): the 55%-capped Zone A scroller should
+                    spend its height on the checklist edge nearest the remarks
+                    panel, with the short metadata read first. */}
                   <div
+                    className="max-md:order-3"
                     style={{
                       flexShrink:   0,
                       background:   "var(--theme-paper)",
@@ -1453,8 +1458,9 @@ export function SubTaskModal({
                     </div>
                   </div>
 
-                {/* 3. Details card — deadline + assignee */}
+                {/* 3. Details card — deadline + assignee (first on mobile) */}
                 <div
+                  className="max-md:order-1"
                   style={{
                     flexShrink:   0,
                     background:   "var(--theme-paper)",
@@ -1525,8 +1531,10 @@ export function SubTaskModal({
                   </div>
                 </div>
 
-                {/* 4. Metadata footer — whispered, monospace */}
+                {/* 4. Metadata footer — whispered, monospace (rides above the
+                    checklist on mobile, below the Details card) */}
                 <div
+                  className="max-md:order-2"
                   style={{
                     flexShrink:    0,
                     display:       "flex",

@@ -20,11 +20,17 @@ import type { PersonalTaskRow } from '@/lib/services/tasks-service';
  * date; a lead-linked task shows the lead's name in the sub line.
  */
 
+// Lead follow-ups all share type-label titles ("Call") — the row title must
+// carry WHO the task is about or the list reads "Call / Call / Call". The
+// lead name rides the title; the sub line keeps status + priority.
+function taskTitle(task: PersonalTaskRow): string {
+  const leadName = [task.lead_first_name, task.lead_last_name].filter(Boolean).join(' ');
+  return leadName ? `${task.title} · ${leadName}` : task.title;
+}
+
 function taskSub(task: PersonalTaskRow): string {
   const bits: string[] = [TASK_STATUS[task.status].label];
   if (task.priority !== 'normal') bits.push(TASK_PRIORITY[task.priority].label);
-  const leadName = [task.lead_first_name, task.lead_last_name].filter(Boolean).join(' ');
-  if (leadName) bits.push(leadName);
   return bits.join(' · ');
 }
 
@@ -74,7 +80,7 @@ export function AgentTasksScreen({
             return (
               <ListRow
                 key={task.id}
-                title={task.title}
+                title={taskTitle(task)}
                 sub={taskSub(task)}
                 right={
                   task.due_at ? (

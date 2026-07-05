@@ -39,9 +39,14 @@ const playfairDisplay = Playfair_Display({
 // point at the same file. IconSelector re-syncs the cookie on change; the
 // install prompt swaps the link in the DOM for an in-the-moment pick.
 export async function generateMetadata(): Promise<Metadata> {
-  const cookieIcon = (await cookies()).get(APP_ICON_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const cookieIcon = cookieStore.get(APP_ICON_COOKIE)?.value;
   const icon = isIconKey(cookieIcon) ? cookieIcon : DEFAULT_ICON;
   const iconHref = iconSrc(icon);
+  const cookieAppearance = cookieStore.get(APPEARANCE_COOKIE)?.value;
+  const appearance = isAppearanceKey(cookieAppearance)
+    ? cookieAppearance
+    : DEFAULT_APPEARANCE;
 
   return {
     title: "Serene",
@@ -55,12 +60,15 @@ export async function generateMetadata(): Promise<Metadata> {
       apple: iconHref,
     },
     // Installed-app chrome on iOS (no manifest `display` support there).
-    // default = dark status text — required on the cream neumorphic canvas
-    // (black-translucent's white text would vanish on #ECE8E1).
+    // dark appearance → black-translucent: the app draws edge-to-edge under
+    // the status bar (white status text on the charcoal canvas) and the
+    // safe-area padding in globals.css takes over. light/system → default:
+    // black-translucent's white status text would vanish on the cream
+    // #ECE8E1 canvas, so the opaque bar stays (legibility beats full-bleed).
     appleWebApp: {
       capable: true,
       title: "Serene",
-      statusBarStyle: "default",
+      statusBarStyle: appearance === "dark" ? "black-translucent" : "default",
     },
   };
 }
@@ -77,6 +85,11 @@ export async function generateViewport(): Promise<Viewport> {
     : DEFAULT_APPEARANCE;
 
   return {
+    // Edge-to-edge on notched/edge-to-edge devices: without viewport-fit=cover
+    // the browser letterboxes the app below the status bar and every
+    // env(safe-area-inset-*) in the codebase evaluates to 0. The shell's
+    // safe-area padding (globals.css) depends on this.
+    viewportFit: "cover",
     themeColor:
       appearance === "system"
         ? [

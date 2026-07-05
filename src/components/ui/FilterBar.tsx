@@ -195,6 +195,13 @@ export function FilterBar({
               overflowX:               'auto' as const,
               scrollbarWidth:          'none' as const,
               WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
+              // overflow-x:auto forces overflow-y to a scrolling value, so the
+              // rail clips its children's raised shadows/accent rings at the
+              // 36px child edge. Pad the rail vertically and pull the same
+              // amount back with negative margins — shadow room, zero height
+              // change.
+              padding:                 'var(--space-2) 0',
+              margin:                  'calc(-1 * var(--space-2)) 0',
             }
           : { flexWrap: 'wrap' as const }),
         ...style,

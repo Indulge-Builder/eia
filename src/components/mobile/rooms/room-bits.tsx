@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 
 /**
  * Shared mobile-room presentation bits (mobile-ops.md §9). Display-only
@@ -149,20 +150,13 @@ export function RowCount({ value, token }: { value: string; token?: string }) {
   );
 }
 
-/** Pane loading state — the typing-dots treatment, butler-quiet. */
+/** Pane loading state — the spinning seed mandala (THE loading indicator;
+    the same centered-LogoSpinner treatment as the WhatsApp pane). Rooms gate
+    it on `!data`, so it only ever shows while a pane is genuinely loading. */
 export function PaneLoader() {
   return (
-    <div className="flex flex-col items-center gap-3 py-10" role="status" aria-label="Loading">
-      <span className="flex gap-[5px]">
-        {[0, 0.18, 0.36].map((delay) => (
-          <span
-            key={delay}
-            className="neu-m-dot w-1.5 h-1.5 rounded-full bg-(--neu-accent)"
-            style={{ animationDelay: `${delay}s` }}
-          />
-        ))}
-      </span>
-      <span className="text-[11.5px] text-(--neu-text-tertiary)">A moment…</span>
+    <div className="flex items-center justify-center py-10">
+      <LogoSpinner size="md" />
     </div>
   );
 }

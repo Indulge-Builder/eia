@@ -44,6 +44,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { AvatarStack } from '@/components/ui/AvatarStack';
 import { CollapseReveal } from '@/components/ui/CollapseReveal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { LoadingVeil } from '@/components/ui/LogoSpinner';
 import type { Task, TaskGroup, TaskStatus, TaskPriority, UserRole, AppDomain } from '@/lib/types/database';
 import { TASK_STATUS_LABELS } from '@/lib/constants/task-types';
 import { BASE_DURATION, EASE_OUT_EXPO, ENTER_DURATION, EXIT_DURATION, FAST_DURATION } from '@/lib/constants/motion';
@@ -1146,6 +1147,9 @@ const GroupRow = memo(function GroupRow({
               </AnimatePresence>
             </div>
 
+            {/* Remarks-fetch window between tap and modal — see MyTasksCalendarView */}
+            {selectedSubtask && modalOpen && selectedSubtaskRemarks === null && <LoadingVeil />}
+
             <AnimatePresence>
               {selectedSubtask && modalOpen && selectedSubtaskRemarks !== null && (
                 <SubTaskModal
@@ -1203,6 +1207,12 @@ export function GroupTasksTab({
   useEffect(() => {
     setGroupRows(initialRows);
   }, [initialRows]);
+
+  // Warm the SubTaskModal chunk after hydration (still out of the route chunk,
+  // G-1) — a first tap otherwise pays remarks fetch + chunk download in series.
+  useEffect(() => {
+    void import('@/components/tasks/SubTaskModal');
+  }, []);
 
   const filteredRows = useMemo(
     () => filterGroupRows(groupRows, filters),

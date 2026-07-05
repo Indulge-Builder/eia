@@ -144,9 +144,10 @@ export function Dialog({
                   : { width: '100%', maxWidth: maxWidth ? undefined : MAX_WIDTH[size as keyof typeof MAX_WIDTH] }),
               }}
             >
-              {/* Header */}
+              {/* Header — same <md gutter tightening as the body */}
               {(title || !hideCloseButton) && (
                 <div
+                  className="max-md:px-4!"
                   style={{
                     display:        'flex',
                     alignItems:     'center',
@@ -216,8 +217,11 @@ export function Dialog({
                 </div>
               )}
 
-              {/* Body */}
+              {/* Body — the <md bottom sheet drops to the space-4 inset (the
+                  desktop space-6 gutters eat ~13% of a 360px sheet and read
+                  as fields floating in a void); md+ keeps the classic inset. */}
               <div
+                className={bodyPadding ? 'max-md:px-4! max-md:py-4!' : undefined}
                 style={{
                   flex:       1,
                   overflow:   'auto',
@@ -233,9 +237,10 @@ export function Dialog({
                 {children}
               </div>
 
-              {/* Footer */}
+              {/* Footer — same <md gutter tightening as the body */}
               {footer && (
                 <div
+                  className="max-md:px-4!"
                   style={{
                     display:        'flex',
                     justifyContent: 'flex-end',

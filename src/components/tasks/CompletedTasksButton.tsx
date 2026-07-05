@@ -4,6 +4,7 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { History } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useMediaQuery, MQ } from '@/hooks/useMediaQuery';
 import type { UserRole, AppDomain } from '@/lib/types/database';
 
 // Heavy modal loading rule (perf audit G-1): load on intent. The call site
@@ -24,6 +25,9 @@ interface CompletedTasksButtonProps {
 
 export function CompletedTasksButton({ currentUser }: CompletedTasksButtonProps) {
   const [open, setOpen] = useState(false);
+  // The /tasks header carries TWO CTAs + the bell next to a 52px-indented
+  // title — the labelled button overflows a ~375px row. Icon-only below md.
+  const isMobile = useMediaQuery(MQ.mobile);
 
   return (
     <>
@@ -32,8 +36,10 @@ export function CompletedTasksButton({ currentUser }: CompletedTasksButtonProps)
         size="sm"
         iconLeft={History}
         onClick={() => setOpen(true)}
+        aria-label="Completed tasks"
+        title="Completed tasks"
       >
-        Completed
+        {isMobile ? null : 'Completed'}
       </Button>
 
       {open && (

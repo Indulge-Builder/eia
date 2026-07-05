@@ -26,6 +26,7 @@ import { DomainLeadsDrillModal, type DomainDrillKind } from '@/components/perfor
 import { DomainDealsDrillModal } from '@/components/performance/DomainDealsDrillModal';
 import { DomainTargetMeter } from '@/components/performance/DomainTargetMeter';
 import { useToast } from '@/hooks/useToast';
+import { useMediaQuery, MQ } from '@/hooks/useMediaQuery';
 import { ENTER_DURATION, PAGE_DURATION, EASE_OUT_EXPO, EASE_IN_OUT } from '@/lib/constants/motion';
 import type { DomainHealthCard, DomainTarget } from '@/lib/types/index';
 import type { PerformancePeriod } from '@/lib/services/performance-service';
@@ -375,6 +376,7 @@ export function DomainOverviewPanel({
   const toast = useToast;
   const [data, setData]               = useState<DomainHealthCard[]>(initialData);
   const [activeMetric, setMetric]     = useState<MetricKey>('leads');
+  const isMobileToggle                = useMediaQuery(MQ.mobile);
   const [isRefetching, setRefetching] = useState(false);
   const [, startTransition]           = useTransition();
   const isMountedRef                  = useRef(false);
@@ -571,8 +573,16 @@ export function DomainOverviewPanel({
             activeTab={activeMetric}
             onChange={(id) => setMetric(id as MetricKey)}
             variant="accent"
+            fullWidth={isMobileToggle}
             indicatorLayoutId="domain-metric-toggle"
-            style={{ marginBottom: 'var(--space-5)' }}
+            // Block flow stretches the tray across the whole chart panel while
+            // the three chips hug left — fit-content keeps the tray hugging its
+            // chips on desktop; below md it splits the row evenly (the
+            // FounderPerformanceShell fullWidth treatment).
+            style={{
+              marginBottom: 'var(--space-5)',
+              ...(isMobileToggle ? null : { width: 'fit-content', maxWidth: '100%' }),
+            }}
           />
 
           {/* initialDimension seeds a positive width on Recharts' synchronous

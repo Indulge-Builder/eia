@@ -12,6 +12,66 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-07-06 — Mobile polish sweep: PWA full-bleed, sticky header rework, filter bars, tasks surfaces, loading standardization
+
+**Why:** first real phone-testing pass on the responsive dashboard shell surfaced a batch of
+mobile defects — the installed app letterboxed below the status bar, the sticky page header
+stuttered and swallowed the drawer trigger, filter bars clipped and jammed, task rows read
+"Call / Call / Call", and the subtask modal opened with seconds of dead air.
+
+- **PWA full-bleed (`src/app/layout.tsx`):** `generateViewport` now emits `viewport-fit=cover` —
+  without it every `env(safe-area-inset-*)` in the codebase evaluated to 0 and the app could never
+  extend under the status bar. iOS `statusBarStyle` follows the appearance cookie: **dark →
+  `black-translucent`** (true edge-to-edge; white status text sits on the charcoal canvas),
+  light/system stays `default` (black-translucent's white text would vanish on cream #ECE8E1).
+  Android already tracks the appearance-aware manifest `theme_color`.
+- **Sticky header rework (`.serene-condense-header`, globals.css):** condensing is now
+  **paint-only** — background + blur + hairline; the padding/font-size/max-height transitions
+  (layout animations, per-frame reflow under a 10px backdrop blur — the scroll jank) are gone. The
+  bar's box is constant-height; the content gap moved from padding-bottom to margin-bottom. Below
+  md the safe-area + rhythm air moved INTO the bar's padding (`main.p-4:has(.serene-condense-header)`
+  drops to `--space-2`), so the stuck bar covers the status-bar strip instead of sliding under the
+  notch. The floating drawer trigger (`.serene-mobile-topbar`) rose from `--z-raised` (10) to
+  `--z-sidebar` (40) — at 10 the condensed bar (30) frosted the Indulge mark AND swallowed its taps
+  ("hamburger not working when scrolled").
+- **FilterBar mobile (`ui/FilterBar.tsx`):** the below-md scroll rail clipped every chip's raised
+  shadow/accent ring top-and-bottom (`overflow-x: auto` forces y-clipping at the 36px child edge) —
+  fixed with vertical padding + compensating negative margins (zero height change). On **/tasks**
+  the bar now takes a full row of the strip below md (`flexBasis: 100%`, tabs + count stay on row 1)
+  — its old `flex-basis: 0` never wrapped, so the tab tray crushed it into an unusable sliver
+  ("filter bar not scrollable").
+- **Tasks page:** `CompletedTasksButton` collapses to icon-only below md (two labelled CTAs plus
+  the bell and the 52px title indent overflowed the header row). `/m/tasks/[agentId]` rows now title
+  **"Call · <Lead Name>"** (name was buried truncated in the 11px sub line — the list read
+  "Call / Call"). New `tasks/[id]/loading.tsx` renders the SAME `WorkspaceSkeleton` the page's
+  Suspense uses — navigation previously painted the tasks LIST skeleton, then the workspace
+  skeleton (the "two skeletons then the page" report).
+- **Subtask modal open latency:** all three call sites (`MyTasksCalendarView`, `GroupTasksTab`,
+  `GroupTaskWorkspace`) warm the `SubTaskModal` chunk post-hydration (still out of the route chunk,
+  G-1) and render the new **`LoadingVeil`** (exported from `ui/LogoSpinner.tsx` — Dialog-scrim +
+  centered LogoSpinner) during the remarks pre-fetch that gates the modal; the tap previously gave
+  zero feedback through fetch + chunk download in series. Below md the modal's Zone A reorders
+  (CSS `order`): Details → metadata → checklist, so the capped scroller spends its height where the
+  user asked ("metadata on top").
+- **Dialog bottom sheet (`ui/Dialog.tsx`):** header/body/footer gutters tighten to `--space-4`
+  below md (the desktop `--space-6` inset ate ~13% of a 360px sheet — the "add task page" spacing).
+- **Mobile loading standard:** `/m` rooms' `PaneLoader` (`mobile/rooms/room-bits.tsx`) swapped its
+  bouncing dots for the centered **`LogoSpinner size="md"`** — the WhatsApp conversation-pane
+  treatment, now THE mobile loading look. It stays gated on `!data`, so it only appears while a
+  pane is genuinely loading, never on a revisit that already has data.
+- **/performance Domains metric toggle (`DomainOverviewPanel`):** the Total Leads / Total Calls /
+  Revenue `TabSelector` tray no longer stretches across the chart panel (block flow made the tray
+  span 100% while the chips hugged left) — `fit-content` on desktop, `fullWidth` even-split below md.
+- **/notes:** removed the Elaya intro paragraph under the title bar.
+
+Files: `src/app/layout.tsx`, `src/app/globals.css`, `src/components/ui/{FilterBar,Dialog,LogoSpinner}.tsx`,
+`src/components/tasks/{TasksFilters,CompletedTasksButton,MyTasksCalendarView,GroupTasksTab,GroupTaskWorkspace,SubTaskModal,CreatePersonalTaskModal}.tsx`,
+`src/app/(dashboard)/tasks/[id]/loading.tsx` (new), `src/components/mobile/screens/AgentTasksScreen.tsx`,
+`src/components/mobile/rooms/room-bits.tsx`, `src/components/performance/DomainOverviewPanel.tsx`,
+`src/components/notes/NotesManager.tsx`.
+
+---
+
 ## 2026-07-06 — Mobile Ops: admin/founder phones auto-open /m
 
 **Why:** the web app sent every logged-in user to `/dashboard` regardless of device, so a founder

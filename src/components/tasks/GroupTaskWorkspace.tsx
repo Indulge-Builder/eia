@@ -84,6 +84,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { BackButton } from "@/components/ui/BackButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { LoadingVeil } from "@/components/ui/LogoSpinner";
 import type {
   Task,
   TaskGroup,
@@ -303,6 +304,12 @@ export function GroupTaskWorkspace({
     }
     setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Warm the SubTaskModal chunk after hydration (still out of the route chunk,
+  // G-1) — a first tap otherwise pays remarks fetch + chunk download in series.
+  useEffect(() => {
+    void import("@/components/tasks/SubTaskModal");
   }, []);
 
   function handleViewChange(v: WorkspaceView) {
@@ -1495,6 +1502,9 @@ export function GroupTaskWorkspace({
           {showAddPanel ? "Close" : "Add subtask"}
         </button>
       </div>
+
+      {/* Remarks-fetch window between tap and modal — see MyTasksCalendarView */}
+      {selectedSubtask && modalOpen && selectedSubtaskRemarks === null && <LoadingVeil />}
 
       {/* Task Modal */}
       <AnimatePresence>

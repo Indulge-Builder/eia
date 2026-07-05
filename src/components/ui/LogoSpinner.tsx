@@ -66,3 +66,30 @@ export function LogoSpinner({ size = 'md', className, style, label = 'Loading' }
     </span>
   );
 }
+
+/**
+ * LoadingVeil — full-viewport scrim + centered LogoSpinner for the gap
+ * between a tap and a heavy surface appearing (e.g. the remarks pre-fetch
+ * that gates SubTaskModal). Wears the Dialog scrim recipe so the veil →
+ * modal handoff reads as one continuous surface. Render it ONLY while a
+ * fetch is genuinely in flight — never as a route/skeleton substitute.
+ */
+export function LoadingVeil({ label = 'Loading' }: { label?: string }) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 'var(--z-overlay)' as React.CSSProperties['zIndex'],
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'var(--neu-scrim)',
+        backdropFilter: 'blur(3px)',
+        WebkitBackdropFilter: 'blur(3px)',
+      }}
+    >
+      <LogoSpinner size="md" label={label} />
+    </div>
+  );
+}

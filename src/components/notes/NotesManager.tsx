@@ -112,16 +112,6 @@ export function NotesManager({ initialNotes }: NotesManagerProps) {
         </MotionButton>
       </CondensingPageHeader>
 
-      {/* Intro line — what these notes are for */}
-      <p
-        className="mb-4"
-        style={{ fontSize: "var(--text-sm)", color: "var(--theme-text-secondary)", maxWidth: "60ch" }}
-      >
-        Write what you&rsquo;d like Elaya to keep in mind about your work — accounts you own,
-        how you like things done, anything worth remembering. She reads your notes when she
-        helps you. Only you can see them.
-      </p>
-
       {/* Row 2 — filter bar */}
       <div className="px-5 py-4 mb-4 rounded-md border border-(--theme-paper-border) bg-(--theme-paper) shadow-(--shadow-1)">
         <div className="flex items-center gap-3 flex-wrap">

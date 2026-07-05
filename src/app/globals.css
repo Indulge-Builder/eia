@@ -298,7 +298,10 @@ body {
     position: absolute;
     top: calc(var(--space-7) + env(safe-area-inset-top, 0px));
     left: var(--space-4);
-    z-index: var(--z-raised);
+    /* Above the sticky condensed page header (--z-sticky, 30) — at --z-raised
+       the translucent stuck bar frosted the logo AND swallowed its taps. The
+       trigger opens the sidebar drawer, so the sidebar layer is its home. */
+    z-index: var(--z-sidebar);
   }
   /* Breathing room above the page title — the paper is full-bleed below md,
      so the page-padding ladder's p-4 alone leaves the <h1> hugging the
@@ -587,56 +590,62 @@ body {
   z-index: var(--z-sticky);
   /* Horizontal bleed only — the sticky bar spans the page-padding ladder
      edge-to-edge; the vertical rhythm stays the page's own (top padding
-     scrolls away, then the bar sticks flush at top: 0). */
-  margin: 0 calc(var(--space-4) * -1);
-  padding: var(--space-2) var(--space-4) var(--space-6);
+     scrolls away, then the bar sticks flush at top: 0).
+     The bar's box is CONSTANT-HEIGHT (mobile-jank fix 2026-07-06): the old
+     condense animated padding + font-size — layout properties, reflowing
+     the whole page every frame under a backdrop blur (the Never-Do list
+     exists for a reason). Condensing is now paint-only: background + blur
+     + hairline. The gap to the content below lives in margin-bottom (not
+     padding), so the stuck bar stays slim and content scrolls visibly
+     beneath the hairline. */
+  margin: 0 calc(var(--space-4) * -1) var(--space-3);
+  padding: var(--space-2) var(--space-4) var(--space-3);
   background: transparent;
   transition:
-    padding 300ms var(--ease-spring),
     background 300ms var(--ease-in-out),
     box-shadow 300ms var(--ease-in-out);
 }
 @media (min-width: 640px) { /* ≥ --bp-sm */
   .serene-condense-header {
-    margin: 0 calc(var(--space-6) * -1);
-    padding: var(--space-2) var(--space-6) var(--space-6);
+    margin: 0 calc(var(--space-6) * -1) var(--space-3);
+    padding: var(--space-2) var(--space-6) var(--space-3);
   }
 }
 @media (min-width: 1024px) { /* ≥ --bp-lg */
   .serene-condense-header {
-    margin: 0 calc(var(--space-8) * -1);
-    padding: var(--space-2) var(--space-8) var(--space-6);
+    margin: 0 calc(var(--space-8) * -1) var(--space-3);
+    padding: var(--space-2) var(--space-8) var(--space-3);
+  }
+}
+/* < md the page's notch clearance normally lives on main.p-4 and scrolls
+   away — a stuck bar would slide under the status bar and the floating
+   drawer trigger. Move the safe-area + rhythm air INTO the bar's constant
+   padding (page keeps the same resting title position: space-2 on main +
+   space-5 + inset here = the old space-7 + inset), so the stuck bar itself
+   covers the status-bar strip. */
+@media (max-width: 767.98px) { /* < --bp-md */
+  .serene-shell-paper main.p-4:has(.serene-condense-header) {
+    padding-top: var(--space-2);
+  }
+  .serene-condense-header {
+    padding-top: calc(var(--space-5) + env(safe-area-inset-top, 0px));
   }
 }
 .serene-condense-header[data-condensed="true"] {
-  padding-top: var(--space-3);
-  padding-bottom: var(--space-3);
   background: color-mix(in srgb, var(--neu-canvas) 82%, transparent);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   box-shadow: 0 1px 0 rgb(var(--neu-dark) / 0.22);
 }
-.serene-condense-header .type-page-title {
-  transition: font-size 300ms var(--ease-spring);
-}
-.serene-condense-header[data-condensed="true"] .type-page-title {
-  font-size: 17px;
-}
 .serene-condense-subtitle {
-  overflow: hidden;
-  max-height: 24px;
   opacity: 1;
-  transition:
-    opacity 240ms var(--ease-in-out),
-    max-height 300ms var(--ease-spring);
+  transition: opacity 240ms var(--ease-in-out);
 }
 .serene-condense-header[data-condensed="true"] .serene-condense-subtitle {
   opacity: 0;
-  max-height: 0;
 }
 @media (prefers-reduced-motion: reduce) {
   .serene-condense-header,
-  .serene-condense-header .type-page-title,
   .serene-condense-subtitle {
     transition: none;
   }
