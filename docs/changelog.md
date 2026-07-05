@@ -12,6 +12,143 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-07-06 — Mobile Ops: admin/founder phones auto-open /m
+
+**Why:** the web app sent every logged-in user to `/dashboard` regardless of device, so a founder
+on a phone got the desktop dashboard, not the pocket surface just built. `/m` was reachable only
+by typing the URL.
+
+- **`/dashboard` page** now redirects a mobile-browser **admin/founder** to `/m` (their rooms are
+  fully built). Manager/agent stay on the responsive `/dashboard` until their room sets ship, and
+  every desktop browser is untouched. The redirect is gated on a **bare landing** (no query
+  params) so a shared `/dashboard?…` deep link or an in-dashboard back-nav is never hijacked
+  mid-flow. Placed in the page (not the shared `(dashboard)` layout) so only the dashboard landing
+  is intercepted, not deep links to `/leads`, `/tasks`, etc.
+- **Authorization is unaffected** — this only picks which fully-functional surface loads; role is
+  read from `public.profiles` via `getCurrentProfile()` (Rule 09), never from the User-Agent. The
+  UA test is `src/lib/utils/device.ts` `isMobileUserAgent()` (server-only; phones + small Android
+  tablets match, iPad deliberately does not — a founder on an iPad keeps the desktop dashboard).
+- **Opt-out:** the mobile drawer gains a "View desktop site" row (admin/founder only) that sets the
+  `serene-force-desktop` cookie (`FORCE_DESKTOP_COOKIE`, 1yr) and hard-navigates to `/dashboard`;
+  the redirect honors that cookie. A hard nav guarantees the cookie is on the server request that
+  renders `/dashboard`, so the redirect never re-fires.
+
+Files: `src/app/(dashboard)/dashboard/page.tsx`, `src/lib/utils/device.ts`,
+`src/lib/constants/mobile-rooms.ts` (`FORCE_DESKTOP_COOKIE`), `src/components/mobile/MobileDrawer.tsx`.
+
+---
+
+## 2026-07-06 — Mobile Ops: the /m layer goes functional (phases 0–5 of docs/modules/mobile-ops.md)
+
+**Why:** the `/m` mobile surface was a display-only mockup running on `demo-data.ts`. The founder
+wants the month's most important numbers in the hand — one thumb, fast. This lands the full
+mobile-ops build contract: four real rooms + the Elaya knob on the real brain, all reusing
+existing reads (R-01 — backend genuinely new: one table, one RPC).
+
+**Phase 0 — infrastructure**
+
+- `src/lib/constants/mobile-rooms.ts` — the role-driven room registry (pure data, the
+  dashboard-widgets precedent). `MOBILE_ROOMS_BY_ROLE` is a 4-tuple per role, so a fifth tab is a
+  compile error; the Elaya knob stays hardcoded center. Also `getMobileDomains(role, domain)` (the
+  swipe scope: admin/founder page all four Gia domains, manager is pinned to their own, agent =
+  coming-soon) and `DOMAIN_VERTICALS` (domain → label + `DOMAIN_ICONS` icon + pastel `-deep`
+  token; replaces the demo `DEMO_VERTICALS` as the tile/header vocabulary).
+- `MobileSessionProvider` + `useMobileSession` — `(client)/layout.tsx` already fetched the profile
+  for its gate; it now threads `{ id, role, domain, fullName, email }` into context so the tab
+  bar and screens read identity without re-fetching (A-15 kept — the RSC does the read).
+- `MobileTabBar` is registry-driven off `getMobileRooms(role)`; the drawer shows the real
+  profile (name/email/`getInitials`), navigates the rooms, and its Sign out is wired to
+  `signOutUser`.
+- `DomainSwiper` — THE domain-paging wrapper every room composes: the existing `ui/Carousel`
+  (one swipe engine, never forked) with a new additive `hideControls` prop (desktop consumer
+  untouched) + a neu-token domain header and dot pager.
+- `useDomainRoomData` (`src/hooks/`) — the room data lifecycle: RSC seed for the first domain,
+  swipe → action fetch once per domain, per-domain cache, error + retry state.
+
+**Phase 1 — Dashboard room (`/m`, zero new backend)**
+
+- `src/lib/services/mobile-service.ts` — orchestration only: `getMobileDashboardData` is a
+  `Promise.all` over `getLeadStatusSummary` + `getLeadsByCampaign` + `getDomainHealthMetrics` +
+  `getDomainTargets` + `getBudgetSummary`/`filterBudgetRowsByDomain`; `mobileMonthRange()` (IST
+  month window) + `buildMobileGreeting` (server-computed so hydration agrees).
+- `DashboardRoom` — greeting block + Elaya search pill + per-domain pane: 2×2 metric tiles
+  (new leads / won / deals-vs-target / ad spend), deals-vs-target meter, top agents, top
+  campaigns (names raw, per the campaign rule). **Decision:** the deals-vs-target meter renders
+  the neu `ProgressCard`, not a Recharts `DomainTargetMeter` wrapper — no Recharts in the mobile
+  chunk; the contract doc is updated.
+
+**Phase 2 — Activity stream (the one new table)**
+
+- Migration `20260706000159_activity_events.sql` — append-only `activity_events` cloned from
+  `task_events` (0144): domain-stamped, `(domain, created_at DESC)` + subject indexes, RLS
+  (admin/founder all · manager own domain · agent own actions, InitPlan-hoisted), NO write
+  policies ever (A-11), Realtime publication, 30-day backfill from `lead_activities` +
+  `task_events` + `deals`.
+- `src/lib/services/activity-events.ts` — `emitActivityEvent` (the `emitTaskEvent` posture:
+  admin client, best-effort, never throws) + `emitLeadActivityEvent` (resolves lead domain +
+  display name for id-shaped cores). **Open question 1 decided:** lead/deal writes emit directly
+  from the cores (`addLeadNoteCore`, `addLeadCallNoteCore`, `createLeadTaskCore`,
+  `updateLeadStatusCore`, `assignLeadCore`, `recordDealCore`, `createWalkInDeal`); task rows are
+  DERIVED inside `emitTaskEvent` (created → `task_created`, status→completed → `task_completed`)
+  so task writes are never double-sourced.
+- `src/lib/services/activity-service.ts` — `getActivityFeed(domain, cursor?)`: one keyset
+  (`created_at, id`) reverse-chronological read, page 30, admin client (Q-13; the gated action
+  pins managers).
+- `ActivityRoom` (`/m/activity`) — the live feed: seeded by the RSC, "Earlier" keyset load-more,
+  ONE Realtime channel per active domain (`domain=eq.<x>`, the OversightRail pattern, P-06
+  teardown + `useId` nonce); domain swipe swaps the channel.
+
+**Phase 3 — Tasks room (new aggregation, no schema change)**
+
+- Migration `20260706000160_get_domain_task_summary.sql` — `get_domain_task_summary(p_domain,
+  p_from, p_to)`: per-assignee created/completed (period) + open/overdue (live) buckets; domain
+  derived `COALESCE(task_groups.domain, assignee profiles.domain)` (the resolveTaskDomain rule in
+  SQL). Scope-param RPC → EXECUTE revoked, service_role only (Q-13/0102).
+- `getDomainTaskSummary` in `tasks-service.ts` via `callAdminRpc`; `TasksRoom` (`/m/tasks`) shows
+  the four counts + the per-agent team list; tapping a member opens `/m/tasks/[agentId]` —
+  a light route reusing `getPersonalTasks` (admin client; page gate = manager+ with manager
+  domain check) rendered by the new `AgentTasksScreen`.
+
+**Phase 4 — Budget room (`/m/budget`, zero new backend)**
+
+- `getMobileBudgetData` (reuses budget + health + target reads); `BudgetRoom` shows spend/leads/
+  deals/revenue tiles, deals-vs-target meter, per-campaign spend rows (CPL "—" at zero leads,
+  never ₹0), and the **tech-expense tracker as a Coming Soon placeholder card** (by contract —
+  no table, no service).
+
+**Phase 5 — Elaya knob on the real brain**
+
+- `src/components/elaya/elaya-stream.ts` — THE Elaya SSE transport extracted from
+  `ElayaChatShell` (fetch + `\n\n` frame buffering + meta/delta/tool/done/error dispatch +
+  `TOOL_STATUS_LABELS`); the shell now pumps this shared loop (state handlers unchanged), and the
+  mobile `ElayaChatScreen` consumes the same — never a second transport.
+- `ElayaChatScreen` rewritten onto the real chat: `/m/elaya` RSC resolves the SAME seed as the
+  desktop page (`resolveElayaChatSeed` — one 24h session across channels) and the screen streams
+  with full cap/429/error handling (draft restored on rejected send, cap swaps the composer for
+  the quiet serif note). The neu chrome is unchanged; assistant bubbles render `ChatMarkdown`;
+  starter chips are the real `ELAYA_STARTER_PROMPTS` and prefill-only (never auto-send). The
+  demo composer's decorative mic was dropped (a dead control implying voice input).
+
+**Retired:** `HomeScreen.tsx` and the demo `ActivityScreen.tsx` (replaced by the rooms; git
+history keeps them). The `requests`/`profile` demo routes stay reachable but left the tab bar
+(profile lives in the drawer).
+
+**Migrations 0159 + 0160 applied to prod + verified 2026-07-06** via `supabase db push`
+(table + RLS + Realtime + 1,584 backfilled rows; RPC revoked-tier posture confirmed). The push
+required a one-time `supabase migration repair`: 14 orphan MCP-apply version stamps reverted and
+local versions 0138–0153 marked applied (their DDL was already live via MCP — verified by
+sentinel objects before repairing), so `db push` and the MCP flow are reconciled. Follow-up:
+regenerate `database.ts` to retire the two documented `activity_events` interim casts.
+
+Files: `src/lib/constants/mobile-rooms.ts`, `src/lib/services/{mobile-service,activity-events,activity-service}.ts`,
+`src/lib/actions/mobile.ts`, `src/lib/validations/mobile-schema.ts`, `src/hooks/useDomainRoomData.ts`,
+`src/components/mobile/{MobileSessionProvider,DomainSwiper}.tsx`, `src/components/mobile/rooms/*`,
+`src/components/mobile/screens/{ElayaChatScreen,AgentTasksScreen}.tsx`, `src/components/elaya/{elaya-stream.ts,ElayaChatShell.tsx}`,
+`src/app/(client)/**`, `src/components/ui/Carousel.tsx` (`hideControls`), `src/lib/services/{lead-mutations,task-events,tasks-service}.ts`,
+`src/lib/actions/deals.ts`, `supabase/migrations/2026070600015{9,60}*.sql`.
+
+---
+
 ## 2026-07-03 — WhatsApp conversation pane: neumorphic polish pass
 
 **Why:** the chat pane that opens when a conversation is selected still wore the flat pre-neumorphic

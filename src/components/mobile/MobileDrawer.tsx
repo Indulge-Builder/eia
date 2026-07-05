@@ -1,16 +1,21 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, m as motion } from 'framer-motion';
 import {
   FileText,
   SlidersVertical,
   MessageCircle,
+  Monitor,
   LogOut,
   type LucideIcon,
 } from 'lucide-react';
 import { lockBodyScroll } from '@/lib/utils/scroll';
-import { DEMO_PERSONA, DEMO_VERTICALS } from './demo-data';
+import { getInitials } from '@/lib/utils/strings';
+import { signOutUser } from '@/lib/actions/profiles';
+import { getMobileRooms, FORCE_DESKTOP_COOKIE } from '@/lib/constants/mobile-rooms';
+import { useMobileSession } from './MobileSessionProvider';
 
 /**
  * The drawer — everything else, behind the mark (§Navigation).
@@ -85,6 +90,11 @@ export function MobileDrawer({
   open: boolean;
   onClose: () => void;
 }) {
+  const session = useMobileSession();
+  const rooms = getMobileRooms(session.role);
+  const router = useRouter();
+  const [, startSignOut] = useTransition();
+
   useEffect(() => {
     if (!open) return;
     return lockBodyScroll();
@@ -130,14 +140,14 @@ export function MobileDrawer({
                 className="w-[38px] h-[38px] shrink-0 rounded-full bg-(--neu-surface-high) border border-(--neu-edge-strong) flex items-center justify-center text-xs font-semibold text-(--neu-accent-deep)"
                 style={{ boxShadow: 'var(--neu-shadow-raised-sm)' }}
               >
-                {DEMO_PERSONA.initials}
+                {getInitials(session.fullName)}
               </span>
               <span className="flex flex-col">
                 <span className="text-[13.5px] font-semibold text-(--neu-text-primary)">
-                  {DEMO_PERSONA.name}
+                  {session.fullName}
                 </span>
                 <span className="text-[11px] text-(--neu-text-tertiary)">
-                  {DEMO_PERSONA.email}
+                  {session.email}
                 </span>
               </span>
             </div>
@@ -145,15 +155,17 @@ export function MobileDrawer({
             <div className="h-px bg-(--neu-m-hairline)" />
 
             <TrackedLabel>ROOMS</TrackedLabel>
-            {DEMO_VERTICALS.map((v) => (
+            {rooms.map((room) => (
               <DrawerRow
-                key={v.key}
-                icon={v.icon}
-                iconToken={v.iconToken}
-                label={v.label}
-                count={v.drawerCount}
+                key={room.key}
+                icon={room.icon}
+                iconToken="var(--neu-accent-deep)"
+                label={room.label}
                 tile
-                onSelect={onClose}
+                onSelect={() => {
+                  onClose();
+                  router.push(room.href);
+                }}
               />
             ))}
 
@@ -161,12 +173,30 @@ export function MobileDrawer({
             <DrawerRow icon={FileText} label="Documents" onSelect={onClose} />
             <DrawerRow icon={SlidersVertical} label="Preferences" onSelect={onClose} />
             <DrawerRow icon={MessageCircle} label="Reach the house" onSelect={onClose} />
+            {(session.role === 'admin' || session.role === 'founder') && (
+              // Opt out of the /dashboard→/m auto-redirect (this session's phone).
+              // A hard nav guarantees the cookie is on the server request that
+              // renders /dashboard, so the redirect never re-fires. 1-year cookie.
+              <DrawerRow
+                icon={Monitor}
+                label="View desktop site"
+                onSelect={() => {
+                  document.cookie = `${FORCE_DESKTOP_COOKIE}=1; path=/; max-age=31536000; samesite=lax`;
+                  window.location.href = '/dashboard';
+                }}
+              />
+            )}
 
             {/* Footer — sign out in clay, never red; drawer-only */}
             <div className="mt-auto flex flex-col gap-2">
               <div className="h-px bg-(--neu-m-hairline)" />
               <button
-                onClick={onClose}
+                onClick={() => {
+                  onClose();
+                  startSignOut(async () => {
+                    await signOutUser();
+                  });
+                }}
                 className="neu-m-touch-quiet flex items-center gap-3 min-h-11 px-2 rounded-[14px] text-left transition-colors active:bg-(--color-danger-light)"
               >
                 <span className="w-9 h-9 shrink-0 flex items-center justify-center text-(--neu-danger-deep)">

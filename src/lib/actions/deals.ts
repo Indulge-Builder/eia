@@ -11,6 +11,7 @@ import { RecordDealSchema, CreateWalkInDealSchema } from "@/lib/validations/deal
 import { formErrors } from "@/lib/validations/form-errors";
 import { normalizeToE164 } from "@/lib/utils/phone";
 import { recordDealCore, type MutationActor } from "@/lib/services/lead-mutations";
+import { emitActivityEvent } from "@/lib/services/activity-events";
 import type { ActionResult } from "@/lib/types/index";
 import type { AppDomain } from "@/lib/types/database";
 import { isGiaDomain, type GiaDomain } from "@/lib/constants/domains";
@@ -237,6 +238,18 @@ export async function createWalkInDeal(
   if (insertError || !inserted) return { data: null, error: formErrors.generic };
 
   const dealId = (inserted as { id: string }).id;
+
+  // Activity stream (mobile-ops §8) — walk-ins have no lead core, so the emit
+  // sits beside the insert here. Best-effort, never fails the write.
+  await emitActivityEvent({
+    domain: finalDomain,
+    actorId: caller.id,
+    subjectType: "deal",
+    subjectId: dealId,
+    eventType: "deal_logged",
+    title: data.contact_name,
+    meta: { amount: data.deal_amount, deal_type: resolved.shape.deal_type, walk_in: true },
+  });
 
   // Bust the /deals route cache so the new row appears on the next load — the
   // server action is the authoritative invalidation, not the modal's

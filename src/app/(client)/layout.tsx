@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentProfile } from '@/lib/services/profiles-service';
+import { MobileSessionProvider } from '@/components/mobile/MobileSessionProvider';
 
 /**
  * The Indulge CLIENT app shell (design_handoff_mobile_system).
@@ -7,8 +8,10 @@ import { getCurrentProfile } from '@/lib/services/profiles-service';
  * one scroll axis, everything sized for the hand (44 floor).
  *
  * Customers have no auth yet (the Elaya customer persona is
- * stubbed), so this surface is gated behind a staff session as an
- * internal preview; the screens run on specimen demo data.
+ * stubbed), so this surface is gated behind a staff session. The
+ * profile fetched for the gate is threaded into MobileSessionProvider
+ * (mobile-ops.md §5) so the tab bar and rooms read identity without
+ * re-fetching.
  */
 export default async function ClientAppLayout({
   children,
@@ -19,8 +22,18 @@ export default async function ClientAppLayout({
   if (!profile || !profile.is_active) redirect('/login');
 
   return (
-    <div className="min-h-dvh bg-(--neu-canvas)">
-      <div className="mx-auto max-w-[430px] min-h-dvh flex flex-col">{children}</div>
-    </div>
+    <MobileSessionProvider
+      session={{
+        id: profile.id,
+        role: profile.role,
+        domain: profile.domain,
+        fullName: profile.full_name,
+        email: profile.email,
+      }}
+    >
+      <div className="min-h-dvh bg-(--neu-canvas)">
+        <div className="mx-auto max-w-[430px] min-h-dvh flex flex-col">{children}</div>
+      </div>
+    </MobileSessionProvider>
   );
 }

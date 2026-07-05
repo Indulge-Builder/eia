@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getCurrentProfile } from "@/lib/services/profiles-service";
+import { isMobileUserAgent } from "@/lib/utils/device";
+import { FORCE_DESKTOP_COOKIE } from "@/lib/constants/mobile-rooms";
 import {
   getDashboardSummary,
   getLeadVolumeByRange,
@@ -40,6 +42,22 @@ export default async function DashboardPage({
   if (!profile) redirect("/login");
 
   const sp = await searchParams;
+
+  // Mobile Ops: an admin/founder landing on the desktop dashboard from a phone
+  // is sent to the pocket /m surface (their rooms are fully built). Manager/agent
+  // stay here until their room sets ship, and every desktop browser is untouched.
+  // Authorization is unaffected — this only picks which fully-functional surface
+  // loads; the "View desktop site" drawer link sets FORCE_DESKTOP_COOKIE to opt out.
+  // Gated on a bare landing (no query params) so a shared /dashboard?… deep link
+  // or a back-nav from within the dashboard is never hijacked mid-flow.
+  if (
+    (profile.role === "admin" || profile.role === "founder") &&
+    Object.keys(sp).length === 0 &&
+    (await cookies()).get(FORCE_DESKTOP_COOKIE)?.value !== "1" &&
+    (await isMobileUserAgent())
+  ) {
+    redirect("/m");
+  }
 
   // ── Resolve active date range from URL params ──────────────────────────────
   // dash_preset: 'today' | 'week' | 'month' | 'quarter' | 'custom'

@@ -2,25 +2,22 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, SquareCheckBig, Clock, User, type LucideIcon } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { getMobileRooms } from '@/lib/constants/mobile-rooms';
+import { useMobileSession } from './MobileSessionProvider';
 
 /**
  * The bottom tab bar (design_handoff_mobile_system §Navigation).
- * EXACTLY four routes — Home, Requests, Activity, Profile — never
- * more. Floating raised pill, height 64, floating 16px off the
- * bottom safe area. Active route rides a raised 46×46 r16
- * accent-gradient tile with ink fg; inactive tabs are quiet glyphs.
+ * EXACTLY four rooms — resolved per role from the mobile-rooms
+ * registry (mobile-ops.md §4; the registry's tuple type makes a fifth
+ * tab a compile error) — never more. Floating raised pill, height 64,
+ * floating 16px off the bottom safe area. Active route rides a raised
+ * 46×46 r16 accent-gradient tile with ink fg; inactive tabs are quiet
+ * glyphs.
  *
  * Elaya holds the center: a 52Ø accent knob riding above the bar
  * (−20). She is navigation, not a tab — no active state, ever.
  */
-
-const TABS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: '/m',          label: 'Home',     icon: Home },
-  { href: '/m/requests', label: 'Requests', icon: SquareCheckBig },
-  { href: '/m/activity', label: 'Activity', icon: Clock },
-  { href: '/m/profile',  label: 'Profile',  icon: User },
-];
 
 function TabCell({ href, label, icon: Icon, active }: {
   href: string;
@@ -57,6 +54,8 @@ function TabCell({ href, label, icon: Icon, active }: {
 
 export function MobileTabBar() {
   const pathname = usePathname();
+  const { role } = useMobileSession();
+  const TABS = getMobileRooms(role);
   const isActive = (href: string) =>
     href === '/m' ? pathname === '/m' : pathname.startsWith(href);
 
@@ -71,7 +70,7 @@ export function MobileTabBar() {
         style={{ boxShadow: 'var(--neu-shadow-raised-lg)' }}
       >
         {TABS.slice(0, 2).map((t) => (
-          <TabCell key={t.href} {...t} active={isActive(t.href)} />
+          <TabCell key={t.key} href={t.href} label={t.label} icon={t.icon} active={isActive(t.href)} />
         ))}
         <Link
           href="/m/elaya"
@@ -86,7 +85,7 @@ export function MobileTabBar() {
           ✦
         </Link>
         {TABS.slice(2).map((t) => (
-          <TabCell key={t.href} {...t} active={isActive(t.href)} />
+          <TabCell key={t.key} href={t.href} label={t.label} icon={t.icon} active={isActive(t.href)} />
         ))}
       </div>
     </nav>

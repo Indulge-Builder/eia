@@ -26,6 +26,7 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { emitActivityEvent } from "@/lib/services/activity-events";
 import type { AppDomain, Database, Json } from "@/lib/types/database";
 import type { TaskEventType } from "@/lib/types/oversight";
 
@@ -112,5 +113,28 @@ export async function emitTaskEvent(input: EmitTaskEventInput): Promise<void> {
     }
   } catch (e) {
     console.warn("[task-events] emit threw (non-fatal)", e);
+  }
+
+  // Unified activity stream (mobile-ops §8) — task rows are DERIVED from this
+  // seam (the decided answer to the emit-vs-derive open question): created →
+  // task_created, status_changed→completed → task_completed. One derivation
+  // point, so task writes are never double-sourced into activity_events.
+  const activityType =
+    input.eventType === "created"
+      ? ("task_created" as const)
+      : input.eventType === "status_changed" && input.meta?.to === "completed"
+        ? ("task_completed" as const)
+        : null;
+
+  if (activityType) {
+    await emitActivityEvent({
+      domain: input.domain,
+      actorId: input.actorId,
+      subjectType: "task",
+      subjectId: input.taskId,
+      eventType: activityType,
+      title: input.taskTitle,
+      meta: input.meta,
+    });
   }
 }

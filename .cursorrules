@@ -62,7 +62,7 @@ src/lib/utils/sanitize.ts           ← sanitizeText() — the only sanitizer
 src/lib/utils/phone.ts              ← normalizeToE164() — the only normalizer
 src/lib/utils/dates.ts              ← formatDate() — the only date formatter
 src/lib/utils/numbers.ts            ← formatCount(), formatCurrency() etc.
-src/lib/utils/export.ts             ← buildCSV(), buildLeadsCSV(), buildXLSXWorkbook(), triggerBrowserDownload() — CLIENT-SIDE ONLY; never import from server actions or services
+src/lib/utils/export.ts             ← buildLeadsCSV(), buildXLSXWorkbook(), triggerBrowserDownload() — CLIENT-SIDE ONLY; never import from server actions or services
 src/components/ui/charts/useChartTokens.ts ← useChartTokens() + resolveColorMap() — the Recharts colour bridge (resolves var(--…)→hex, re-resolves on theme change). NOTE: the old src/lib/utils/chart-tokens.ts stub is DELETED — never recreate it.
 src/lib/utils/strings.ts            ← getInitials() + hashString() — the ONLY initials derivation and deterministic colour-pick hash; never re-implement inline
 src/lib/services/profiles-service.ts ← getAssignableUsers({ domain?, agentsOnly? }) — THE assignable-users query; client wrapper getAssignableUsersAction(domain?) in lib/actions/profiles.ts; canonical AssignableUser type in lib/types — never re-declare a Pick<Profile,…> assignee shape or fork another agents/users list
@@ -73,15 +73,43 @@ src/lib/services/ad-spend-service.ts ← getBudgetSummary() (get_budget_summary 
 src/lib/services/domain-targets-service.ts ← getDomainTargets() / upsertDomainTarget() — THE domain_targets access (founder monthly deals-closed targets)
 src/lib/utils/webhook.ts            ← readJsonBody()/parseJsonBody() — THE webhook JSON parse guard; createRateLimiter()+getClientIp() — THE rate limiter (S-17); safeSecretCompare() — THE timing-safe secret compare; never hand-roll any of the three in a route
 src/lib/utils/rows.ts               ← mapRows<TRow, TOut>(data, fn) — THE typed boundary for untyped query results (joined selects, untyped RPCs); never add a new `as Record<string, unknown>` row cast in a service (Q-18)
+src/lib/services/cache-helpers.ts   ← withRedisCache(key, ttl, fetchFn, normalize?) — THE Redis cache-aside envelope (get→fetch→setex, non-fatal both sides); never hand-roll the boilerplate in a service (dry-audit D1)
+src/lib/services/rpc-helpers.ts     ← callAdminRpc(rpc, params, mapRow, logCtx) — THE revoked-tier admin-client RPC boundary (Q-13 + Q-18 + uniform error log); session-client self-scoped RPCs (auth.uid() in SQL) must NOT use it (dry-audit D2)
+src/lib/actions/_validation.ts      ← parseActionInput(schema, input) — THE Zod-parse + first-issue→formErrors.generic mapper for actions (dry-audit S2); quieter generic-only and custom code→copy mappers stay bespoke
+src/lib/validations/fields.ts       ← uuidField(msg)/emailField(msg) — THE shared Zod field fragments (message-parameterised; dry-audit C1); phone fields stay per-schema (normalizeToE164 transforms differ)
+src/lib/trigger/cancel-runs.ts      ← cancelRunsByTag(tag) — THE Trigger.dev cancel-by-tag helper (DELAYED/QUEUED list → settle-cancel; dry-audit D8); lives OUTSIDE src/trigger so the task scan skips it
+src/lib/elaya/access.ts             ← canAccessLead — THE shared Elaya per-lead access gate (ONE security predicate for both tool registries) + leadDisplayName/statusLabel (dry-audit D6+D15)
+eslint.config.mjs                   ← THE lint config (flat, correctness-only; `pnpm lint` / `pnpm lint:fix`, NOT in the build). Machine-enforces A-17 m-as-motion, no window.confirm/alert, Rule-05 supabase import scoping, the Anthropic-adapter-only SDK rule. React-Compiler-prep rules OFF until compiler adoption (rationale in the file). Keep it lean — a new rule must prevent a bug.
+src/components/leads/CardHeader.tsx ← <CardHeader icon label right?> — THE dossier card-header strip: accent icon + accent micro-label on the THEMED --neu-header-wash (22% accent into surface — stronger than the 12% accent-surface, which read washed-out; tune ONLY via the token) + --neu-header-edge hairline (never paper-subtle — the sunken well tone, neu Rule 4); all 7 dossier cards compose it (dry-audit D3)
 src/lib/constants/define-enum.ts    ← defineEnum([{ id, label }]) — THE factory for simple string-enum constants (derives values/labels/options/zodEnum from one array); richer config tables (TASK_PRIORITY, lead-status badges) stay hand-written
+src/lib/constants/themes.ts         ← THE theme vocabulary (THEME_KEYS/ThemeKey/isThemeKey) + THEME_COOKIE 'serene-theme' + persistThemeCookie() — the SSR theme mirror; the root layout reads the cookie to stamp data-theme on <html> server-side (zero-flash), ThemeInitializer/ThemeSelector keep it in sync with profiles.theme
+src/lib/constants/appearance.ts     ← THE light/dark mode vocabulary (APPEARANCE_KEYS light/dark/system — 'system' follows prefers-color-scheme, UI label "Auto"; built like themes.ts) + APPEARANCE_COOKIE 'serene-appearance' + persistAppearanceCookie() (the SSR mirror of profiles.appearance, migration 0158 — the root layout stamps data-neu="dark" server-side; 'system' gets a pre-paint inline script) + applyAppearanceToDom() — THE ONLY place data-neu flips (attribute + <meta theme-color> rewrite #ECE8E1↔#28241C) + NEU_CANVAS_LIGHT/DARK (the sanctioned meta/manifest hex mirrors of --neu-canvas). ThemeInitializer syncs on load + owns the live OS listener; the profile AppearanceSelector (segmented Light · Dark · Auto) writes it; rides the existing updateProfile action (NO new persist action)
+src/lib/constants/app-icons.ts      ← THE PWA home-screen icon vocabulary (ICON_KEYS/IconKey/isIconKey/ICON_OPTIONS/ICON_ENUM/DEFAULT_ICON via defineEnum — built like themes.ts) + iconSrc(value) (THE only key→/icon-N.webp path resolver; validates against ICON_KEYS, falls back to DEFAULT_ICON — NEVER interpolate a raw param into an icon path) + APP_ICON_COOKIE 'serene-app-icon' + persistAppIconCookie() (the SSR manifest mirror — the root layout reads it to point <link rel=manifest> at /api/manifest?icon=<saved> + apple-touch-icon; IconInitializer/IconSelector keep it in sync with profiles.app_icon). One square /public/icon-N.webp per key (covers manifest 192/512 + maskable + apple); adding an option = one { id,label } line + a CHECK migration. Mirrors profiles.theme end-to-end; rides the existing updateProfile action (NO new persist action)
 src/components/ui/StatTile.tsx      ← <StatTile label value sub? variant="card"|"cell"> — THE labelled stat tile (campaign metric cards + deals summary cells); performance MetricCard deliberately stays bespoke
 src/lib/utils/scroll.ts             ← scrollToBottom(el), lockBodyScroll() → unlock fn (re-entrant; mobile drawer/sheets)
+src/lib/utils/whatsapp-format.ts    ← markdownToWhatsApp() — THE markdown → WhatsApp-native text converter (**x**→*x*, *x*→_x_, headings→bold line, md bullets→"- ", links→text (url)); every model-authored WhatsApp reply passes through it before sending (elaya-whatsapp.ts)
+src/components/ui/ChatMarkdown.tsx  ← <ChatMarkdown content> — THE markdown-lite renderer for model-authored chat text in-app (bold/italic/lists/links/code as React elements; no dangerouslySetInnerHTML, no dependency, SSE-safe). The in-app mirror of whatsapp-format.ts; used by ElayaMessageBubble — never re-parse model markdown inline
 src/lib/services/transcription-service.ts ← transcribeAudio() — THE Deepgram call site (server-only; nova-2 + hi-Latn for Hinglish). Audio transcribed in-memory and discarded — never stored. Client entry: transcribeAudioAction (lib/actions/transcription.ts); mic capture: src/hooks/useAudioRecorder.ts — THE recording hook (codec negotiation, 2-min auto-stop, mic-track release); never re-implement MediaRecorder plumbing inline
+src/components/ui/DictationButton.tsx ← <DictationButton> — THE voice-dictation cluster (record → transcribe → onTranscript(text) as an editable draft; never auto-sends). Wraps useAudioRecorder + transcribeAudioAction + the mic/stop/cancel buttons + m:ss counter + Transcribing… spinner ONCE. variant="composer" (32px pill, mounts as a <MessageBar leadingSlot> — Elaya + WhatsApp composers) or "inline" (28px bordered, form footer/label row — LeadNotesInput + CalledModal). onError(message) so each consumer keeps its surface (toast vs inline); onBusyChange(busy) for footer submit gating. Renders null when MediaRecorder unsupported. ALL four voice surfaces compose this — never re-inline a mic/transcribe cluster
+src/lib/constants/interests.ts      ← SERVICE_CATEGORY_* (defineEnum) + DOMAIN_INTERESTS + getDomainInterests() — THE per-domain leads.service_interests vocabulary (text[], NEVER an enum; unknown values dropped at ingestion via extractServiceInterests, never rejected)
+src/lib/services/intelligence-service.ts ← Call Intelligence reads — getHelpdeskLibrary(domain) (Redis 1hr {cases,hooks} envelope; key REDIS_KEYS.helpdeskCases + REDIS_TTL.HELPDESK_CASES live in redis-keys.ts ONLY), getCasesForLead()/getHooksForCategories() (dossier card, ≤6 rows, deliberately un-cached). Tables service_cases + conversation_hooks (migration 0110: all-authenticated read, admin/founder write RLS). Writes ONLY via lib/actions/intelligence.ts — every write awaits the helpdesk-key del (P-08 convention) before revalidatePath('/helpdesk'). Helpdesk filtering is CLIENT-SIDE on the full library — never add a per-keystroke server search
+src/components/intelligence/        ← CaseCard (dossier preview), CaseListRow + CaseDetailModal (/helpdesk list row → full-detail modal), CategoryTag (THE static category pill — card/row/modal), CategoryPill (filter button), HookList, HelpdeskSearch, category-icons.ts — shared Call Intelligence components; /helpdesk and the dossier ServiceInterestCard both compose these
+src/lib/elaya/                      ← THE Elaya AI subsystem (foundation 2026-06-12). provider.ts — the ONE provider-neutral complete() contract; adapters/anthropic.ts — the ONLY file allowed to import @anthropic-ai/sdk (Gemini/OpenAI land as sibling adapters, zero brain changes); registry.ts — llm_providers config row → adapter, read per turn (model switch = DB edit, no deploy); principal.ts — verified profile → role+persona+permitted toolset (customer persona stubbed); pii.ts — maskPii(), THE PII gateway every tool result passes before reaching a model (depth via elaya_settings); persona.ts — system prompt; brain.ts — the tool-calling loop + (E3) the confirmation RESOLVER pre-step (the ONLY place a state-change executes — runs on a prior-turn proposal + an affirmative human reply); tools/registry.ts — the role-gated read tools + THE single executeTool dispatch (read ∪ write); tools/write-registry.ts — the role-gated write tools (note/call/task writes execute inline; update_lead_status/reassign_lead/log_deal/delete_task propose-only) + executeProposedAction (resolver-only). Full per-tool table + tiers live in src/lib/elaya/CLAUDE.md; confirmation.ts — classifyConfirmation(), the pure English+Hinglish affirmation gate (default 'other' = cancel; never trusts the model). Tools wrap existing lib/services functions / lead-mutations cores — NEVER a direct table query, NEVER model-supplied identity args
+src/lib/services/lead-mutations.ts  ← (E3) THE shared context-free body of the 4 action-shaped lead writes (addLeadNoteCore/createLeadTaskCore/updateLeadStatusCore/assignLeadCore) + reviveLeadCore (Lead Revival R1: wraps createLeadTaskCore = the E2 path + a "Revived" marker; NEVER touches the leads row) — wraps the existing RPC + invalidateLeadCaches (P-08) + SLA + notify; both leads.ts actions and Elaya write tools call the SAME core (R-01). revalidatePath/after() stay in the caller. Never re-implement a lead mutation outside a core
+src/lib/services/revival-service.ts ← (Lead Revival R1) THE revival_candidates + revival_policies access (admin client). Silence finder + daily-cap count (native assigned_to filter, never a leads embed — head:true drops it) + the open→actioned/dismissed resolve-once flip (A-11 carve-out) + the review-predicate read (getOpenCandidatesForCaller, session-client RLS). Revival NEVER writes the leads row
+src/lib/services/revival-gate.ts    ← (Lead Revival R1) THE note-AI gate: ONE structured THREE-verdict call (revive/dismiss/unsure) reusing the Elaya provider/PII layer (resolveLlmForJob('routing') + maskPii, NO tools, NO new SDK import). judgeNotesForRevival() = the model core (re-testable via scripts/test-revival-gate.ts); judgeLeadForRevival() = the DB-read wrapper. Prompt sends confident junk → dismiss (audit log, never review), ambiguous → unsure, warm-with-window → revive; warm leads NEVER auto-dismissed. Fails CLOSED to 'unsure' — never auto-revive AND never auto-dismiss on a bad verdict
+src/trigger/lead-revival.ts          ← (Lead Revival R1) sweepRevivalCandidatesTask — THE daily silence-detection schedules.task (07:30 IST; the project's first cron task). Reads revival_policies → finds silent leads w/ no open candidate → note-AI gate → confident revive under cap → reviveLeadCore (Revived task); unsure/overflow → open candidate (review). NOT a parallel scheduler
+src/lib/services/elaya-actions-service.ts ← (E3) THE elaya_actions ledger access (admin client) — insert executed/proposed, getLatestProposedAction (resolver read), markActionResolved (proposed→executed/failed/dismissed, admin-client UPDATE, no user policy), supersedePriorProposals (one live proposal per conversation). Trust + rollback ledger; before/after snapshots
+src/lib/services/elaya-service.ts   ← Elaya conversation/message DB access — 24h session expiry (server-side, ONE active session per user across channels), append-only message inserts, IST daily-cap count (shared across channels)
+src/lib/services/elaya-whatsapp.ts  ← tryHandleElayaWhatsAppMessage() — THE WhatsApp staff routing gate + Elaya WhatsApp turn (called by the whatsapp webhook before processInboundMessage; profile match → brain to completion + one sendElayaWhatsAppReply; no match → lead pipeline untouched; never writes lead-pipeline tables)
+src/lib/services/llm-providers-service.ts ← llm_providers + elaya_settings reads — per request, never module-cached (sla_policies pattern)
+src/lib/constants/notification-categories.ts ← THE per-user notification control catalog (migration 0133): one entry per category = (event × recipient-role-that-differs), with `channels` (the checkboxes the UI renders) + `roles` (which users see the row). THE single source the UI, the SQL CHECK, and the gate key on. `lead_initiation`/`elaya_reply` are TRANSACTIONAL — deliberately ABSENT, never muteable. Adding a category = one entry here + a CHECK-extending migration.
+src/lib/services/notification-prefs-service.ts ← THE notification control GATE (migration 0133, SERVER ONLY, admin client — cross-user fan-out read like dispatchPush). resolveChannels/isChannelEnabled (Seam B single-recipient), filterRecipientsByPref(ids, key, channel) (Seam B fan-out — ONE batched .in query), getNotificationPrefs (React cache() per-request memo), getMyNotificationPrefs (session /profile seed). **Absence = ON, fails OPEN** (missing/malformed/thrown → send). Seam A = createNotification's optional `notificationKey` (gates in-app + push together); Seam B = the 6 broadcast whatsapp-api.ts wrappers. Owner edits via actions/notification-prefs.ts (session client). NEVER gate lead_initiation/elaya_reply.
 src/lib/services/dashboard-service.ts ← ALL dashboard widget queries (never extend leads-service.ts)
 src/lib/actions/dashboard.ts         ← ALL dashboard server actions (widget data refresh)
 src/lib/constants/dashboard-widgets.ts ← widget registry (pure data, no component refs)
-src/hooks/useWidgetData.ts            ← useWidgetData({ seed, fetcher, autoFetch?, deps? }) — THE dashboard-widget data lifecycle (RSC seed → skip mount fetch, deps-driven auto-fetch, refetch for tabs/refresh, apply for cohort sync); never hand-roll seed/loaded/fetch-effect state in a widget
-src/lib/utils/widget-scope.ts         ← resolveWidgetScope(role, mode) + WidgetDomainMode — THE manager-vs-domain-picker scope decision for widget fetches (client side; the dashboard actions re-enforce the manager override server-side via effectiveWidgetDomain())
+src/hooks/useWidgetData.ts            ← useWidgetData({ seed, fetcher, autoFetch?, deps? }) — THE dashboard-widget data lifecycle (RSC seed → skip mount fetch, deps-driven auto-fetch, refetch for refresh, apply for cohort sync); never hand-roll seed/loaded/fetch-effect state in a widget
+src/lib/utils/domain-scope.ts         ← resolveDomainParam(searchParams, cookieStore, role) — THE single global-domain-scope resolver (admin/founder → ?domain= param ?? serene-domain cookie ?? null; manager/agent → always null). ONE selector for the whole app: dashboard + leads + deals + campaigns all read it; the dashboard RSC threads the result into the cohort widgets as a `scopeDomain` prop (there are NO per-widget domain tabs — removed 2026-06-17, default view = all-domains aggregated). Dashboard widget refresh actions still re-pin managers server-side via effectiveWidgetDomain() (actions/dashboard.ts). NOT a security boundary — founder narrowing is an additive WHERE, never an RLS change. (The old src/lib/utils/widget-scope.ts is DELETED — never recreate it.)
 src/lib/constants/route-permissions.ts ← ALWAYS_ALLOWED_PREFIXES + DOMAIN_ROUTE_MAP (domain → permitted route prefixes)
 src/lib/constants/domain-colors.ts    ← DOMAIN_LINE_COLORS record, one entry per AppDomain; values are var(--domain-*) strings resolved via resolveColorMap() before Recharts use
 src/lib/utils/route-access.ts         ← canAccessRoute(profile, pathname) — pure function, safe in 'use client' components
@@ -91,9 +119,10 @@ src/hooks/useMountOnFirstOpen.ts      ← useMountOnFirstOpen(open) — THE moun
 src/hooks/usePortalAnchor.ts          ← usePortalAnchor() — THE floating-panel anchoring mechanism (portal positioning, flip, outside-close, visualViewport); pair with <FloatingPanel>; never re-implement inline
 src/components/ui/FloatingPanel.tsx   ← <FloatingPanel> — anchored dropdown-panel portal + chrome; driven by usePortalAnchor
 src/components/ui/CollapseReveal.tsx  ← <CollapseReveal> — THE expand/collapse reveal (grid-template-rows 0fr↔1fr + fade); never animate height: 0↔"auto"; render inside <AnimatePresence> at the call site
-src/components/ui/DateRangeFields.tsx ← <DateRangeFields> — the canonical From → To date-range panel body for filter bars
-src/components/ui/FilterBar.tsx       ← <FilterBar> — THE shared list-page filter-bar shell (sliders icon + count badge, SearchBar, children dropdowns, Range trigger+panel, optional Apply, Clear). All four filter bars compose it; never fork a new filter-bar chrome
-src/hooks/useUrlFilters.ts            ← useUrlFilters({ resetKeys? }) — THE URL-param filter plumbing (debounced search→URL push, push(updates), clearAll) for URL-driven filter bars; client-state bars (TasksFilters) pass state straight to <FilterBar>
+src/components/ui/DateRangeFields.tsx ← <DateRangeFields> — the canonical From → To date-range panel body for filter bars (the "Dates" panel)
+src/components/ui/DateRangePresetList.tsx ← <DateRangePresetList> — THE quick-range preset panel body (the "Range" panel: Today…Last 3 Months); presets + IST-anchored resolver in src/lib/constants/date-range-presets.ts
+src/components/ui/FilterBar.tsx       ← <FilterBar> — THE shared list-page filter-bar shell (sliders icon + count badge, SearchBar (hideSearch to omit), children dropdowns, Range trigger+panel, Clear, trailing slot); immediate-commit only — the Apply/draft model was removed 2026-06-12, never reintroduce it. Below md every bar auto-collapses to the single-row scroll layout — FilterDropdown children must pass menuPortal. Composed by ALL filter bars: Leads, Deals, Campaigns, Tasks, Performance, admin UsersTable, settings AgentSettingsTable; never fork a new filter-bar chrome
+src/hooks/useUrlFilters.ts            ← useUrlFilters({ resetKeys? }) — THE URL-param filter plumbing (debounced search→URL push, push(updates), pushDebounced(updates) batched commit, clearAll) for URL-driven filter bars; client-state bars (TasksFilters) pass state straight to <FilterBar>. Same file: useMultiSelectUrlParam(url, key) — THE optimistic multi-select param (instant checkbox echo, toggle bursts → one router.push)
 src/components/ui/ConfirmDialog.tsx   ← <ConfirmDialog> — THE standalone confirm dialog; owns the --z-overlay/--z-modal contract + body portal; never window.confirm
 src/components/ui/EmptyState.tsx      ← <EmptyState> — THE canonical empty state (hero icon-tile variant + inline serif-italic variant); makes "Playfair italic heading, never 'No data available'" structural; never hand-roll the italic style object
 src/components/ui/PageSkeletons.tsx   ← PageHeaderSkeleton / FilterBarSkeleton / SkeletonCard / Shimmer / skeletonStagger — THE shared loading.tsx scaffold blocks (page header, paper filter strip, card chrome); loading files compose these, only bespoke interiors stay inline
@@ -103,6 +132,13 @@ src/hooks/useDashboardLayout.ts       ← localStorage layout hook (key: serene:
 src/components/dashboard/            ← DashboardCanvas, DashboardWidgetSlot, WidgetSkeleton, widgets/
 src/components/ui/                  ← shadcn primitives, zero feature imports
 src/components/ui/elaya-glyph.tsx     ← Elaya's custom SVG mark (always breathing)
+src/components/mobile/              ← THE Indulge mobile layer (design_handoff_mobile_system, 2026-07-03; FUNCTIONAL since 2026-07-06 — build contract docs/modules/mobile-ops.md): IndulgeMark (9-circle stroked mark — THE drawer button; no hamburger ever), MobileTabBar (EXACTLY 4 rooms + the Elaya knob — never a fifth tab; rooms resolved per role from lib/constants/mobile-rooms.ts), MobileSessionProvider (useMobileSession — the (client) layout threads {id,role,domain,fullName,email}; no service import in a client file), MobileDrawer (real profile + room nav + signOutUser), DomainSwiper (THE domain-paging wrapper every room composes — ui/Carousel with hideControls + neu header/dot pager; ONE swipe engine, never forked), app-bars, fields/controls/content/overlays, rooms/ (DashboardRoom · TasksRoom · BudgetRoom · ActivityRoom + room-bits — display-only A-06, RSC-seeded, refreshed via lib/actions/mobile.ts, per-domain state via hooks/useDomainRoomData; Activity subscribes one Realtime channel per active domain) + screens/ (ElayaChatScreen — the REAL brain over components/elaya/elaya-stream.ts, the SAME transport ElayaChatShell pumps; AgentTasksScreen for /m/tasks/[agentId]; requests/profile demo screens remain, off the bar) + demo-data.ts (specimen copy, butler voice). --neu-* tokens exclusively; mounted by src/app/(client)/m/ (staff-session-gated — customer auth stubbed). Touch floor 44; mobile radii card 24 / tile 18 / field 16 / pill
+src/lib/constants/mobile-rooms.ts   ← THE mobile room registry (mobile-ops §4): MOBILE_ROOMS_BY_ROLE (4-tuple per role — a fifth tab is a compile error; the Elaya knob is NOT a room), getMobileRooms(role), getMobileDomains(role, domain) (admin/founder = all four Gia domains, manager pinned to own, agent = none → coming-soon), DOMAIN_VERTICALS (GiaDomain → label + DOMAIN_ICONS icon + pastel -deep token — never re-map inline)
+src/lib/services/mobile-service.ts  ← Mobile Ops orchestration reads (ZERO new queries — Promise.all over existing service fns, R-01) + mobileMonthRange() (the shared IST month window) + buildMobileGreeting(); swipe-refresh actions in lib/actions/mobile.ts (Zod → requireProfile(manager+) → manager pinned server-side)
+src/lib/services/activity-events.ts ← emitActivityEvent()/emitLeadActivityEvent() — THE activity_events emit seam (migration 0159; the emitTaskEvent posture: admin client, best-effort, never throws). Lead/deal mutation cores emit directly; task rows DERIVE inside emitTaskEvent (created→task_created, status→completed→task_completed) — never double-source, never emit from an action/UI
+src/lib/services/activity-service.ts ← getActivityFeed(domain, cursor?) — THE activity_events keyset read (page 30; Q-13 admin client, getActivityFeedAction pins managers); the live layer is the mobile Activity room's Realtime channel, not this read
+src/components/elaya/elaya-stream.ts ← streamElayaChat() + TOOL_STATUS_LABELS — THE Elaya SSE transport (fetch + \n\n frame parse + meta/delta/tool/done/error dispatch); ElayaChatShell AND the mobile ElayaChatScreen both pump it — never fork a second Elaya transport
+src/styles/serene-mobile.css        ← the mobile layer's CSS (imported after serene-neumorphic-tokens.css): --neu-m-* scrim/drawer/sheet/indicator tokens (+ dark overrides), halo/breathe/dot idle loops at mobile timings, .neu-m-touch(-knob/-quiet) press recipes — all reduced-motion gated
 src/styles/design-tokens.css        ← ALL CSS variables, all themes
 src/app/globals.css                 ← `.layout-shell` (the mounted flat dashboard shell) + `.layout-canvas` (atmosphere class — mounted on the auth shell only, never the dashboard shell) + Tailwind @theme isolation block
 docs/design/DESIGN-DNA.md          ← full design reference
@@ -297,19 +333,29 @@ Elaya never silently crosses domain boundaries.
 ## Theme Quick Reference
 
 ```text
-data-theme="earth"   → champagne gold accent (#c9a553), warm canvas (#0d0c0a) + grain + radial washes
-data-theme="air"     → slate blue accent (#54769e), blue-black canvas
-data-theme="water"   → deep teal accent (#1e7d72), teal-black canvas
-data-theme="fire"    → ember sienna accent (#c25022), brown-black canvas
-data-theme="martini" → periwinkle accent (#9fa1ff), evening-indigo canvas (#0a0a16); near-white paper w/ periwinkle whisper (#f8f8fe); mint→success chips, sky→info chips
-data-theme="candy"   → candy-pink accent (#f9b2d7), dark-plum canvas (#130a12); near-white paper w/ blush whisper (#fdf9fb); pastel rainbow lives in the chips (mint success / powder-blue info / lemon warning)
+NEUMORPHIC FINAL REVISION (2026-07-03): the app renders on the soft-UI
+token layer (src/styles/serene-neumorphic-tokens.css — Whisper shadows,
+Marshmallow radii, one cream material #ECE8E1/#F1EDE6). A theme changes
+ONLY the accent family — surfaces, shadow pairs, text, semantic status
+chips, and the --domain-* chart palette NEVER re-tint. EIGHT themes;
+the neu layer overrides the stock design-tokens accents with these
+design-approved softened values:
 
-Default (no attribute) = Earth.
-Theme attribute goes on the <html> element.
---theme-accent-fg on Earth is #201808 (warm ink on gold).
---theme-accent-fg on Martini is #191a38 and on Candy is #2b1420 (dark ink — pastel accents can never hold white text; never "fix" them to #ffffff).
---theme-accent-fg on Air/Water/Fire is #ffffff.
-(cosmos / coffee / macha were retired 2026-07-02 — migration 0156.)
+data-theme="earth" → honey gold       #D6BC82 (deep #8A7448, fg #33290F)
+data-theme="air"   → powder sky       #97B5D2 (deep #587A96, fg #223240)
+data-theme="water" → soft seafoam     #8FC3B9 (deep #4E7E74, fg #1C2E2A)
+data-theme="fire"  → terracotta peach #DC9877 (deep #A05C3E, fg #3A1F12)
+data-theme="candy" → soft pink        #F0B5D2 (deep #A85C87, fg #2E1522)
+data-theme="rose"  → English rose     #D9A0A5 (deep #B57F84, fg #45272A)
+data-theme="moss"  → matcha sage      #A9C4A0 (deep #6F8A66, fg #26301F)
+data-theme="lilac" → light lilac      #C9C0E4 (deep #8E83B8, fg #2E2840)
+
+Default (no attribute) = Earth. Theme attribute goes on <html>.
+ALL accents take DARK INK --theme-accent-fg — pastel fills can never
+hold white text; never "fix" an accent-fg to #ffffff.
+Dark mode: data-neu="dark" (warm charcoal; accents auto-lift lighter).
+(cosmos / coffee / macha retired 2026-07-02 — migration 0156;
+ martini retired 2026-07-03 — migration 0157 moved it to lilac.)
 ```
 
 ---
@@ -348,7 +394,9 @@ serene/
 │   │   ├── (dashboard)/             ← all authenticated pages
 │   │   ├── api/
 │   │   │   ├── webhooks/            ← inbound webhooks (leads, whatsapp)
-│   │   │   └── auth/callback/       ← the auth callback. No other API routes (P-02).
+│   │   │   ├── auth/callback/       ← the auth callback
+│   │   │   ├── elaya/chat/          ← Elaya SSE streaming (sanctioned P-02 exception, Decision Log 2026-06-12).
+│   │   │   └── manifest/             ← dynamic per-icon Web App Manifest (sanctioned PWA P-02 carve-out — static JSON, the dynamic twin of app/manifest.ts; ?icon= validated via isIconKey). No other API routes (P-02).
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   └── page.tsx                 ← redirects to /login or /dashboard
@@ -415,8 +463,11 @@ serene/
 | Deals | ✅ | `public.deals` first-class table (0072–0074), walk-in creation |
 | Attribution refactor | ✅ | `source`/`medium`/`attribution jsonb` (0065); `leads.city` column (0066) |
 | Domain route authorization | ✅ | `canAccessRoute` + `DOMAIN_ROUTE_MAP` + layout guard + Sidebar filter |
+| Elaya foundation | ✅ | Migration 0116 (`elaya_*`, `user_context`, `llm_providers`, `elaya_settings`), provider abstraction (Anthropic adapter), principal resolver, PII gateway, 6 read-only tools, `/elaya` SSE chat |
+| Elaya WhatsApp staff channel | ✅ | Routing gate on the whatsapp webhook (staff number → same brain/tools/cap, one reply; unknown number → lead pipeline untouched), `elaya_reply` audit rows (0117) |
+| Lead Revival (Phase R1) | ✅ | Migration 0119 (`revival_candidates` ledger + `revival_policies` config). Daily Trigger.dev `schedules.task` sweep → note-AI suppression gate (Elaya `routing` provider, reused) → confident revive = a "Revived" task via the E2 `createLeadTaskCore` path; unsure/overflow → review tab (the `/leads?revival=true` predicate reusing `LeadsTable`). `ReviveLeadButton` (one component, two mounts). Folds into `/settings`. Layer over leads — never mutates lead status/columns. Full contract: `docs/modules/revival.md` |
 
-**Current focus:** Elaya AI presence, client records (post-won flow).
+**Current focus:** Elaya Phase 2 (agentic writes via `elaya_actions`, WhatsApp customer persona), client records (post-won flow).
 
 **UI primitive rule (kept here because it's a live convention):** `Button` (CSS hover, zero Framer cost) for form submits and modal actions; `MotionButton + MOTION_BUTTON_DEFAULTS` for standalone primary CTAs that are pressed repeatedly (`AddLeadButton`, `TasksShell` header). Never add `MotionButton` to a form submit. Never merge the two.
 
@@ -599,7 +650,7 @@ Framer Motion entrance animations apply CSS `transform` to the animated element.
 
 **Reference implementations:**
 
-- `LeadsFilters.tsx` / `DealsFilters.tsx` / `CampaignFilters.tsx` / `TasksFilters.tsx` — all four compose `<FilterBar>` (`src/components/ui/FilterBar.tsx`), which owns the Range trigger + `usePortalAnchor` + `<FloatingPanel>` + `<DateRangeFields>` internally (canonical)
+- `LeadsFilters.tsx` / `DealsFilters.tsx` / `CampaignFilters.tsx` / `TasksFilters.tsx` — all four compose `<FilterBar>` (`src/components/ui/FilterBar.tsx`), which owns the Range (presets) + Dates triggers + `usePortalAnchor` + `<FloatingPanel>` + `<DateRangePresetList>`/`<DateRangeFields>` internally (canonical)
 - `GroupTasksTab.tsx` — ⋯ dropdown portaled; confirm delete via `<ConfirmDialog>`
 - `GroupTaskWorkspace.tsx` — confirm delete via `<ConfirmDialog>`
 - `DatePicker.tsx` / `TimePicker.tsx` / `FilterDropdown.tsx` — primitives still own a private copy of the mechanism (migrate onto `usePortalAnchor` last; do not fork a new copy from them)
@@ -619,6 +670,5 @@ This project has a knowledge graph at graphify-out/ with god nodes, community st
 
 Rules:
 - For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+- Read graphify-out/GRAPH_REPORT.md (god nodes + Claude-labelled community structure) only for broad architecture review or when query/path/explain do not surface enough context. There is no longer a curated wiki/ — the graph is the navigation layer.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost). To re-name communities after a re-cluster, run `graphify label . --backend claude` (uses the Claude API; ANTHROPIC_API_KEY is in .env.local). To regenerate the interactive visual, run `GRAPHIFY_VIZ_NODE_LIMIT=10000 graphify cluster-only .` (writes graphify-out/graph.html; the default 5000-node limit skips this repo's ~6.6k-node graph).

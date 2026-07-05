@@ -18,46 +18,7 @@ import { formErrors } from '@/lib/validations/form-errors';
 import { ElayaIdentityCard } from '@/components/elaya/ElayaIdentityCard';
 import { ElayaFeedbackCard } from '@/components/elaya/ElayaFeedbackCard';
 import { ElayaMessageBubble, type ElayaUiMessage } from '@/components/elaya/ElayaMessageBubble';
-
-type SseEvent =
-  | { type: 'meta'; conversationId: string; remainingToday: number }
-  | { type: 'delta'; text: string }
-  | { type: 'tool'; name: string }
-  | { type: 'done'; messageId: string | null }
-  | { type: 'error'; message: string };
-
-// One status line per tool the model may call. Covers every read AND write tool —
-// a tool with no entry falls back to the generic line. Keep in step with
-// lib/elaya/tools/registry.ts + write-registry.ts (a missing write entry showed the
-// generic "Checking Serene…" on a mutation — audit nit).
-const TOOL_STATUS_LABELS: Record<string, string> = {
-  // Reads
-  search_leads: 'Looking through your leads…',
-  get_cold_leads: 'Finding leads going cold…',
-  get_lead_details: 'Opening the lead…',
-  get_my_tasks: 'Checking your tasks…',
-  search_deals: 'Going through deals…',
-  get_performance_snapshot: 'Pulling your numbers…',
-  get_helpdesk_content: 'Browsing the case library…',
-  get_escalations: 'Checking what needs attention…',
-  get_domain_health: 'Pulling the domain scorecard…',
-  get_campaigns: 'Looking at campaign performance…',
-  get_budget: 'Pulling the spend numbers…',
-  // Writes
-  add_lead_note: 'Adding your note…',
-  log_call: 'Logging the call…',
-  create_lead_task: 'Creating the follow-up…',
-  update_lead_status: 'Setting that up…',
-  reassign_lead: 'Setting that up…',
-  log_deal: 'Setting that up…',
-  create_personal_task: 'Creating your task…',
-  create_group_task: 'Creating the workspace…',
-  create_subtask: 'Adding the task…',
-  find_teammate: 'Finding your teammate…',
-  update_task_status: 'Updating the task…',
-  update_task: 'Updating the task…',
-  delete_task: 'Setting that up…',
-};
+import { streamElayaChat, toolStatusLabel } from '@/components/elaya/elaya-stream';
 
 type Props = {
   conversationId: string;
@@ -158,56 +119,30 @@ export function ElayaChatShell({
       );
 
     try {
-      const res = await fetch('/api/elaya/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: content, conversationId: activeConversationId }),
-      });
-
-      if (!res.ok || !res.body) {
-        const payload = (await res.json().catch(() => null)) as
-          | { error?: string; capReached?: boolean }
-          | null;
-        if (payload?.capReached) setRemaining(0);
-        // Never clear the user's text on a rejected send — restore it.
-        setMessages((prev) => prev.filter((msg) => msg.id !== localId && msg.id !== assistantId));
-        setInput(content);
-        toast.danger(payload?.error ?? formErrors.elayaUnavailable);
-        return;
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        let boundary = buffer.indexOf('\n\n');
-        while (boundary !== -1) {
-          const frame = buffer.slice(0, boundary);
-          buffer = buffer.slice(boundary + 2);
-          boundary = buffer.indexOf('\n\n');
-
-          if (!frame.startsWith('data: ')) continue;
-          let event: SseEvent;
-          try {
-            event = JSON.parse(frame.slice(6)) as SseEvent;
-          } catch {
-            continue;
-          }
-
-          if (event.type === 'meta') {
-            setActiveConversationId(event.conversationId);
-            setRemaining(event.remainingToday);
-          } else if (event.type === 'delta') {
+      // THE shared SSE transport (elaya-stream.ts) — the mobile ElayaChatScreen
+      // pumps the identical loop; this shell owns only the state handlers.
+      await streamElayaChat(
+        { message: content, conversationId: activeConversationId },
+        {
+          onRejected: ({ error, capReached }) => {
+            if (capReached) setRemaining(0);
+            // Never clear the user's text on a rejected send — restore it.
+            setMessages((prev) =>
+              prev.filter((msg) => msg.id !== localId && msg.id !== assistantId),
+            );
+            setInput(content);
+            toast.danger(error ?? formErrors.elayaUnavailable);
+          },
+          onMeta: ({ conversationId: id, remainingToday: left }) => {
+            setActiveConversationId(id);
+            setRemaining(left);
+          },
+          onDelta: (text) => {
             setToolStatus(null);
-            appendDelta(event.text);
-          } else if (event.type === 'tool') {
-            setToolStatus(TOOL_STATUS_LABELS[event.name] ?? 'Checking Serene…');
-          } else if (event.type === 'done') {
+            appendDelta(text);
+          },
+          onTool: (name) => setToolStatus(toolStatusLabel(name)),
+          onDone: () => {
             // Unflag pending — but DROP the bubble entirely if the final reply is
             // empty/whitespace-only (a blank bubble would otherwise render once
             // pending clears; the render guard only hides empty WHILE pending).
@@ -218,14 +153,15 @@ export function ElayaChatShell({
                 return [{ ...msg, pending: false }];
               }),
             );
-          } else if (event.type === 'error') {
-            toast.danger(event.message);
+          },
+          onStreamError: (message) => {
+            toast.danger(message);
             setMessages((prev) =>
               prev.filter((msg) => !(msg.id === assistantId && msg.content.trim().length === 0)),
             );
-          }
-        }
-      }
+          },
+        },
+      );
     } catch {
       toast.danger(formErrors.elayaUnavailable);
       setMessages((prev) =>

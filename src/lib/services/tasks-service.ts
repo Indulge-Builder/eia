@@ -25,6 +25,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { redis } from '@/lib/redis';
 import { REDIS_KEYS, TASK_GIA_TTL, TASK_PERSONAL_PAGE1_TTL, TASK_GROUP_LIST_TTL } from '@/lib/constants/redis-keys';
 import { mapRows } from '@/lib/utils/rows';
+import { callAdminRpc } from '@/lib/services/rpc-helpers';
+import type { GiaDomain } from '@/lib/constants/domains';
 import type { AssignableUser, WithAuthor, WithAssignee } from '@/lib/types';
 import type {
   AppDomain,
@@ -784,4 +786,77 @@ export async function getAllLeadTasks(leadId: string): Promise<Task[]> {
     const bTerminal = TERMINAL.has(b.status) ? 1 : 0;
     return aTerminal - bTerminal;
   });
+}
+
+// ─────────────────────────────────────────────
+// getDomainTaskSummary — Mobile Ops Tasks room (mobile-ops §7).
+// ONE get_domain_task_summary RPC call (migration 0160): per-assignee
+// created/completed (period) + open/overdue (live) buckets for a domain's
+// tasks (domain derived COALESCE(group, assignee profile) — the
+// resolveTaskDomain rule in SQL). Scope-param RPC → Q-13 revoked tier:
+// called via callAdminRpc with session-derived args; the gated action
+// (actions/mobile.ts) is the trust boundary.
+// ─────────────────────────────────────────────
+export type DomainTaskAgentSummary = {
+  agentId: string | null;
+  agentName: string;
+  createdCount: number;
+  completedCount: number;
+  openCount: number;
+  overdueCount: number;
+};
+
+export type DomainTaskSummary = {
+  domain: GiaDomain;
+  from: string;
+  to: string;
+  totals: {
+    created: number;
+    completed: number;
+    open: number;
+    overdue: number;
+  };
+  byAgent: DomainTaskAgentSummary[];
+};
+
+type DomainTaskSummaryRpcRow = {
+  agent_id: string | null;
+  agent_name: string;
+  created_count: number;
+  completed_count: number;
+  open_count: number;
+  overdue_count: number;
+};
+
+export async function getDomainTaskSummary(
+  domain: GiaDomain,
+  from: string,
+  to: string,
+): Promise<DomainTaskSummary> {
+  const byAgent = await callAdminRpc<DomainTaskSummaryRpcRow, DomainTaskAgentSummary>(
+    'get_domain_task_summary',
+    { p_domain: domain, p_from: from, p_to: to },
+    (row) => ({
+      agentId: row.agent_id,
+      agentName: row.agent_name,
+      createdCount: Number(row.created_count ?? 0),
+      completedCount: Number(row.completed_count ?? 0),
+      openCount: Number(row.open_count ?? 0),
+      overdueCount: Number(row.overdue_count ?? 0),
+    }),
+    '[tasks-service]',
+  );
+
+  return {
+    domain,
+    from,
+    to,
+    totals: {
+      created: byAgent.reduce((s, a) => s + a.createdCount, 0),
+      completed: byAgent.reduce((s, a) => s + a.completedCount, 0),
+      open: byAgent.reduce((s, a) => s + a.openCount, 0),
+      overdue: byAgent.reduce((s, a) => s + a.overdueCount, 0),
+    },
+    byAgent,
+  };
 }
