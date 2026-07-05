@@ -1325,8 +1325,8 @@
     "semantic_hash": ""
   },
   "src/components/ui/EmptyState.tsx": {
-    "mtime": 1783082621.7098129,
-    "ast_hash": "86106ea4973b9c230b92843e9cd1f943",
+    "mtime": 1783293915.9962723,
+    "ast_hash": "726359d58b7d24f62fe69df8e07571e1",
     "semantic_hash": ""
   },
   "src/components/ui/FilterBar.tsx": {
@@ -3170,8 +3170,8 @@
     "semantic_hash": ""
   },
   "docs/changelog.md": {
-    "mtime": 1783293571.7225227,
-    "ast_hash": "c7d04e026157bc1d1c7ff08fc19a6218",
+    "mtime": 1783293978.7720132,
+    "ast_hash": "915c003833db88f01c2fb2d730baacdd",
     "semantic_hash": ""
   },
   "docs/claude-project/1-product-and-status.md": {

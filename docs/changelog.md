@@ -12,6 +12,22 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-07-06 — /settings: filter bar moved above the config link cards
+
+**Why:** the `/settings` hub rendered the two admin/founder config link cards (Follow-up Engine,
+Lead Revival) above `AgentSettingsTable`, so its filter bar sat *below* the cards — breaking the
+list-page contract where the filter bar sits directly under the page title.
+
+**What:** added an optional `beforeList` slot to `AgentSettingsTable`, rendered between its
+`FilterBar` and the roster list. The page now passes the link-cards grid through that slot instead
+of rendering it above the table. Result: title → filter bar → config link cards → roster, matching
+every other list page. No behaviour change to filtering, the roster, or the cards themselves.
+
+- `src/components/settings/AgentSettingsTable.tsx` — new `beforeList?: React.ReactNode` prop
+- `src/app/(dashboard)/settings/page.tsx` — link cards moved into `beforeList` (still admin/founder-gated)
+
+---
+
 ## 2026-07-06 — Mobile polish sweep: PWA full-bleed, sticky header rework, filter bars, tasks surfaces, loading standardization
 
 **Why:** first real phone-testing pass on the responsive dashboard shell surfaced a batch of
@@ -64,15 +80,18 @@ stuttered and swallowed the drawer trigger, filter bars clipped and jammed, task
   span 100% while the chips hugged left) — `fit-content` on desktop, `fullWidth` even-split below md.
 - **/notes:** removed the Elaya intro paragraph under the title bar.
 
-- **Skeleton watermark centered (`ui/PageSkeletons.tsx` + globals.css):** the faint spinning
-  seed-mandala on loading screens was pinned top-right of the ~36px header row (`right: -20px;
-  top: -16px`), reading as a corner scrap floating at the top. It now fills and centers within the
-  paper region: `.serene-shell-paper` became a `position: relative` containing block, and
-  `SkeletonWatermark` renders `absolute inset:0` with a centered mark, mounted OUTSIDE the header
-  flex row so its containing block is the paper region (not the thin header strip, not the
-  sidebar/gutter).
+- **Skeleton watermark removed (`ui/PageSkeletons.tsx` + globals.css):** the faint spinning
+  seed-mandala that `PageHeaderSkeleton` stamped on every loading screen read as clutter behind the
+  shimmer blocks — removed entirely (`SkeletonWatermark` + its `watermark` prop deleted; the
+  `.serene-shell-paper { position: relative }` added to center it reverted). The brand mark now
+  rests ONLY on the empty-state, never on loading skeletons.
+- **Brand empty-state simplified (`ui/EmptyState.tsx`):** the `brand` composition (the `/notes`
+  and `/deals` empties) dropped its crisp 76px foreground mandala and moved the faint 240px
+  watermark from the top-right corner to CENTERED behind the text — the title/description now rest
+  over a single calm centered watermark. Both `brand` consumers inherit it. This is the one place
+  the resting brand mark still appears.
 
-Files: `src/app/layout.tsx`, `src/app/globals.css`, `src/components/ui/{FilterBar,Dialog,LogoSpinner,PageSkeletons}.tsx`,
+Files: `src/app/layout.tsx`, `src/app/globals.css`, `src/components/ui/{FilterBar,Dialog,LogoSpinner,PageSkeletons,EmptyState}.tsx`,
 `src/components/tasks/{TasksFilters,CompletedTasksButton,MyTasksCalendarView,GroupTasksTab,GroupTaskWorkspace,SubTaskModal,CreatePersonalTaskModal}.tsx`,
 `src/app/(dashboard)/tasks/[id]/loading.tsx` (new), `src/components/mobile/screens/AgentTasksScreen.tsx`,
 `src/components/mobile/rooms/room-bits.tsx`, `src/components/performance/DomainOverviewPanel.tsx`,

@@ -34,39 +34,41 @@ export default async function SettingsPage() {
         )}
       </div>
 
-      {/* Configuration pages — admin/founder only. Each opens a dedicated
-          editor; the agent roster stays inline below as the default surface. */}
-      {isPrivileged && (
-        <div
-          style={{
-            display:             "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap:                 "var(--space-4)",
-            marginBottom:        "var(--space-8)",
-          }}
-        >
-          <SettingsLinkCard
-            href="/settings/follow-up-engine"
-            icon="timer"
-            title="Follow-up Engine"
-            description="SLA timers, cadences, and escalation rules that drive Gia's automatic follow-ups."
-            index={0}
-          />
-          <SettingsLinkCard
-            href="/settings/lead-revival"
-            icon="sparkles"
-            title="Lead Revival"
-            description="Silence thresholds and daily caps for the nightly auto-revival sweep."
-            index={1}
-          />
-        </div>
-      )}
-
-      {/* Team shifts & routing pool — the always-present roster (manager+) */}
+      {/* Team shifts & routing pool — the always-present roster (manager+).
+          The config link cards (admin/founder only) render via the table's
+          beforeList slot — below the filter bar, above the roster — so the
+          filter bar stays directly under the page title (list-page contract). */}
       <AgentSettingsTable
         initialRoster={roster}
         callerRole={profile.role}
         callerDomain={profile.domain}
+        beforeList={
+          isPrivileged ? (
+            <div
+              style={{
+                display:             "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap:                 "var(--space-4)",
+                marginBottom:        "var(--space-8)",
+              }}
+            >
+              <SettingsLinkCard
+                href="/settings/follow-up-engine"
+                icon="timer"
+                title="Follow-up Engine"
+                description="SLA timers, cadences, and escalation rules that drive Gia's automatic follow-ups."
+                index={0}
+              />
+              <SettingsLinkCard
+                href="/settings/lead-revival"
+                icon="sparkles"
+                title="Lead Revival"
+                description="Silence thresholds and daily caps for the nightly auto-revival sweep."
+                index={1}
+              />
+            </div>
+          ) : null
+        }
       />
     </main>
   );

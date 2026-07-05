@@ -125,10 +125,6 @@ body {
    restored 2026-07-03). Raised cream surface + Whisper pair + hairline edge;
    cards inside raise themselves a step further via their own shadow pairs. */
 .serene-shell-paper {
-  /* Containing block for the loading-skeleton watermark (SkeletonWatermark) —
-     an absolutely-positioned inset:0 mark then centers on the paper region,
-     not on the thin header row it's mounted in, nor on the sidebar/gutter. */
-  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;

@@ -21,6 +21,9 @@ interface AgentSettingsTableProps {
   initialRoster: AgentRosterRow[];
   callerRole:    UserRole;
   callerDomain:  AppDomain;
+  /** Rendered between the filter bar and the roster list (e.g. the admin/founder
+   *  config link cards) so the filter bar stays directly under the page title. */
+  beforeList?:   React.ReactNode;
 }
 
 interface ShiftState {
@@ -129,6 +132,7 @@ const POOL_FILTER_ITEMS = [
 export function AgentSettingsTable({
   initialRoster,
   callerRole,
+  beforeList,
 }: AgentSettingsTableProps) {
   const isPrivileged     = callerRole === "admin" || callerRole === "founder";
   const showDomainFilter = isPrivileged;
@@ -371,6 +375,10 @@ export function AgentSettingsTable({
           menuPortal
         />
       </FilterBar>
+
+      {/* ── Config link cards (slot) — sits below the filter bar so the bar
+           stays directly under the page title, consistent with list pages ── */}
+      {beforeList}
 
       {/* ── Empty state ────────────────────────────────────────────── */}
       {filtered.length === 0 && (

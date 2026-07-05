@@ -20,11 +20,11 @@ import { SeedMandala } from './SeedMandala';
  * `framed` adds the paper-subtle bordered surface; `ambient` adds the accent
  * radial wash (decorative, aria-hidden). Both are hero-variant options.
  *
- * `brand` (polish handoff §08) upgrades the hero to the mark-rests-here
- * composition: 76px SeedMandala (gradient, opacity .85) in place of the icon
- * tile + a 240px watermark mandala bleeding off the top-right corner
- * (opacity .08, one revolution per 120s). Pair with exactly ONE primary
- * action in `action`, per-module copy (calm, one poetic touch, mention
+ * `brand` (polish handoff §08; simplified 2026-07-06) is the mark-rests-here
+ * composition: a single 240px watermark mandala CENTERED behind the content
+ * (gradient, opacity .08, one revolution per 120s) with the title/description
+ * resting over it — no foreground glyph, no icon tile. Pair with exactly ONE
+ * primary action in `action`, per-module copy (calm, one poetic touch, mention
  * Elaya where relevant).
  */
 
@@ -127,19 +127,23 @@ export function EmptyState({
         ...style,
       }}
     >
-      {/* §08 watermark — 240px mandala off the top-right corner, one turn
-          every 2 minutes (class-driven spin → reduced-motion rests it). */}
+      {/* §08 watermark — 240px mandala CENTERED behind the content, one turn
+          every 2 minutes (class-driven spin → reduced-motion rests it). It is
+          the sole brand mark now (the crisp 76px foreground glyph was removed
+          2026-07-06 — the text rests over the faint watermark alone). */}
       {brand && (
         <div
           aria-hidden="true"
           style={{
-            position:      'absolute',
-            right:         '-50px',
-            top:           '-50px',
+            position:       'absolute',
+            inset:          0,
+            display:        'flex',
+            alignItems:     'center',
+            justifyContent: 'center',
             // 0.08 on cream; rises to 0.10 under [data-neu="dark"] — gold
             // carries further on charcoal (dark-mode handoff §mandala).
-            opacity:       'var(--neu-watermark-opacity, 0.08)',
-            pointerEvents: 'none',
+            opacity:        'var(--neu-watermark-opacity, 0.08)',
+            pointerEvents:  'none',
           }}
         >
           <SeedMandala size={240} variant="gradient" spin={120} />
@@ -159,12 +163,6 @@ export function EmptyState({
             `,
           }}
         />
-      )}
-
-      {brand && (
-        <div style={{ position: 'relative', zIndex: 1, opacity: 0.85 }}>
-          <SeedMandala size={76} variant="gradient" />
-        </div>
       )}
 
       {!brand && Icon && (

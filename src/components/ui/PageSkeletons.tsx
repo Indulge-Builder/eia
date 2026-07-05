@@ -13,48 +13,10 @@
 // whatsapp split-pane) stay bespoke — only the repeated blocks live here.
 
 import React from 'react';
-import { SeedMandala } from './SeedMandala';
 
 /** Logo-motion handoff shimmer stagger: 150ms per element, capped. */
 export function skeletonStagger(index: number): number {
   return Math.min(index * 150, 600);
-}
-
-export interface SkeletonWatermarkProps {
-  /** Mark edge in px (default 150). */
-  size?: number;
-}
-
-/**
- * The faint seed-mandala watermark, turning at 40s/rev (its fixed speed) at
- * 10% opacity — one calm mark CENTERED behind the loading region, not a corner
- * scrap. Its containing block is `.serene-shell-paper` (made `position:
- * relative` in globals.css), so `inset: 0` spans the whole paper region and the
- * mark centers on it — NOT on the ~36px header strip it's mounted in, nor on
- * the sidebar/gutter. Mounted structurally by `PageHeaderSkeleton`; bespoke
- * skeletons (dashboard, whatsapp) may mount it too.
- */
-export function SkeletonWatermark({ size = 150 }: SkeletonWatermarkProps) {
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        position: 'absolute',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: 0.1,
-        pointerEvents: 'none',
-        overflow: 'hidden',
-        zIndex: 0,
-      }}
-    >
-      <div style={{ width: size, height: size }}>
-        <SeedMandala size={size} spin={40} />
-      </div>
-    </div>
-  );
 }
 
 export interface ShimmerProps {
@@ -91,36 +53,29 @@ export interface PageHeaderSkeletonProps {
   titleWidth?: number;
   /** Width of the top-right CTA block; omit for pages without a CTA. */
   actionWidth?: number;
-  /** The top-right seed-mandala watermark (default true) — every composing
-   *  loading page gets it structurally; opt out for cramped regions. */
-  watermark?: boolean;
 }
 
-/** Row 1 of the Standard Page Layout Contract — title left, optional CTA right. */
+/** Row 1 of the Standard Page Layout Contract — title left, optional CTA right.
+ *  The spinning seed-mandala watermark was removed 2026-07-06 — it read as
+ *  clutter behind the shimmer blocks. The brand mark now rests only on the
+ *  empty-state (`ui/EmptyState.tsx` `brand`), never on loading skeletons. */
 export function PageHeaderSkeleton({
   titleWidth = 80,
   actionWidth,
-  watermark = true,
 }: PageHeaderSkeletonProps) {
   return (
-    <>
-      {/* Rendered OUTSIDE the header flex row (and before it) so its containing
-          block is `.serene-shell-paper` (position: relative), letting the mark
-          center on the whole paper region — not on this ~36px header strip. */}
-      {watermark && <SkeletonWatermark />}
-      <div
-        style={{
-          display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'space-between',
-          gap:            'var(--space-4)',
-          marginBottom:   'var(--space-6)',
-        }}
-      >
-        <Shimmer w={titleWidth} h={36} />
-        {actionWidth !== undefined && <Shimmer w={actionWidth} h={36} style={{ flexShrink: 0 }} />}
-      </div>
-    </>
+    <div
+      style={{
+        display:        'flex',
+        alignItems:     'center',
+        justifyContent: 'space-between',
+        gap:            'var(--space-4)',
+        marginBottom:   'var(--space-6)',
+      }}
+    >
+      <Shimmer w={titleWidth} h={36} />
+      {actionWidth !== undefined && <Shimmer w={actionWidth} h={36} style={{ flexShrink: 0 }} />}
+    </div>
   );
 }
 
