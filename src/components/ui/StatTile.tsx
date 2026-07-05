@@ -4,10 +4,11 @@ import { AnimatedNumber } from './AnimatedNumber';
 // (AnimatedNumber is a client leaf — fine to render from a server tree).
 //
 // Two variants cover the two existing anatomies:
-//   'card' — paper card chrome, micro label on top, 2xl semibold sans value,
+//   'card' — paper card chrome, micro label on top, 2xl semibold mono value,
 //            optional coloured sub-line (campaign metrics strip).
 //   'cell' — bare centred cell for composition inside one shared strip card:
 //            2xl mono accent value on top, micro label below (deals summary).
+// Both values render in --font-mono + tabular-nums (number-font rule).
 //
 // MetricCard (performance/CoreFourGrid) deliberately stays bespoke — its
 // delta/sparkline/motion decoration is its own thing (per the audit: "do not
@@ -44,8 +45,8 @@ export function StatTile({
       >
         <span
           style={{
-            // Playfair for numbers (soft-UI type rule); accent-deep is the text-safe accent.
-            fontFamily:         'var(--font-serif)',
+            // Mono for numbers (number-font rule); accent-deep is the text-safe accent.
+            fontFamily:         'var(--font-mono)',
             fontSize:           'var(--text-2xl)',
             fontWeight:         'var(--weight-semibold)',
             fontVariantNumeric: 'tabular-nums',
@@ -89,8 +90,8 @@ export function StatTile({
 
       <p
         style={{
-          // Playfair for numbers (soft-UI type rule).
-          fontFamily:  'var(--font-serif)',
+          // Mono for numbers (number-font rule).
+          fontFamily:  'var(--font-mono)',
           fontSize:    'var(--text-2xl)',
           fontWeight:  'var(--weight-semibold)',
           color:       'var(--theme-text-primary)',

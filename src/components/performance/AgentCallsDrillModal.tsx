@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Phone } from 'lucide-react';
 import { DrillModalShell } from './DrillModalShell';
 import { Button } from '@/components/ui/Button';
+import { Num } from '@/components/ui/Num';
 import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { getAgentCallsForManagerAction } from '@/lib/actions/performance';
@@ -78,9 +79,11 @@ export function AgentCallsDrillModal({ open, agentId, agentName, domain, onClose
   }, [open, load]);
 
   const subtitle =
-    items.length > 0
-      ? `${agentName} · showing ${items.length} most recent${hasMore ? '' : ''}`
-      : agentName;
+    items.length > 0 ? (
+      <>{agentName} · showing <Num>{items.length}</Num> most recent</>
+    ) : (
+      agentName
+    );
 
   return (
     <DrillModalShell open={open} title="Recent calls" subtitle={subtitle} onClose={onClose}>

@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { FileSpreadsheet, Upload, type LucideIcon } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/Button";
+import { Num } from "@/components/ui/Num";
 import { useToast } from "@/hooks/useToast";
 import { formatCount, formatCurrency } from "@/lib/utils/numbers";
 import { parseMetaSpendFile, type ParsedAdSpend } from "@/lib/utils/ad-spend-parse";
@@ -197,17 +198,17 @@ export function AdSpendUploadModal({ open, onClose }: Props) {
             }}
           >
             <span>
-              <strong style={{ color: "var(--theme-text-primary)", fontWeight: "var(--weight-semibold)" }}>
+              <Num style={{ color: "var(--theme-text-primary)", fontWeight: "var(--weight-semibold)" }}>
                 {formatCount(parsed.rows.length)}
-              </strong>{" "}
-              day-grain rows · {formatCurrency(Math.round(totalSpend))} total spend
+              </Num>{" "}
+              day-grain rows · <Num>{formatCurrency(Math.round(totalSpend))}</Num> total spend
             </span>
-            <span>
+            <Num>
               {formatDate(parsed.dateFrom, "dd MMM yyyy")} → {formatDate(parsed.dateTo, "dd MMM yyyy")}
-            </span>
+            </Num>
             {parsed.skipped > 0 && (
               <span style={{ color: "var(--theme-text-tertiary)" }}>
-                {formatCount(parsed.skipped)} zero-spend row{parsed.skipped === 1 ? "" : "s"} will be skipped
+                <Num>{formatCount(parsed.skipped)}</Num> zero-spend row{parsed.skipped === 1 ? "" : "s"} will be skipped
               </span>
             )}
           </div>

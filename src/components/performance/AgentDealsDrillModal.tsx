@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DrillModalShell } from './DrillModalShell';
 import { DealDrillRow, type DealDrillRowItem } from './DealDrillRow';
+import { Num } from '@/components/ui/Num';
 import { Button } from '@/components/ui/Button';
 import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -68,7 +69,13 @@ export function AgentDealsDrillModal({ open, agentId, agentName, domain, onClose
     <DrillModalShell
       open={open}
       title="Won deals"
-      subtitle={total > 0 ? `${agentName} · ${total} deal${total === 1 ? '' : 's'}` : agentName}
+      subtitle={
+        total > 0 ? (
+          <>{agentName} · <Num>{total}</Num> deal{total === 1 ? '' : 's'}</>
+        ) : (
+          agentName
+        )
+      }
       onClose={onClose}
     >
       {loading && rows.length === 0 ? (

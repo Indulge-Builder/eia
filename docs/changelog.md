@@ -12,6 +12,53 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-07-06 — StatTile numbers switched from Playfair to the mono number font (app-wide)
+
+**Why:** `StatTile` (both `card` and `cell` variants) rendered its value in `--font-serif`
+(Playfair). Per the number-font rule the value should be a mono number so every labelled stat
+tile reads consistently against the other card boxes. This is the shared component behind the
+deals summary strip, campaign metric cards, and every other labelled stat tile — the change is
+app-wide by design.
+
+**What changed:**
+
+- **`src/components/ui/StatTile.tsx`** — both variants' value font `--font-serif → --font-mono`
+  (still `--text-2xl`, semibold, `tabular-nums`; colours unchanged — `cell` keeps `--neu-accent-deep`,
+  `card` keeps `--theme-text-primary`).
+- **Consumers affected (no per-consumer edit needed):** `DealsSummaryStrip` (deals hero bar),
+  `CampaignMetricsStrip`, `AccountReportSection`, and every other `StatTile` mount.
+
+No behavioural change; typecheck + lint clean.
+
+---
+
+## 2026-07-06 — Number-font rule: inline numeric tokens in modal captions now render in the mono number font
+
+**Why:** the number-font rule mandates two fonts for numbers — `--font-serif` (Playfair) for hero
+stat values, `--font-mono` (Geist Mono) for secondary/technical numbers — both with `tabular-nums`.
+An audit of every modal + drill-modal card found the *standalone* stat values already comply. The
+remaining offenders were numbers embedded **mid-sentence** in tertiary captions and drill-modal
+subtitles (`Aanya · 12 deals`, `showing 12 most recent`, `12 day-grain rows · ₹4,50,000 total spend`),
+which inherited the default `--font-sans` (the "title" font). The surrounding prose must stay sans, so
+the fix wraps only the digits.
+
+**What changed:**
+
+- **New `src/components/ui/Num.tsx`** — `<Num>` — THE inline numeric-token wrapper. Renders its
+  children in `--font-mono` + `tabular-nums`, colour/weight inherited from the sentence around it
+  (never re-tints — it is not a hero value). Display-only (A-06), server-component-safe. Compose this
+  for any number embedded mid-sentence; standalone hero/stat values still set `--font-serif` directly.
+- **`DrillModalShell`** `subtitle` prop widened `string → React.ReactNode` so callers can wrap the
+  inline count.
+- Wrapped the inline count in the five drill-modal subtitles that carry one — `AgentDealsDrillModal`,
+  `AgentLeadsDrillModal`, `DomainDealsDrillModal`, `AgentCallsDrillModal`, `LeadDrillModal` — and the
+  three numeric tokens in the `AdSpendUploadModal` parse-preview panel (row count, total spend, skipped
+  count + the date range), all via `<Num>`.
+
+No behavioural change; typecheck + lint clean.
+
+---
+
 ## 2026-07-06 — /settings: filter bar moved above the config link cards
 
 **Why:** the `/settings` hub rendered the two admin/founder config link cards (Follow-up Engine,

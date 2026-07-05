@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { DrillModalShell } from './DrillModalShell';
 import { LeadDrillRow } from './LeadDrillRow';
+import { Num } from '@/components/ui/Num';
 import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { ActionResult } from '@/lib/types/index';
@@ -80,9 +81,14 @@ export function LeadDrillModal({ open, title, subtitle, emptyLabel = 'No leads h
   }, [open, fetchKey]);
 
   const fullSubtitle =
-    rows.length > 0
-      ? `${subtitle ? `${subtitle} · ` : ''}${rows.length} lead${rows.length === 1 ? '' : 's'}`
-      : subtitle;
+    rows.length > 0 ? (
+      <>
+        {subtitle ? `${subtitle} · ` : ''}
+        <Num>{rows.length}</Num> lead{rows.length === 1 ? '' : 's'}
+      </>
+    ) : (
+      subtitle
+    );
 
   return (
     <DrillModalShell open={open} title={title} subtitle={fullSubtitle} onClose={onClose}>

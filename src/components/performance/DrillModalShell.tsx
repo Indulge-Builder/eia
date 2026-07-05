@@ -22,8 +22,9 @@ import { MODAL_VARIANTS } from '@/lib/constants/motion';
 export interface DrillModalShellProps {
   open: boolean;
   title: string;
-  /** Optional sub-line under the title (e.g. "showing N most recent"). */
-  subtitle?: string;
+  /** Optional sub-line under the title (e.g. "showing N most recent").
+   *  ReactNode so callers can wrap inline counts in the mono number font. */
+  subtitle?: React.ReactNode;
   onClose: () => void;
   children: React.ReactNode;
 }
