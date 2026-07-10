@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useId } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, m as motion } from 'framer-motion';
 import { X } from 'lucide-react';
@@ -11,6 +11,7 @@ import {
   EASE_IN_EXPO,
   EASE_IN_OUT,
 } from '@/lib/constants/motion';
+import { lockBodyScroll } from '@/lib/utils/scroll';
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
@@ -59,6 +60,7 @@ export function Dialog({
   const titleId = useId();
   const descId = useId();
   const isFull = size === 'full';
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -68,6 +70,20 @@ export function Dialog({
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [open, onClose]);
+
+  // Lock body scroll while open — stops the scrollbar disappear/reappear that
+  // shifts the page one frame as the fixed overlay mounts (the Called-modal
+  // jitter). lockBodyScroll is re-entrant, so nested dialogs stay correct.
+  useEffect(() => {
+    if (!open) return;
+    return lockBodyScroll();
+  }, [open]);
+
+  // Take focus on the panel itself (not a field) so no input paints its accent
+  // ring mid scale-in, and preventScroll stops the animating panel scroll-jump.
+  useEffect(() => {
+    if (open) panelRef.current?.focus({ preventScroll: true });
+  }, [open]);
 
   // SSR guard — after the hooks so hook order stays stable (ConfirmDialog pattern).
   if (typeof document === 'undefined') return null;
@@ -99,17 +115,19 @@ export function Dialog({
             style={{
               position:   'fixed',
               inset:      0,
-              // Neumorphic scrim — warm umber + 3px blur (README modal recipe;
-              // the sanctioned scrim treatment for this design system).
+              // Neumorphic scrim — warm umber (README modal recipe; the
+              // sanctioned scrim treatment for this design system). No
+              // backdrop-filter: it is not sanctioned on modal overlays (V-06)
+              // and its per-frame recompute caused the open-animation shimmer.
               backgroundColor: 'var(--neu-scrim)',
-              backdropFilter: 'blur(3px)',
-              WebkitBackdropFilter: 'blur(3px)',
               zIndex:     ('var(--z-overlay)' as React.CSSProperties['zIndex']),
             }}
           >
             {/* Panel */}
             <motion.div
               key="dialog-panel"
+              ref={panelRef}
+              tabIndex={-1}
               role="dialog"
               aria-modal="true"
               aria-labelledby={title ? titleId : undefined}
@@ -136,6 +154,7 @@ export function Dialog({
                 border:       '1px solid var(--neu-edge)',
                 boxShadow:    'var(--neu-shadow-modal)',
                 overflow:     'hidden',
+                outline:      'none', // programmatic panel focus draws no ring
                 display:      'flex',
                 flexDirection:'column',
                 zIndex:       ('var(--z-modal)' as React.CSSProperties['zIndex']),

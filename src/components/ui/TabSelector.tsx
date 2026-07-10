@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
-import { SPRING_CONFIG, FAST_DURATION, EASE_OUT_EXPO } from '@/lib/constants/motion';
+import { SPRING_TAB, FAST_DURATION, EASE_OUT_EXPO } from '@/lib/constants/motion';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -267,7 +267,7 @@ export function TabsTrigger({
             boxShadow: 'var(--neu-shadow-tab-active)',
             zIndex: -1,
           }}
-          transition={SPRING_CONFIG}
+          transition={SPRING_TAB}
         />
       )}
 
@@ -284,7 +284,7 @@ export function TabsTrigger({
             boxShadow: 'var(--neu-shadow-tab-active)',
             zIndex: -1,
           }}
-          transition={SPRING_CONFIG}
+          transition={SPRING_TAB}
         />
       )}
 
@@ -300,7 +300,7 @@ export function TabsTrigger({
             boxShadow:    'var(--neu-shadow-raised-sm)',
             zIndex:       -1,
           }}
-          transition={SPRING_CONFIG}
+          transition={SPRING_TAB}
         />
       )}
 

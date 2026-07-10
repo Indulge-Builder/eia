@@ -12,12 +12,14 @@ import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE } from '@/lib/constants/lead-stat
 import { CALL_OUTCOME_LABELS } from '@/lib/constants/call-outcomes';
 import { getLeadSourceLabel, getMetaMediumLabel } from '@/lib/constants/lead-sources';
 import { formatDate } from '@/lib/utils/dates';
+import { formatCount } from '@/lib/utils/numbers';
 import { LEAD_COLUMN_MAP, type LeadColumnId } from '@/lib/constants/lead-columns';
 import { useLeadColumnPreferences } from '@/hooks/useLeadColumnPreferences';
 import { useMountOnFirstOpen } from '@/hooks/useMountOnFirstOpen';
 import { LeadsSelectionToolbar } from '@/components/leads/LeadsSelectionToolbar';
 import { ExportButton } from '@/components/leads/ExportButton';
 import { TabSelector } from '@/components/ui/TabSelector';
+import { Tooltip } from '@/components/ui/Tooltip';
 import type { AppDomain, LeadFilters, UserRole } from '@/lib/types/database';
 
 // Load-on-intent (perf audit G-1): the picker (@dnd-kit chain) stays out of the
@@ -29,6 +31,7 @@ const LeadColumnPicker = dynamic(
 
 type LeadsTableProps = {
   leads:            LeadListItemWithAssignee[];
+  totalCount:       number;
   userId:           string;
   role:             UserRole;
   domain:           AppDomain;
@@ -41,7 +44,7 @@ type LeadsTableProps = {
   enableViewToggle?: boolean;
 };
 
-export function LeadsTable({ leads, userId, role, domain, filters, hasActiveFilters = false, goingCold = false, enableViewToggle = false }: LeadsTableProps) {
+export function LeadsTable({ leads, totalCount, userId, role, domain, filters, hasActiveFilters = false, goingCold = false, enableViewToggle = false }: LeadsTableProps) {
   const router       = useRouter();
   const pathname     = usePathname();
   const params       = useSearchParams();
@@ -252,49 +255,64 @@ export function LeadsTable({ leads, userId, role, domain, filters, hasActiveFilt
           <span>Going Cold</span>
         </button>
 
+        {/* Filtered total — always visible (the pagination summary only appears
+            when totalCount > pageSize, so small result sets showed no count). */}
+        <span
+          style={{
+            color:      'var(--theme-text-tertiary)',
+            fontSize:   'var(--text-xs)',
+            fontFamily: 'var(--font-sans)',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          {formatCount(totalCount)} {totalCount === 1 ? 'lead' : 'leads'}
+        </span>
+
         <div style={{ flex: 1, minWidth: 0 }} aria-hidden="true" />
 
         {/* Sort order — commits immediately to URL (not part of filter draft) */}
-        <button
-          type="button"
-          onClick={toggleSortOrder}
-          title={sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}
-          aria-label={sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}
-          aria-pressed={sortOrder === 'asc'}
-          className="serene-touch"
-          style={{
-            display:      'inline-flex',
-            alignItems:   'center',
-            gap:          'var(--space-1)',
-            height:       '2.25rem',
-            padding:      '0 var(--space-3)',
-            background:   sortOrder === 'asc' ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))' : 'transparent',
-            border:       '1px solid var(--neu-edge)',
-            boxShadow:    sortOrder === 'asc' ? 'var(--neu-shadow-chip)' : 'none',
-            borderRadius: 'var(--radius-sm)',
-            fontSize:     'var(--text-sm)',
-            fontFamily:   'var(--font-sans)',
-            fontWeight:   'var(--weight-medium)',
-            color:        sortOrder === 'asc' ? 'var(--neu-accent-deep)' : 'var(--theme-text-secondary)',
-            cursor:       'pointer',
-            transition:   'var(--transition-hover), box-shadow var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)',
-            whiteSpace:   'nowrap',
-            flexShrink:   0,
-            outline:      'none',
-          }}
-        >
-          <ArrowDownUp
+        <Tooltip side="bottom" label={sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}>
+          <button
+            type="button"
+            onClick={toggleSortOrder}
+            aria-label={sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}
+            aria-pressed={sortOrder === 'asc'}
+            className="serene-touch"
             style={{
-              width:       '0.875rem',
-              height:      '0.875rem',
-              strokeWidth: 1.5,
-              transform:   sortOrder === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition:  'transform var(--duration-base) var(--ease-spring)',
+              display:      'inline-flex',
+              alignItems:   'center',
+              gap:          'var(--space-1)',
+              height:       '2.25rem',
+              padding:      '0 var(--space-3)',
+              background:   sortOrder === 'asc' ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))' : 'transparent',
+              border:       '1px solid var(--neu-edge)',
+              boxShadow:    sortOrder === 'asc' ? 'var(--neu-shadow-chip)' : 'none',
+              borderRadius: 'var(--radius-sm)',
+              fontSize:     'var(--text-sm)',
+              fontFamily:   'var(--font-sans)',
+              fontWeight:   'var(--weight-medium)',
+              color:        sortOrder === 'asc' ? 'var(--neu-accent-deep)' : 'var(--theme-text-secondary)',
+              cursor:       'pointer',
+              transition:   'var(--transition-hover), box-shadow var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)',
+              whiteSpace:   'nowrap',
+              flexShrink:   0,
+              outline:      'none',
             }}
-            aria-hidden="true"
-          />
-          <span className="max-md:hidden">{sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}</span>
-        </button>
+          >
+            <ArrowDownUp
+              style={{
+                width:       '0.875rem',
+                height:      '0.875rem',
+                strokeWidth: 1.5,
+                transform:   sortOrder === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition:  'transform var(--duration-base) var(--ease-spring)',
+              }}
+              aria-hidden="true"
+            />
+            <span className="max-md:hidden">{sortOrder === 'asc' ? 'Oldest first' : 'Newest first'}</span>
+          </button>
+        </Tooltip>
 
         {/* Column picker trigger — md+ only (table-only control, see toolbar note) */}
         <div ref={pickerAnchorRef} className="max-md:hidden" style={{ position: 'relative', flexShrink: 0 }}>
@@ -760,9 +778,19 @@ function LeadCell({
       );
 
     case 'campaign':
+      // Truncated cell (maxWidth 12rem + ellipsis) — the full campaign name
+      // lives in the top tooltip; the '—' placeholder gets none.
       return (
         <td style={{ ...baseCell, fontSize: 'var(--text-xs)', color: 'var(--theme-text-tertiary)', maxWidth: '12rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {lead.utm_campaign ?? '—'}
+          {lead.utm_campaign ? (
+            <Tooltip side="top" label={lead.utm_campaign}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                {lead.utm_campaign}
+              </span>
+            </Tooltip>
+          ) : (
+            '—'
+          )}
         </td>
       );
 

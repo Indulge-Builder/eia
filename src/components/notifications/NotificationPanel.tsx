@@ -13,6 +13,7 @@ import { createPortal } from "react-dom";
 import { m as motion, AnimatePresence } from "framer-motion";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MotionRow } from "@/components/ui/RowMotion";
 import { useMediaQuery, MQ } from "@/hooks/useMediaQuery";
 import {
   ENTER_DURATION,
@@ -39,21 +40,6 @@ const PANEL_VARIANTS = {
   },
 } as const;
 
-// ─── Item stagger variants ────────────────────────────────────────────────────
-
-const ITEM_VARIANTS = {
-  hidden: { opacity: 0, y: 4 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay:    Math.min(i * 50, 200) / 1000,
-      duration: EXIT_DURATION,
-      ease:     EASE_OUT_EXPO,
-    },
-  }),
-} as const;
-
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface NotificationPanelProps {
@@ -78,7 +64,6 @@ export function NotificationPanel({
   anchorRef,
 }: NotificationPanelProps) {
   const panelRef       = useRef<HTMLDivElement>(null);
-  const isInitialMount = useRef(true);
 
   // Portal escape: the bell lives inside the sidebar <aside>, which carries a
   // `transform` for the off-canvas drawer below md. A transformed ancestor is a
@@ -115,16 +100,6 @@ export function NotificationPanel({
       window.removeEventListener("resize", place);
     };
   }, [open, isMobile, anchorRef]);
-
-  // After first render, flip the flag so subsequent Realtime items use custom={0}
-  useEffect(() => {
-    if (open) {
-      const id = setTimeout(() => { isInitialMount.current = false; }, 0);
-      return () => clearTimeout(id);
-    } else {
-      isInitialMount.current = true;
-    }
-  }, [open]);
 
   // Close on outside click
   useEffect(() => {
@@ -258,31 +233,34 @@ export function NotificationPanel({
               style={{ flex: 1, minHeight: 0, overflowY: "auto" }}
             >
               {notifications.length === 0 ? (
+                // §08 brand empty — the mark rests here when the inbox is clear.
+                // No action (nothing to do when caught up). minHeight is sized
+                // for the 380px dropdown / bottom sheet, not a full page.
                 <EmptyState
-                  title="You're all caught up."
-                  style={{ padding: "var(--space-8) var(--space-4)" }}
+                  brand
+                  title="All caught up."
+                  description="New alerts will land here as they arrive."
+                  minHeight="240px"
                 />
               ) : (
-                <motion.div layout style={{ padding: "var(--space-1) 0" }}>
+                // Row choreography via the shared MotionRow (polish §02) —
+                // migrated off the bespoke ITEM_VARIANTS/isInitialMount stagger
+                // so the whole app rides one pattern. initial={false}: the first
+                // open never cascades, a Realtime arrival slides in, a marked-
+                // read row lifts out and its siblings glide up.
+                <div style={{ padding: "var(--space-1) 0" }}>
                   <AnimatePresence initial={false}>
-                    {notifications.map((n, i) => (
-                      <motion.div
-                        key={n.id}
-                        layout
-                        custom={isInitialMount.current ? i : 0}
-                        variants={ITEM_VARIANTS}
-                        initial="hidden"
-                        animate="visible"
-                      >
+                    {notifications.map((n) => (
+                      <MotionRow key={n.id}>
                         <NotificationItem
                           notification={n}
                           onMarkRead={onMarkRead}
                           onClose={onClose}
                         />
-                      </motion.div>
+                      </MotionRow>
                     ))}
                   </AnimatePresence>
-                </motion.div>
+                </div>
               )}
             </div>
           </motion.div>

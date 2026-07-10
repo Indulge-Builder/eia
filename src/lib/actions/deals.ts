@@ -66,7 +66,7 @@ async function notifyDealCreated(opts: {
 // ─────────────────────────────────────────────
 export async function recordDeal(
   input: unknown,
-): Promise<ActionResult<{ leadId: string }>> {
+): Promise<ActionResult<{ leadId: string; dealId: string }>> {
   // S-01: Zod validation first line
   const parsed = parseActionInput(RecordDealSchema, input);
   if (!parsed.ok) return { data: null, error: parsed.error };
@@ -137,7 +137,11 @@ export async function recordDeal(
   revalidatePath("/leads");
   revalidatePath(`/leads/${(lead.slug as string | null) ?? leadId}`);
 
-  return { data: { leadId }, error: null };
+  // Return the new deal id so the caller (the lead→Won flow in StatusActionPanel)
+  // can stamp the one-shot petal-fall celebration key — the celebration is
+  // reserved for a lead transitioning into Won, played once when the matching
+  // DealCard renders on /deals (polish handoff §03).
+  return { data: { leadId, dealId: core.dealId }, error: null };
 }
 
 // ─────────────────────────────────────────────

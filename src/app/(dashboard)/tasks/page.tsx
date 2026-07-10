@@ -2,7 +2,6 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import type { SearchParams } from 'next/dist/server/request/search-params';
 import { getCurrentProfile } from '@/lib/services/profiles-service';
-import { getNotifications } from '@/lib/services/notifications-service';
 import { TOP_BAR_ENABLED } from '@/lib/constants/feature-flags';
 import { PageControls } from '@/components/layout/PageControls';
 import { CondensingPageHeader } from '@/components/layout/CondensingPageHeader';
@@ -52,9 +51,7 @@ export default async function TasksPage({
           <AddTaskButton activeTab={tab} validTabs={validTabs} />
           {TOP_BAR_ENABLED && (
             <PageControls
-              userId={profile.id}
               isPrivileged={false}
-              notificationsPromise={getNotifications(profile.id)}
             />
           )}
         </CondensingPageHeader>
@@ -63,10 +60,10 @@ export default async function TasksPage({
           <TasksAsync
             tab={tab}
             validTabs={validTabs}
-            userId={profile.id}
             callerRole={profile.role}
             callerDomain={profile.domain}
             callerName={profile.full_name}
+            userId={profile.id}
           />
         </Suspense>
       </TasksCreateProvider>

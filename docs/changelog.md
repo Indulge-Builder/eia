@@ -12,6 +12,206 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-07-10 — PWA boot polish: cream icon plate merges the OS splash into the boot screen; progress bar removed
+
+**Why:** opening the installed app on a phone showed two loading moments — first the OS-generated
+splash (manifest background + app icon) with the icon on its legacy pitch-black #0d0c0a plate,
+reading as a separate black screen for a few seconds, then the real `AppBootScreen` draw sequence.
+The OS splash cannot be removed, but it can be made to look like the boot screen itself. Also the
+boot screen carried a progress shimmer bar below the wordmark that the logo draw animation already
+covers.
+
+**What changed:**
+
+- **All app icons re-plated cream.** `scripts/pad-app-icons.mjs` now composites the umber→gold
+  glyph onto a solid #ECE8E1 plate (`NEU_CANVAS_LIGHT`, the boot screen canvas) instead of the
+  legacy Earth black. The OS splash now shows a cream icon on the cream manifest background, so it
+  reads as the boot screen's canvas and the two loading moments merge into one. Rebuilt:
+  `public/icon-1..4.webp` (manifest + apple-touch), and the script now also emits
+  `src/app/apple-icon.png` (180px fallback) and `public/icons/icon-192.png` / `icon-512.png`
+  (push-notification icon + offline shell) from the default icon so every surface matches.
+  The `maskable` manifest entry stays valid — the plate is still solid, corners are cream.
+- **`sw.js` `CACHE_VERSION` bumped to `serene-shell-v2`** so the precached `/icons/icon-192.png`
+  refreshes on installed devices.
+- **Boot screen progress bar removed.** `AppBootScreen` dropped the inset track + accent sweep
+  below the tagline; the mark's draw animation is the progress indicator. The now-orphaned
+  `serene-progress-sweep` keyframe was deleted from `design-tokens.css`.
+
+Note for installed devices: the home-screen icon and splash are baked at install time — existing
+installs keep the black icon until the user re-adds the app to the home screen.
+
+## 2026-07-10 — Polish-layer adoption sprint: every design handoff now 100% wired
+
+**Why:** an audit of the five design handoffs in `designss/` found four (neumorphic, dark mode,
+mobile, logo/loading) fully shipped, but the polish layer had its primitives built and only
+partially adopted — most were wired into one or two of the call sites the spec named. This sprint
+finishes the adoption so no handoff is left half-wired, and fixes one real celebration bug.
+
+**What changed:**
+
+- **Petal-fall now fires on the lead→Won transition (correctness fix).** The gold petal
+  celebration was only stamped on walk-in deal *creation* (`NewDealModal`); marking a lead Won
+  produced no petals. `recordDeal` (both the `deals.ts` core and the `leads.ts` wrapper) now
+  returns the new `dealId`, and `StatusActionPanel.fireDeal` stamps `DEAL_CELEBRATE_STORAGE_KEY`
+  on success so the matching `DealCard` plays the petals once when the user lands on `/deals`.
+- **Button success morph adopted on in-place save forms.** The `useButtonStatus` / `status`
+  grammar (idle → pending → sage "Saved" + check draw) is now wired into `EditProfileForm`,
+  `EditAuthorizationForm`, and `PasswordChangeForm` — the forms that stay mounted through success
+  so the morph is visible. Deliberately skipped for redirect/navigate-away forms and
+  close-on-success modals (the morph would never be seen).
+- **List choreography (`MotionRow`) across the task, notification, and notes lists.** Task lists
+  (`MyTasksCalendarView`, `GroupTasksTab` subtasks, `GroupTaskWorkspace` list view), the
+  `SubTaskModal` Action Items checklist, and `NotificationPanel` now compose the shared
+  `<MotionRow>` inside `<AnimatePresence initial={false}>`; each surface's per-row entrance
+  `motion.div` was removed so nothing double-animates. `NotificationPanel` dropped its bespoke
+  variants + stagger for the shared primitive.
+- **Undo-instead-of-confirm for reversible task deletes.** A single task/subtask delete now
+  removes the row optimistically, shows `toast.undo` (with the accent depletion bar), and only
+  fires `deleteTaskAction` on the toast timeout — Undo cancels it. The commit is owned by the
+  layout-mounted `ToastProvider` timer, so it still fires if the user navigates away. The truly
+  destructive group delete (cascades all subtasks) keeps `ConfirmDialog`.
+- **Tooltip wired into the leads table.** The toolbar Sort-order button (`side="bottom"`,
+  replacing a raw `title=`) and the truncated Campaign cell (`side="top"`, full `utm_campaign`)
+  now use the `Tooltip` primitive. Non-truncating cells and prose notes were left as-is.
+- **AnimatedNumber on the last two KPI heroes + header condense on Budget.** The `ManagerBudgetWidget`
+  budget hero and the `AgentTasksWidget` task count now animate via `AnimatedNumber` (wrapping the
+  already-formatted string). The `/budget` page title row is now `CondensingPageHeader`, matching
+  Leads/Deals/Tasks/Notes.
+- **Branded empty states** (76px mandala composition + serif-italic copy) on My Tasks ("A clear
+  slate — nothing on your plate.", New task action), the three Escalations "all clear" sections,
+  the bare Helpdesk library (Elaya named), and the Notifications panel ("All caught up.").
+
+The four already-complete handoffs need no work. One loose end noted for later cleanup: the
+`--z-veil` token is orphaned (the route veil was intentionally deleted in the 2026-07-03 motion
+calm-down and must never return).
+
+---
+
+## 2026-07-10 — Blueprint batch: 13 correctness + polish fixes
+
+Thirteen self-contained backlog items from the 2026-07-08 planning session, each pre-diagnosed
+in `blueprints/`. Grouped here as one dated block; each is independent unless noted.
+
+**Response time is now business-minutes (09:00–19:00 IST, Mon–Sat) everywhere.**
+New SQL helper `business_minutes_between()` (migration `20260710000161`); the agent KPI, roster,
+team benchmark, Elaya snapshot twin, and campaign first-touch RPCs all use it. Nights and Sundays
+no longer inflate the number (a Fri-evening→Mon-morning lead was reading as ~3,900 min). The
+campaign metric also gains its missing negative-interval guard. Display units unchanged, RPC
+return shapes unchanged (zero TypeScript edits). **Not yet applied — run `supabase db push`.**
+
+**Notification bell: persistent provider + four correctness fixes.**
+Bell state / Realtime subscription hoisted to a layout-mounted `NotificationsProvider` (was
+remounting per navigation via `PageControls`, dropping live INSERTs and flickering the badge).
+Seed is now unread-only via `getMyNotificationsAction` (`getUnreadNotifications` — 50+ recent read
+rows no longer push older unread out of the window). `markAllRead` rollback is snapshot-based
+(captures the unread ids before the optimistic write instead of keying on `read_at === now`, which
+an interleaving Realtime UPDATE could break); Realtime UPDATEs upsert (remove-if-read /
+prepend-if-absent / replace) instead of map-by-id. `useNotifications` reduced to a `useContext`
+read; `NotificationBell` takes no seed prop; `PageControls`/`Sidebar`/`DashboardCanvas` and every
+page stopped passing `notificationsPromise`; `getNotifications` deleted (no callers). Migration
+`20260710000162` syncs the `notifications.type` CHECK with the full `NotificationType` TS union
+(`sla_breach_agent`/`manager`/`founder`, `task_overdue_manager`, `suggestion_resolved` inserts
+were silently failing). **Not yet applied — run `supabase db push`.**
+
+**Managers regain /budget (read) and the budget widget, pinned to their domain's spend.**
+Reverses the 2026-06-25 exclusion. `/budget` is now manager+; a manager sees ONLY their own
+domain's campaign SPEND plane — `BudgetPage` pins `scopeDomain = profile.domain` server-side (never
+a `?domain=` param, so it can't be widened) and threads it into `BudgetAsync`, which filters rows
+via `filterBudgetRowsByDomain`, skips the recharge fetch, and renders the totals strip + campaign
+table only. The recharge ledger, balance, per-account report, and fuel gauge stay admin/founder-only
+(recharges carry no domain — scoping them would misstate finance). The dashboard Campaign Budget
+widget is manager+ too: `BudgetGaugeSummary` gained `scope: 'org' | 'domain'` with the
+recharge-derived fields nullable; managers get `scope:'domain'` (spend total + campaigns + CPL, no
+gauge arc, built by the new pure `buildDomainSpendGaugeSummary`), admin/founder get `scope:'org'`
+unchanged. Upload + Add-Recharge writes remain admin/founder only; agents still redirect.
+
+**Dashboard canvas: proper layout at phone and ultrawide extremes.**
+Below 768px the canvas collapses to a derived, read-only single column built at render time from
+the stored desktop placements (per-widget `mobileH`, `mobileH: 8` on `manager-campaigns`, 12px
+margins); this `xs` layout is never persisted, so a phone visit can't clobber the saved desktop
+layout. Edit mode (drag/resize + the Edit toggle) is disabled below 768px. `.serene-dashboard-grid`
+gets `max-width: 1760px; margin-inline: auto` so 12 fluid columns no longer stretch into absurdly
+wide short cards on very large screens. Breakpoint constant unified onto `GRID_MOBILE_BREAKPOINT`.
+No localStorage version bump (stored shape unchanged).
+
+**Ad-spend upload: month-to-date re-uploads fully override, including zeroed days.**
+`parseMetaSpendFile` now ingests zero-spend days instead of skipping them, so a re-uploaded
+month-to-date export overrides every day it covers — a day that dropped to zero (refund/correction)
+now overwrites the stale non-zero row via the existing upsert. The parser skips only unusable rows
+(missing campaign, negative/NaN spend); the "all rows zero" error is replaced by an empty-result
+guard. `spend` Zod relaxed to `min(0)`; row cap raised 5000→10000. Modal copy states the
+month-to-date workflow. The day-grain whole-file rejection, conflict target, and
+`normalizeCampaignKey` are untouched; no delete-in-range.
+
+**My Tasks calendar: clicking a dotted past day shows that day's overdue tasks.**
+`visibleSections` in `MyTasksCalendarView` now filters the merged overdue bucket by
+`taskLocalKey(t.due_at) === selectedKey` and labels the section "Overdue — <day>", so a day's dot
+and its list agree. All-mode (no day selected) still shows the single merged Overdue section;
+today/future selection unchanged. Date-grain keys stay browser-local (no IST/ISO change).
+
+**/deals drops its in-page Domain dropdown.**
+The global `DomainSelector` is now the single domain control for `/deals` (same `?domain=` param,
+no query changes). The bar reads the param read-only to surface the shop-slice Category dropdown;
+it never writes or counts domain, so the global scope no longer adds to the filter-count badge and
+the bar's Clear (mirroring `LeadsFilters`) never resets it.
+
+**/leads: always-visible filtered total count.**
+The leads toolbar now always shows the filtered total (e.g. "7 leads") via `formatCount` —
+previously the total only appeared in the pagination summary, which renders only above 30 rows.
+`totalCount` (already returned by the query) is threaded from `LeadsTableAsync` into `LeadsTable`
+(and the campaign detail page's lead table).
+
+**Called modal + New Deal modal: clean, jitter-free open (shared `Dialog` primitive).**
+Removed `backdrop-filter: blur(3px)` from the modal overlay (per-frame recompute caused the
+open-animation shimmer, and it violated V-06 — blur is not sanctioned on modal overlays); added a
+re-entrant body scroll lock via `lockBodyScroll()` (stops the scrollbar-shift one-frame page jump).
+`Dialog` now also takes programmatic focus on the panel itself on open with `{ preventScroll: true }`
+(+ `tabIndex={-1}`, `outline: none`) instead of letting the browser drift focus into the first
+input mid scale-in — no accent-ring flash, no scroll jump. Every modal benefits.
+
+**Tab indicator spring softened.**
+The sliding active-tab indicator uses a new gentler `SPRING_TAB` (stiffness 260, damping 32) instead
+of `SPRING_CONFIG` (400/30) — settles without the snap. `SPRING_CONFIG` and its other consumers
+untouched; the new constant lives in `motion.ts` (V-13).
+
+**Lead follow-up task no longer missing from /tasks until hard refresh.**
+`createLeadTaskAction` and `reviveLeadAction` invalidated Redis but never revalidated `/tasks`, so
+client-side navigation served the stale router-cache payload. Both now call
+`revalidatePath("/tasks")`, matching the sibling task creators.
+
+**Lead dossier notes: timeline dot alignment.**
+The per-note timeline dot now centers on the note header's first line (`marginTop` from
+`var(--space-1)` to `calc(var(--space-3) + 2px)`) instead of floating above it.
+
+---
+
+## 2026-07-06 — AI engineering method codified: the serene-engineer skill + Claude Project instructions
+
+**Why:** the repo's law (root `CLAUDE.md`, `The_Rules.md`, the DNA) says WHAT is allowed, but the
+working method that produces senior-level output (search before building, diagnose before fixing,
+plan at the seam, verify by exercising, record in the changelog) lived only in habit. Any Claude
+model working in this repo (Opus included) should follow the same discipline, and a claude.ai
+Project without repo access needs a self-contained version of the same contract.
+
+**What changed:**
+
+- **`.claude/skills/serene-engineer/SKILL.md`** (new) — the in-repo method skill: the quality bar,
+  the 7-step loop (orient → reuse-first search → diagnose → plan at the seam → build in layer
+  order → verify → record), the judgment rules for when the docs are silent, the table of traps
+  that actually bit this codebase (A-16 void sends, P-08 redis races, dual-key lead rows, P-09
+  `unstable_cache`+`cookies()`, the motion namespace, and friends), the output contract, and a
+  definition-of-done checklist. It defers to `CLAUDE.md`/`The_Rules.md` on every point of law;
+  it only encodes process and judgment.
+- **`docs/ai/claude-project-instructions.md`** (new) — the paste-in custom instructions for a
+  claude.ai Project: the same method adapted for a Claude with no repo access ("ask for the exact
+  file, never guess"), a condensed rule digest with rule IDs, the output contract, and the list
+  of knowledge files to upload (root `CLAUDE.md`, `The_Rules.md`, DNA, tokens, vision, the four
+  layer `CLAUDE.md` files).
+
+No code paths touched; docs and tooling only.
+
+---
+
 ## 2026-07-06 — StatTile numbers switched from Playfair to the mono number font (app-wide)
 
 **Why:** `StatTile` (both `card` and `cell` variants) rendered its value in `--font-serif`

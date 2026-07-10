@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { updateLeadStatus, recordDeal } from '@/lib/actions/leads';
 import { CalledModal } from './CalledModal';
 import { WonDealModal } from './WonDealModal';
+import { DEAL_CELEBRATE_STORAGE_KEY } from '@/components/deals/DealCard';
 import { Modal } from '@/components/ui/modal';
 import { formErrors } from '@/lib/validations/form-errors';
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS } from '@/lib/constants/lead-statuses';
@@ -99,6 +100,16 @@ export function StatusActionPanel({ lead, callerProfile }: Props) {
       if (result.error) {
         setError(result.error);
         throw new Error(result.error);
+      }
+      // Arm the one-shot petal-fall celebration for the lead→Won transition —
+      // the matching DealCard plays it once when the user lands on /deals
+      // (polish handoff §03, reserved exclusively for Won).
+      try {
+        if (result.data?.dealId) {
+          sessionStorage.setItem(DEAL_CELEBRATE_STORAGE_KEY, result.data.dealId);
+        }
+      } catch {
+        // sessionStorage unavailable — the celebration is decorative, skip it
       }
       closeModal();
       router.refresh();

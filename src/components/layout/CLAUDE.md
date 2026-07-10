@@ -4,8 +4,9 @@
 
 | File | Role |
 | --- | --- |
-| `Sidebar.tsx` | `'use client'`; primary nav, user footer. Notification bell ONLY when `TOP_BAR_ENABLED` is **off** (then it's the footer bell exactly as before); when **on**, the footer bell is not rendered (the bell lives in `PageControls` on each page's title row). `notificationsPromise` prop is optional — only the layout's OFF path passes it. |
-| `PageControls.tsx` | `'use client'`; **THE global controls cluster on the page title row** (`TOP_BAR_ENABLED`) — domain selector + notification bell, rendered INLINE in each page's `flex items-center justify-between` title row (right side, beside the page CTA), so they read as part of the page — **no separate bar, strip, or divider**. Props: `userId`, `isPrivileged` (admin/founder → the `DomainSelector` renders; bell-only otherwise), `notificationsPromise` (each page starts its own un-awaited `getNotifications` seed). **Single bell mount** — one `NotificationBell` per page render; the Sidebar footer bell is gated off when `TOP_BAR_ENABLED`, so no duplicate `notifications:${userId}` Realtime channel. The domain selector stays inline at every breakpoint (it used to hide below md, but the dashboard has no per-page filter bar to fall back to, so hiding it stranded admin/founder on mobile with the date filter but no domain scope — `DomainSelector`'s `<FilterDropdown menuPortal>` menu body-portals out, so it never clips on a narrow viewport). (Replaced the dead `TopBar` stub + the short-lived sticky in-paper bar — the bar read as separated from the page; controls-on-the-title-row is the merged design.) |
+| `Sidebar.tsx` | `'use client'`; primary nav, user footer. Notification bell ONLY when `TOP_BAR_ENABLED` is **off** (then it's the footer bell exactly as before); when **on**, the footer bell is not rendered (the bell lives in `PageControls` on each page's title row). Takes no notification seed — the bell reads state from `<NotificationsProvider>` (dashboard layout) via context. |
+| `NotificationsProvider.tsx` | `'use client'`; **THE single mount that owns notification inbox state** (2026-07-10). Mounted ONCE in the dashboard layout wrapping the shell, so the Realtime subscription + chime + optimistic mark-read/all survive navigation (the fix for "notifications don't show up live" — the old `PageControls` bell remounted per route, tearing down the channel). Seeds UNREAD-only on mount via `getMyNotificationsAction`; exposes `{ notifications, unreadCount, markRead, markAllRead, isLoading }` via `NotificationsContext`. `useNotifications` is now `useContext` of this. Props: `{ userId, children }`. |
+| `PageControls.tsx` | `'use client'`; **THE global controls cluster on the page title row** (`TOP_BAR_ENABLED`) — domain selector + notification bell, rendered INLINE in each page's `flex items-center justify-between` title row (right side, beside the page CTA), so they read as part of the page — **no separate bar, strip, or divider**. Prop: `isPrivileged` (admin/founder → the `DomainSelector` renders; bell-only otherwise). The bell reads state from the layout `<NotificationsProvider>` (no seed prop). The domain selector stays inline at every breakpoint (it used to hide below md, but the dashboard has no per-page filter bar to fall back to, so hiding it stranded admin/founder on mobile with the date filter but no domain scope — `DomainSelector`'s `<FilterDropdown menuPortal>` menu body-portals out, so it never clips on a narrow viewport). (Replaced the dead `TopBar` stub + the short-lived sticky in-paper bar — the bar read as separated from the page; controls-on-the-title-row is the merged design.) |
 | `DomainSelector.tsx` | `'use client'`; admin/founder global domain scope picker (rendered by `PageControls`, gated on `isPrivileged`; only meaningful on the domain-aware pages leads/deals/campaigns). Composes `FilterDropdown` + `useUrlFilters` to write the SAME `?domain=` param those pages read (the DealsFilters mechanism), plus the `serene-domain` cookie (`persistDomainCookie`). **Reads `param ?? cookie`** (`readDomainCookie`, post-mount to avoid hydration mismatch) so its displayed value matches what the page renders even on a URL with no `?domain=` (the page resolves the same fallback server-side) — this is the fix for "selector resets on navigation". Shows the domain's own label when scoped, "All domains" (empty selection, no accent) otherwise. NOT a security boundary — pages ignore param + cookie for manager/agent. |
 | `ThemeInitializer.tsx` | `'use client'`; corrective sync for the SSR theme + appearance cookies (`lib/constants/themes.ts` / `appearance.ts`). The root layout SSRs `data-theme` AND `data-neu` on `<html>` from the `serene-theme` / `serene-appearance` cookies (zero-flash first paint; `system` gets a pre-paint inline script); this component only flips the attributes when a cookie was missing/stale vs `profiles.theme` / `profiles.appearance` (via `applyAppearanceToDom` — also rewrites `<meta theme-color>`), re-writes the cookies for the next request, and owns the live `prefers-color-scheme` listener while the `system` appearance is active. |
 | `IconInitializer.tsx` | `'use client'`; the `ThemeInitializer` twin for the SSR app-icon cookie (`lib/constants/app-icons.ts`). The root layout's `generateMetadata` builds the manifest `<link>` + apple-touch-icon from the `serene-app-icon` cookie; this component only re-writes the cookie from `profiles.app_icon` (new device / cleared cookie / choice made elsewhere) so the NEXT request's manifest link is right. No DOM mutation (the manifest link is metadata, and the installed icon is OS-owned) — cookie correctness for the next install is the whole job. Mounted in the dashboard layout beside `ThemeInitializer`. |
@@ -39,9 +40,9 @@ Lives in `components/elaya/`, but mounted **once in the dashboard layout** besid
 ### Web Push (PWA push notifications — migration 0120)
 
 The notification **bell** (`NotificationBell`) is mounted in `PageControls` on each page's title row
-when `TOP_BAR_ENABLED` (else the Sidebar footer — see the file table above). The seed streams via a
-`notificationsPromise` (each page starts its own when on; the layout's when off). Web Push is the
-bell's second delivery channel — fan-out lives
+when `TOP_BAR_ENABLED` (else the Sidebar footer — see the file table above). Its state comes from the
+layout-mounted `<NotificationsProvider>` (seeds unread-only via `getMyNotificationsAction`). Web Push
+is the bell's second delivery channel — fan-out lives
 inside `createNotification` (see `src/components/notifications/CLAUDE.md` "Web Push — the second
 channel" and `src/lib/services/CLAUDE.md`). The **mobile notification panel** is a docked bottom
 sheet below md (portal-escaped from the transformed sidebar `<aside>`); the **subscribe control +
@@ -129,27 +130,31 @@ one `NotificationBell` is ever alive:
 | **on** | `<PageControls>` on each page | page title row (`PageControls`) | not rendered |
 | **off** | none | Sidebar footer (as before) | rendered |
 
-Each page does `{TOP_BAR_ENABLED && <PageControls … notificationsPromise={getNotifications(profile.id)} />}`
-in its title row; `Sidebar.tsx` does `{!TOP_BAR_ENABLED && notificationsPromise && <footer bell>}`;
-the layout creates `notificationsPromise` only when off. Both states compile and render exactly one bell.
+Each page does `{TOP_BAR_ENABLED && <PageControls isPrivileged={…} />}` in its title row;
+`Sidebar.tsx` does `{!TOP_BAR_ENABLED && <footer bell>}`. Neither seeds — the bell reads state
+from `<NotificationsProvider>` (mounted once in the dashboard layout). Both states render exactly
+one bell.
 
-### Single bell mount (the failure-mode guard)
+### Single provider mount (the failure-mode guard, 2026-07-10)
 
-`useNotifications` names its Realtime channel `notifications:${userId}:${mountId}` (a `useId()`
-mount suffix was added 2026-07-02 per P-06 — Strict Mode double-mount safety). The nonce removes
-the channel-name *collision*, but two mounted `NotificationBell`s for one user would still mean
-two independent unread states + double chime. With `TOP_BAR_ENABLED` on, the Sidebar footer bell
-is gated OFF, so the one `PageControls` bell per rendered page is the only mount. Never add a
-second bell mount.
+Notification inbox state (Realtime subscription + chime + optimistic mark-read/all) is owned by ONE
+`<NotificationsProvider userId={profile.id}>` (`src/components/layout/NotificationsProvider.tsx`)
+mounted once in the dashboard layout — so the subscription SURVIVES navigation (before this the bell
+lived in `PageControls`, which remounts on every route change, tearing down and recreating the
+Realtime channel per navigation and dropping any INSERT that landed in the gap). `NotificationBell`
+now takes no seed prop; `useNotifications` is `useContext(NotificationsContext)`. The channel is
+still named `notifications:${userId}:${mountId}` (a `useId()` suffix, P-06 Strict-Mode safety) but
+there is now only ONE subscription regardless of how many bells render. The provider seeds
+UNREAD-only on mount via `getMyNotificationsAction`. Never add a second provider mount.
 
 ### Where PageControls is wired
 
 Every primary page with a standard server title row renders `PageControls` (bell always; selector
 when `isPrivileged`): leads, deals, campaigns (selector ON — domain-aware), tasks, performance (all
 3 role branches), helpdesk, budget, escalations, settings, elaya, admin/users (bell-only). Dashboard
-has no server title row — its bell rides the `DashboardCanvas` header cluster (the page threads the
-streamed `notificationsPromise` in). **`/whatsapp` is the one exception** — full-bleed chat, no title
-row, no bell (reachable on every other page).
+has no server title row — its bell rides the `DashboardCanvas` header cluster (`PageControls` reads
+state from the layout provider, no seed threaded in). **`/whatsapp` is the one exception** —
+full-bleed chat, no title row, no bell (reachable on every other page).
 
 ### Domain selector → `param ?? cookie` (the navigation-persistence fix)
 

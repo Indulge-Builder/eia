@@ -2,9 +2,10 @@
 
 /**
  * NotificationBell — bell icon with unread dot and panel.
- * Client component. Sits in the Sidebar footer (current bell position).
+ * Client component. State comes from <NotificationsProvider> (mounted once in the
+ * dashboard layout) via the useNotifications context hook — no seed prop, no
+ * Supabase calls here.
  * Unread indicator: dot only — never a number badge (spec L-04).
- * No Supabase calls here — all state managed through useNotifications hook.
  */
 
 import { useRef, useState } from "react";
@@ -13,30 +14,22 @@ import { m as motion } from "framer-motion";
 import { useNotifications } from "@/hooks/useNotifications";
 import { NotificationPanel } from "@/components/notifications/NotificationPanel";
 import { BASE_DURATION, EASE_OUT_EXPO, EASE_SPRING, SPRING_BOUNCE } from "@/lib/constants/motion";
-import type { Notification } from "@/lib/types/database";
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface NotificationBellProps {
-  userId:      string;
-  initialData: Notification[];
-  variant?:    "sidebar" | "topbar";
+  variant?: "sidebar" | "topbar";
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function NotificationBell({
-  userId,
-  initialData,
   variant = "sidebar",
 }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const buttonRef       = useRef<HTMLButtonElement>(null);
 
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications({
-    userId,
-    initialData,
-  });
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
 
   const isSidebar  = variant === "sidebar";
   const hasUnread  = unreadCount > 0;

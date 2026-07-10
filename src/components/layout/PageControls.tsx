@@ -13,70 +13,23 @@
  * but no domain scope. DomainSelector composes <FilterDropdown menuPortal>, so
  * its menu body-portals out and never clips on a narrow viewport.
  *
- * SINGLE BELL MOUNT — one `NotificationBell` per page render. `useNotifications`
- * keys its Realtime channel by userId only (no mount suffix), so this must be
- * the only bell mounted: the Sidebar footer bell is gated off when
- * TOP_BAR_ENABLED. The seed streams from the page's `notificationsPromise`
- * (started un-awaited, same contract as the old Sidebar/TopBar bell).
+ * The bell reads its state from <NotificationsProvider> (mounted once in the
+ * dashboard layout) via useNotifications — so it no longer seeds per page and no
+ * longer tears down its Realtime channel on navigation. PageControls no longer
+ * takes or forwards a notification seed.
  */
 
-import { Suspense, use } from "react";
-import { Bell } from "lucide-react";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { DomainSelector } from "@/components/layout/DomainSelector";
-import type { Notification } from "@/lib/types/database";
-
-// ─── Notification bell seed (streamed) ────────────────────
-// getNotifications never rejects (returns [] on error), so use() cannot throw.
-// The bell sits on the paper title row, so it uses the `topbar` (paper-text)
-// variant at every breakpoint.
-function SeededNotificationBell({
-  userId,
-  promise,
-}: {
-  userId: string;
-  promise: Promise<Notification[]>;
-}) {
-  const initialData = use(promise);
-  return (
-    <NotificationBell userId={userId} initialData={initialData} variant="topbar" />
-  );
-}
-
-// Same-size stand-in while the seed streams — no layout shift. Paper-text colour.
-function BellFallback() {
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        width: "32px",
-        height: "32px",
-        color: "var(--theme-text-secondary)",
-        flexShrink: 0,
-      }}
-    >
-      <Bell style={{ width: "14px", height: "14px", strokeWidth: 1.5 }} />
-    </div>
-  );
-}
 
 // ─── PageControls ─────────────────────────────────────────
 
 type PageControlsProps = {
-  userId: string;
   isPrivileged: boolean; // admin || founder → the domain selector renders
-  notificationsPromise: Promise<Notification[]>;
 };
 
-export function PageControls({
-  userId,
-  isPrivileged,
-  notificationsPromise,
-}: PageControlsProps) {
+export function PageControls({ isPrivileged }: PageControlsProps) {
   return (
     <div className="serene-page-controls">
       {isPrivileged && (
@@ -87,9 +40,7 @@ export function PageControls({
 
       {/* Icon-only control — charcoal tooltip carries the label (polish §05) */}
       <Tooltip label="Notifications" side="bottom">
-        <Suspense fallback={<BellFallback />}>
-          <SeededNotificationBell userId={userId} promise={notificationsPromise} />
-        </Suspense>
+        <NotificationBell variant="topbar" />
       </Tooltip>
     </div>
   );

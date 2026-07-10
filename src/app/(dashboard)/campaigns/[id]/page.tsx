@@ -88,6 +88,7 @@ async function CampaignLeadsAsync({
     <div>
       <LeadsTable
         leads={leads}
+        totalCount={totalCount}
         userId={userId}
         role={role}
         domain={domain}

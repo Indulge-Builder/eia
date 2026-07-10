@@ -102,7 +102,8 @@ export function LeadNotesSection({ notes }: Props) {
                       background:   'var(--theme-paper)',
                       border:       '2px solid var(--theme-paper-border)',
                       flexShrink:   0,
-                      marginTop:    'var(--space-1)',
+                      // center the 15px dot on the card header's first text line (12px pad + ~19px line)
+                      marginTop:    'calc(var(--space-3) + 2px)',
                     }}
                   />
                   {/* Connector line */}

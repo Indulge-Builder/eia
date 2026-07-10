@@ -6,7 +6,9 @@ import { RefreshCcw } from "lucide-react";
 import { getAgentTasksSummaryAction } from "@/lib/actions/dashboard";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { formatDate } from "@/lib/utils/dates";
+import { formatCount } from "@/lib/utils/numbers";
 import {
   TASK_CATEGORY,
   TASK_PRIORITY,
@@ -281,7 +283,7 @@ export function AgentTasksWidget({ userId, initialData }: WidgetProps) {
                 color: "var(--theme-text-primary)",
               }}
             >
-              {tasks.length}
+              <AnimatedNumber value={formatCount(tasks.length)} />
             </span>
             <span
               style={{

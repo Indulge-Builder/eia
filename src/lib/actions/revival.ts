@@ -88,6 +88,7 @@ export async function reviveLeadAction(
   const slug = (lead.slug as string | null) ?? leadId;
   revalidatePath(`/leads/${slug}`);
   revalidatePath("/leads");
+  revalidatePath("/tasks");
 
   return { data: { leadId, taskId: core.task.id }, error: null };
 }

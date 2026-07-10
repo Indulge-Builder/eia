@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, m as motion, useReducedMotion } from "framer-motion";
@@ -17,7 +17,6 @@ import {
   Settings,
   MessageCircle,
   Film,
-  Bell,
   Wallet,
   BookOpen,
   AlertTriangle,
@@ -38,7 +37,7 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { useMediaQuery, MQ } from "@/hooks/useMediaQuery";
 import { lockBodyScroll } from "@/lib/utils/scroll";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import type { Profile, Notification } from "@/lib/types/database";
+import type { Profile } from "@/lib/types/database";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -64,11 +63,12 @@ const MAIN_NAV: NavItem[] = [
 // Analytics section — Performance + Escalations for all roles (agents get a
 // self-scoped Escalations view); Oversight + Campaigns for manager+ (the shared
 // isManager gate below; Escalations stays Gia-domain-only via canAccessRoute). Budget is
-// admin/founder ONLY — it rides the same isManager gate but is gated down to
-// admin/founder by canAccessRoute (it's absent from DOMAIN_ROUTE_MAP, and only
-// admin/founder bypass that map). Oversight sits directly below Performance and
-// is manager+ only (it rides the isManager gate, unlike Performance which is the
-// all-roles special-case in the filter below).
+// manager+ — it rides the same isManager gate and, since /budget is now in the
+// Gia-domain DOMAIN_ROUTE_MAP, a Gia-domain manager passes canAccessRoute (a
+// non-Gia manager still doesn't). A manager sees only their own domain's SPEND
+// (server-pinned); admin/founder bypass the map and see all domains + recharges.
+// Oversight sits directly below Performance and is manager+ only (it rides the
+// isManager gate, unlike Performance which is the all-roles special-case below).
 const ANALYTICS_NAV: NavItem[] = [
   { href: "/performance", label: "Performance", icon: BarChart2 },
   { href: "/oversight", label: "Oversight", icon: Telescope },
@@ -245,55 +245,13 @@ function NavSection({ label }: { label: string }) {
   );
 }
 
-// ─── Notification bell seed (streamed) ────────────────────
-
-// The layout starts getNotifications() without awaiting and passes the
-// promise down — the shell paints immediately and the seed streams into
-// this Suspense boundary. getNotifications never rejects (returns [] on
-// error), so use() here cannot throw.
-function SeededNotificationBell({
-  userId,
-  promise,
-}: {
-  userId: string;
-  promise: Promise<Notification[]>;
-}) {
-  const initialData = use(promise);
-  return (
-    <NotificationBell userId={userId} initialData={initialData} variant="sidebar" />
-  );
-}
-
-// Static, same-size stand-in while the seed streams — no layout shift.
-function BellFallback() {
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        display:        "flex",
-        alignItems:     "center",
-        justifyContent: "center",
-        width:          "32px",
-        height:         "32px",
-        color:          "var(--theme-sidebar-text)",
-        flexShrink:     0,
-      }}
-    >
-      <Bell style={{ width: "14px", height: "14px", strokeWidth: 1.5 }} />
-    </div>
-  );
-}
-
 // ─── Sidebar ──────────────────────────────────────────────
 
 type SidebarProps = {
   profile: Profile;
-  // Only present (and only consumed) when TOP_BAR_ENABLED is off — the OFF-path
-  // footer bell. When on, the bell lives in PageControls and this is undefined.
-  notificationsPromise?: Promise<Notification[]>;
 };
 
-export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
+export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
   const { openComposer } = useSuggestionFeedback();
   const isPrivileged = profile.role === "admin" || profile.role === "founder";
@@ -563,20 +521,15 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
         />
 
         <div className="serene-sidebar-footer-row">
-          {/* Notification bell — seed streams in without blocking the shell.
+          {/* Notification bell — reads inbox state from <NotificationsProvider>
+              (mounted once in the dashboard layout) via context; no seed prop.
               Hidden on the md icon rail (avatar only there).
-              TOP_BAR_ENABLED relocates the bell to the TopBar: the footer mount
+              TOP_BAR_ENABLED relocates the bell to PageControls: the footer mount
               is removed entirely (not CSS-hidden) so exactly one NotificationBell
-              is alive — a second mount would open a duplicate Realtime channel
-              (`notifications:${userId}`, no mount suffix) and double the state. */}
-          {!TOP_BAR_ENABLED && notificationsPromise && (
+              is rendered (the bell state itself lives in the provider regardless). */}
+          {!TOP_BAR_ENABLED && (
             <span className="serene-sidebar-rail-hide">
-              <Suspense fallback={<BellFallback />}>
-                <SeededNotificationBell
-                  userId={profile.id}
-                  promise={notificationsPromise}
-                />
-              </Suspense>
+              <NotificationBell variant="sidebar" />
             </span>
           )}
 

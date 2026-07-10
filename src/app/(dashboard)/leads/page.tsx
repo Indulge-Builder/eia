@@ -7,7 +7,6 @@ import { isGiaDomain, parseGiaDomainParam } from '@/lib/constants/domains';
 import { LEAD_ASSIGNABLE_ROLES } from '@/lib/constants/roles';
 import { resolveDomainParam } from '@/lib/utils/domain-scope';
 import { getLeadFilterOptions } from '@/lib/services/leads-service';
-import { getNotifications } from '@/lib/services/notifications-service';
 import { TOP_BAR_ENABLED } from '@/lib/constants/feature-flags';
 import { PageControls } from '@/components/layout/PageControls';
 import { CondensingPageHeader } from '@/components/layout/CondensingPageHeader';
@@ -133,9 +132,7 @@ export default async function LeadsPage({
           />
           {TOP_BAR_ENABLED && (
             <PageControls
-              userId={profile.id}
               isPrivileged={showDomainFilter}
-              notificationsPromise={getNotifications(profile.id)}
             />
           )}
         </CondensingPageHeader>

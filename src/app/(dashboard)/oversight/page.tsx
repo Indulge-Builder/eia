@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/services/profiles-service";
-import { getNotifications } from "@/lib/services/notifications-service";
 import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { PageControls } from "@/components/layout/PageControls";
 import { getTeamTaskOverview } from "@/lib/services/oversight-service";
@@ -52,9 +51,7 @@ export default async function OversightPage() {
         </h1>
         {TOP_BAR_ENABLED && (
           <PageControls
-            userId={profile.id}
             isPrivileged
-            notificationsPromise={getNotifications(profile.id)}
           />
         )}
       </div>

@@ -63,6 +63,7 @@ import {
 } from "@/lib/actions/tasks";
 import { formatDate } from "@/lib/utils/dates";
 import { CollapseReveal } from "@/components/ui/CollapseReveal";
+import { MotionRow } from "@/components/ui/RowMotion";
 import { CheckTile } from "@/components/ui/CheckTile";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { toast } from "@/lib/toast";
@@ -105,6 +106,15 @@ export interface SubTaskModalProps {
   /** Fired after a successful server write so list/board parents can sync without refresh */
   onTaskUpdated?:   (update: SubTaskModalTaskUpdate) => void;
   onTaskDeleted?:   (taskId: string) => void;
+  /**
+   * Undo-instead-of-confirm (polish §06). When set, Delete does NOT call the
+   * server here — the modal closes and hands the deferred commit to the parent,
+   * which removes the row optimistically, shows toast.undo, and only fires
+   * deleteTaskAction on the toast TIMEOUT (Undo cancels it). Takes precedence
+   * over onTaskDeleted (the parent owns the optimistic removal). Absent → the
+   * legacy immediate delete via deleteTaskAction (kept for any non-undo caller).
+   */
+  onDeferDelete?:   (taskId: string) => void;
 }
 
 // ─── Icon button ──────────────────────────────────────────────────────────────
@@ -496,6 +506,7 @@ export function SubTaskModal({
   currentUserName = "",
   onTaskUpdated,
   onTaskDeleted,
+  onDeferDelete,
 }: SubTaskModalProps) {
   const isGroupSubtask = task.task_category === "group_subtask";
 
@@ -687,6 +698,17 @@ export function SubTaskModal({
   // ── Delete task ───────────────────────────────────────────────────────────
   function handleDeleteTask() {
     setShowDeleteConfirm(false);
+    // Undo path (polish §06): hand the row to the parent, which removes it
+    // optimistically, shows toast.undo, and defers deleteTaskAction to the
+    // toast timeout (Undo cancels it). The modal just closes — no server call
+    // here. onDeferDelete takes precedence over onTaskDeleted (the parent owns
+    // the optimistic removal so it can restore on Undo).
+    if (onDeferDelete) {
+      onDeferDelete(task.id);
+      onClose();
+      return;
+    }
+    // Legacy immediate delete — kept for any caller that doesn't opt into undo.
     startTransition(async () => {
       const result = await deleteTaskAction({ taskId: task.id });
       if (result.error) {
@@ -1415,16 +1437,24 @@ export function SubTaskModal({
                         </DndContext>
                       ) : (
                         <>
-                          {displayItems.map((item) => (
-                            <SortableChecklistItem
-                              key={item.id}
-                              item={item}
-                              editMode={false}
-                              onToggle={handleChecklistToggle}
-                              onDelete={() => {}}
-                              onTextChange={() => {}}
-                            />
-                          ))}
+                          {/* Row choreography (§02): a checked item can be
+                              re-ordered/hidden and new items drop in from above.
+                              initial={false} so opening the modal never cascades
+                              every saved item. Edit mode keeps DndContext (drag
+                              needs direct control) — only the read view animates. */}
+                          <AnimatePresence initial={false}>
+                            {displayItems.map((item) => (
+                              <MotionRow key={item.id}>
+                                <SortableChecklistItem
+                                  item={item}
+                                  editMode={false}
+                                  onToggle={handleChecklistToggle}
+                                  onDelete={() => {}}
+                                  onTextChange={() => {}}
+                                />
+                              </MotionRow>
+                            ))}
+                          </AnimatePresence>
                           {!checklistExpanded && hiddenCount > 0 && (
                             <button
                               type="button"

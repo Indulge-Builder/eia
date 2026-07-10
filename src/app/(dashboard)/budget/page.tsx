@@ -1,10 +1,11 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import type { AppDomain } from "@/lib/types/database";
 import { getCurrentProfile } from "@/lib/services/profiles-service";
-import { getNotifications } from "@/lib/services/notifications-service";
 import { resolvePerformanceDateParams } from "@/lib/services/performance-service";
 import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { PageControls } from "@/components/layout/PageControls";
+import { CondensingPageHeader } from "@/components/layout/CondensingPageHeader";
 import { AdSpendUploadButton } from "@/components/budget/AdSpendUploadButton";
 import { AddRechargeButton } from "@/components/budget/AddRechargeButton";
 import { BudgetAsync } from "./BudgetAsync";
@@ -16,7 +17,12 @@ import { BudgetFilterBar } from "./BudgetFilterBar";
 // /budget — ad spend vs lead/deal outcomes per campaign.
 // Reads only from our DB (ad_spend_daily via get_budget_summary) — never a
 // live Meta API call. Always-live reads, no Redis (like /campaigns).
-// Access: admin/founder only (read + upload). Managers are excluded.
+// Access: manager (read) · admin/founder (read + upload + add recharge).
+// A manager sees ONLY their own domain's campaign SPEND plane — the spend rows
+// are filtered by profile.domain (server-pinned; a manager can never widen it),
+// and the recharge ledger / balance / gauge are hidden entirely because
+// recharges carry no domain and scoping them would misstate finance. Upload +
+// Add-Recharge stay admin/founder only.
 // ─────────────────────────────────────────────
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -28,7 +34,7 @@ export default async function BudgetPage({
 }) {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
-  if (!["admin", "founder"].includes(profile.role)) {
+  if (!["manager", "admin", "founder"].includes(profile.role)) {
     redirect("/dashboard");
   }
 
@@ -41,25 +47,25 @@ export default async function BudgetPage({
 
   const canUpload = profile.role === "admin" || profile.role === "founder";
 
+  // Managers see only their own domain's SPEND plane — pinned server-side to
+  // profile.domain so a crafted ?domain= can never widen it. Admin/founder get
+  // null (all domains, both planes). This is the ONE flag that switches
+  // BudgetAsync from the full report to the spend-only campaign plane.
+  const scopeDomain: AppDomain | null =
+    profile.role === "manager" ? (profile.domain as AppDomain) : null;
+
   return (
     <main className="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
-      {/* Row 1 — page header */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <h1 className="type-page-title m-0">
-          Budget<span className="page-title-dot">.</span>
-        </h1>
-        <div className="flex items-center gap-3">
-          {canUpload && <AddRechargeButton />}
-          {canUpload && <AdSpendUploadButton />}
-          {TOP_BAR_ENABLED && (
-            <PageControls
-              userId={profile.id}
-              isPrivileged={false}
-              notificationsPromise={getNotifications(profile.id)}
-            />
-          )}
-        </div>
-      </div>
+      {/* Row 1 — page header (sticky, condenses past 24px scroll — polish §07) */}
+      <CondensingPageHeader title="Budget">
+        {canUpload && <AddRechargeButton />}
+        {canUpload && <AdSpendUploadButton />}
+        {TOP_BAR_ENABLED && (
+          <PageControls
+            isPrivileged={false}
+          />
+        )}
+      </CondensingPageHeader>
 
       {/* The Accounts|Campaigns tabs (filter-bar leading slot) and the content
           switch (BudgetWorkspace, inside BudgetAsync) share one client tab
@@ -71,8 +77,8 @@ export default async function BudgetPage({
         </div>
 
         {/* Row 3 — content */}
-        <Suspense key={`${from}:${to}`} fallback={<BudgetContentSkeleton />}>
-          <BudgetAsync from={from} to={to} canUpload={canUpload} />
+        <Suspense key={`${from}:${to}:${scopeDomain ?? "all"}`} fallback={<BudgetContentSkeleton />}>
+          <BudgetAsync from={from} to={to} canUpload={canUpload} scopeDomain={scopeDomain} />
         </Suspense>
       </BudgetTabProvider>
     </main>

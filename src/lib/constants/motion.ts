@@ -111,6 +111,9 @@ export const SPRING_CONFIG = {
   damping: 30,
 } as const;
 
+/** Gentler spring for sliding tab indicators — settles without snap (V-13). */
+export const SPRING_TAB = { type: 'spring', stiffness: 260, damping: 32 } as const;
+
 /**
  * Bouncier spring for tiny "arrival" pops (notification dot, badges).
  * Lower damping than SPRING_CONFIG → one visible overshoot. Use sparingly.

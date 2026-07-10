@@ -1111,7 +1111,7 @@ export async function addLeadNote(
 // Thin wrapper — canonical implementation lives in deals.ts.
 // "use server" files cannot use re-export syntax; async wrapper is required.
 // ─────────────────────────────────────────────
-export async function recordDeal(input: unknown): Promise<ActionResult<{ leadId: string }>> {
+export async function recordDeal(input: unknown): Promise<ActionResult<{ leadId: string; dealId: string }>> {
   const { recordDeal: _recordDeal } = await import("@/lib/actions/deals");
   return _recordDeal(input);
 }
@@ -1171,6 +1171,7 @@ export async function createLeadTaskAction(
   // (request-context only — stays in the action, not the core).
   const dossierSegment = (lead.slug as string | null) ?? leadId;
   revalidatePath(`/leads/${dossierSegment}`);
+  revalidatePath("/tasks");
 
   return { data: core.task, error: null };
 }

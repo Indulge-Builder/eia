@@ -5,7 +5,6 @@ import { getCurrentProfile } from '@/lib/services/profiles-service';
 import { cookies } from 'next/headers';
 import { getLeadFilterOptions } from '@/lib/services/leads-service';
 import { resolveDomainParam } from '@/lib/utils/domain-scope';
-import { getNotifications } from '@/lib/services/notifications-service';
 import { resolveDateRangePreset } from '@/lib/constants/date-range-presets';
 import { TOP_BAR_ENABLED } from '@/lib/constants/feature-flags';
 import { PageControls } from '@/components/layout/PageControls';
@@ -112,9 +111,7 @@ export default async function DealsPage({
         />
         {TOP_BAR_ENABLED && (
           <PageControls
-            userId={profile.id}
             isPrivileged={showDomainFilter}
-            notificationsPromise={getNotifications(profile.id)}
           />
         )}
       </CondensingPageHeader>

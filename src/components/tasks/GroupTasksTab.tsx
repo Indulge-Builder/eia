@@ -24,7 +24,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { createSubtaskAction, getGroupSubtasksAction, getTaskRemarksAction, deleteGroupTaskAction } from '@/lib/actions/tasks';
+import { createSubtaskAction, getGroupSubtasksAction, getTaskRemarksAction, deleteGroupTaskAction, deleteTaskAction } from '@/lib/actions/tasks';
 import { TaskCompletionCircle } from '@/components/tasks/TaskCompletionCircle';
 import { useCreateTriggerModal } from '@/hooks/useCreateTriggerModal';
 import { useMediaQuery, MQ } from '@/hooks/useMediaQuery';
@@ -43,6 +43,7 @@ import type { TaskGroupRow, SubtaskWithAssignee, TaskRemarkWithAuthor } from '@/
 import { Avatar } from '@/components/ui/Avatar';
 import { AvatarStack } from '@/components/ui/AvatarStack';
 import { CollapseReveal } from '@/components/ui/CollapseReveal';
+import { MotionRow } from '@/components/ui/RowMotion';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { LoadingVeil } from '@/components/ui/LogoSpinner';
 import type { Task, TaskGroup, TaskStatus, TaskPriority, UserRole, AppDomain } from '@/lib/types/database';
@@ -489,6 +490,47 @@ const GroupRow = memo(function GroupRow({
     setModalOpen(false);
   }, [group.id, onGroupCountsChange]);
 
+  // Undo-instead-of-confirm (polish §06): the subtask row exits immediately
+  // (MotionRow), its group counts adjust, and a charcoal undo toast counts down
+  // 5s. deleteTaskAction fires ONLY on timeout (not on Undo) via the toast's
+  // onTimeout — that timer lives in the singleton store, so the commit still
+  // fires if this row/panel unmounts. Undo re-inserts the row and re-adds counts.
+  const handleSubtaskDeferDelete = useCallback((taskId: string) => {
+    const removed = subtasks.find((s) => s.id === taskId);
+    if (!removed) return;
+    const wasCompleted = removed.status === 'completed';
+
+    setSubtasks((prev) => prev.filter((s) => s.id !== taskId));
+    onGroupCountsChange?.(group.id, {
+      subtaskDelta: -1,
+      completedDelta: wasCompleted ? -1 : 0,
+    });
+    setSelectedSubtask(null);
+    setModalOpen(false);
+
+    const restore = () => {
+      setSubtasks((prev) =>
+        prev.some((s) => s.id === taskId) ? prev : [...prev, removed],
+      );
+      onGroupCountsChange?.(group.id, {
+        subtaskDelta: 1,
+        completedDelta: wasCompleted ? 1 : 0,
+      });
+    };
+
+    toast.undo('Subtask deleted', {
+      action: { label: 'Undo', onClick: restore },
+      onTimeout: () => {
+        void deleteTaskAction({ taskId }).then((result) => {
+          if (result.error) {
+            restore();
+            toast.danger("Couldn't delete subtask", { message: result.error });
+          }
+        });
+      },
+    });
+  }, [subtasks, group.id, onGroupCountsChange]);
+
   const [, startTransition] = useTransition();
   const { getEffectiveStatus, handleToggle } = useTaskCompletionToggle();
   const caller = { id: currentUserId, role: callerRole, domain: callerDomain };
@@ -861,7 +903,13 @@ const GroupRow = memo(function GroupRow({
                 </div>
               )}
 
-              {!isLoadingSubtasks && subtasks.map((subtask, i) => {
+              {/* Row choreography (polish §02) — a subtask deleted via undo
+                  lifts out and its siblings glide up; initial={false} so first
+                  expand never cascades every existing row. MotionRow owns
+                  enter/exit, so the row itself is a plain div. */}
+              {!isLoadingSubtasks && (
+              <AnimatePresence initial={false}>
+              {subtasks.map((subtask, i) => {
                 const effectiveStatus = getEffectiveStatus(subtask.id, subtask.status);
                 const isSubComplete =
                   effectiveStatus === 'completed' ||
@@ -872,11 +920,8 @@ const GroupRow = memo(function GroupRow({
                   effectiveStatus !== 'error';
 
                 return (
-                  <motion.div
-                    key={subtask.id}
-                    initial={{ opacity: 0, x: -4 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.18, delay: Math.min(i * 0.035, 0.2), ease: EASE_OUT_EXPO }}
+                  <MotionRow key={subtask.id}>
+                  <div
                     role="button"
                     tabIndex={0}
                     onClick={() => handleOpenSubtask(subtask)}
@@ -1003,9 +1048,12 @@ const GroupRow = memo(function GroupRow({
                     >
                       <Eye style={{ width: 14, height: 14, strokeWidth: 1.5 } as React.CSSProperties} />
                     </span>
-                  </motion.div>
+                  </div>
+                  </MotionRow>
                 );
               })}
+              </AnimatePresence>
+              )}
 
               {/* Add subtask row */}
               <AnimatePresence>
@@ -1163,6 +1211,7 @@ const GroupRow = memo(function GroupRow({
                   currentUserName={currentUserName}
                   onTaskUpdated={handleSubtaskUpdated}
                   onTaskDeleted={handleSubtaskDeleted}
+                  onDeferDelete={handleSubtaskDeferDelete}
                 />
               )}
             </AnimatePresence>

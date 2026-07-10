@@ -5,9 +5,11 @@ import { m as motion } from "framer-motion";
 import { RefreshCcw, Fuel } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { getBudgetGaugeWidgetAction } from "@/lib/actions/dashboard";
 import { resolvePresetToRange } from "@/lib/utils/date-range";
-import { formatCount, formatCurrencyCompact } from "@/lib/utils/numbers";
+import { DOMAIN_LABELS } from "@/lib/constants/domains";
+import { formatCount, formatCurrency, formatCurrencyCompact } from "@/lib/utils/numbers";
 import { EASE_SPRING, SLOW_DURATION } from "@/lib/constants/motion";
 import { useWidgetData } from "@/hooks/useWidgetData";
 import { useDashboardCohortSync } from "@/hooks/useDashboardCohortSync";
@@ -16,22 +18,30 @@ import type { BudgetGaugeSummary } from "@/lib/services/ad-spend-service";
 import type { WidgetProps } from "../DashboardWidgetSlot";
 
 /**
- * Campaign Budget — the ad-account FUEL GAUGE. The org-wide tank: total
- * recharged is the full tank, spend is fuel burned, remaining is fuel left
- * (recharged − spent, INR-only — the same balance rule as the /budget
- * per-account report). The hero is the remaining-fuel figure; below it the
- * Recharged · Spent · Remaining trio carries the breakdown.
+ * Campaign Budget. TWO shapes, switched on the payload's `scope`:
  *
- * Data is the /budget pipeline (getBudgetSummary + getAccountRecharges) rolled
- * into one gauge by buildBudgetGaugeSummary: RSC-seeded on first paint
+ * - scope 'org' (admin/founder) — the ad-account FUEL GAUGE. The org-wide tank:
+ *   total recharged is the full tank, spend is fuel burned, remaining is fuel
+ *   left (recharged − spent, INR-only — the same balance rule as the /budget
+ *   per-account report). Hero = remaining fuel; the Recharged · Spent ·
+ *   Remaining trio carries the breakdown.
+ * - scope 'domain' (manager) — the manager's own domain SPEND plane only. The
+ *   gauge arc and every recharge-derived figure (recharged / remaining /
+ *   consumed) are HIDDEN — recharges carry no domain, so a per-domain
+ *   "remaining" would misstate finance. Hero = domain spend total; below it the
+ *   campaign count + CPL. A tertiary caption names the domain. The manager's
+ *   domain is pinned server-side in getBudgetGaugeWidgetAction (via
+ *   profile.domain) — a crafted request can never leak another domain.
+ *
+ * Data is the /budget pipeline rolled into one summary by buildBudgetGaugeSummary
+ * (org) or buildDomainSpendGaugeSummary (domain): RSC-seeded on first paint
  * (initialData.budget_gauge), refetched through getBudgetGaugeWidgetAction on
- * range change / refresh. ALWAYS org-wide — recharges carry no domain, so there
- * is no per-domain "remaining" (that would be a finance error).
+ * range change / refresh.
  *
- * Density-adaptive (the v4 spatial dashboard): a tiny cell shows the remaining
- * headline + a thin gauge; a taller cell adds the full tank trio.
+ * Density-adaptive (the v4 spatial dashboard): a tiny cell shows the headline +
+ * (org only) a thin gauge; a taller cell adds the full breakdown.
  */
-export function ManagerBudgetWidget({ initialData, dateRange }: WidgetProps) {
+export function ManagerBudgetWidget({ initialData, dateRange, domain }: WidgetProps) {
   const rscGauge = initialData?.budget_gauge ?? null;
   const range = dateRange ?? resolvePresetToRange("week");
   const tier = useWidgetDensityTier();
@@ -99,8 +109,16 @@ export function ManagerBudgetWidget({ initialData, dateRange }: WidgetProps) {
         />
       </div>
 
-      {!loaded ? null : data === null || data.recharged === 0 ? (
-        <EmptyGauge spent={data?.spent ?? 0} />
+      {!loaded ? null : data === null ? (
+        <EmptyGauge spent={0} />
+      ) : data.scope === "domain" ? (
+        data.spent === 0 ? (
+          <EmptyGauge spent={0} domainLabel={DOMAIN_LABELS[domain]} />
+        ) : (
+          <DomainSpendBody gauge={data} domainLabel={DOMAIN_LABELS[domain]} isPending={isPending} />
+        )
+      ) : data.recharged === 0 ? (
+        <EmptyGauge spent={data.spent} />
       ) : (
         <FuelGaugeBody gauge={data} tier={tier} isPending={isPending} />
       )}
@@ -119,8 +137,12 @@ function FuelGaugeBody({
   tier:      "compact" | "standard" | "rich";
   isPending: boolean;
 }) {
-  const consumed = gauge.consumed ?? 0; // recharged > 0 guaranteed by caller
-  const overspent = gauge.remaining < 0;
+  // Org scope guarantees these are non-null (recharged > 0 by the caller's
+  // branch); coerce for the type-narrow since the shared payload allows null.
+  const recharged = gauge.recharged ?? 0;
+  const remaining = gauge.remaining ?? 0;
+  const consumed = gauge.consumed ?? 0;
+  const overspent = remaining < 0;
   const pct = Math.round(consumed * 100);
 
   // Fuel-tank intent: a depletion semantic (high consumption = low fuel = bad).
@@ -133,8 +155,8 @@ function FuelGaugeBody({
 
   // Remaining is the hero number; overspend renders the deficit in danger.
   const remainingLabel = overspent
-    ? `−${formatCurrencyCompact(Math.abs(gauge.remaining))}`
-    : formatCurrencyCompact(gauge.remaining);
+    ? `−${formatCurrencyCompact(Math.abs(remaining))}`
+    : formatCurrencyCompact(remaining);
 
   const showTrio  = tier !== "compact";
 
@@ -169,7 +191,7 @@ function FuelGaugeBody({
               whiteSpace:         "nowrap",
             }}
           >
-            {remainingLabel}
+            <AnimatedNumber value={remainingLabel} />
           </p>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -205,7 +227,7 @@ function FuelGaugeBody({
             paddingTop:          "var(--space-1)",
           }}
         >
-          <TankStat label="Recharged" value={formatCurrencyCompact(gauge.recharged)} color="var(--theme-text-primary)" />
+          <TankStat label="Recharged" value={formatCurrencyCompact(recharged)} color="var(--theme-text-primary)" />
           <TankStat label="Spent"     value={formatCurrencyCompact(gauge.spent)}     color="var(--theme-text-primary)" />
           <TankStat
             label="Remaining"
@@ -323,11 +345,98 @@ function TankStat({ label, value, color }: { label: string; value: string; color
 }
 
 /**
- * No recharge to gauge against. If there is spend-with-no-recharge we still
- * surface the spend so the card isn't blank (and it hints the recharge log is
- * behind); otherwise the period simply has nothing.
+ * The manager's domain-scoped SPEND body (scope 'domain'). No gauge arc, no
+ * recharge/remaining/consumed — only spend-derived figures. Hero = domain spend
+ * total; below it the campaign count + cost-per-lead. A tertiary caption names
+ * the pinned domain so it never reads as an org figure.
  */
-function EmptyGauge({ spent }: { spent: number }) {
+function DomainSpendBody({
+  gauge,
+  domainLabel,
+  isPending,
+}: {
+  gauge:       BudgetGaugeSummary;
+  domainLabel: string;
+  isPending:   boolean;
+}) {
+  return (
+    <div
+      style={{
+        display:        "flex",
+        flexDirection:  "column",
+        gap:            "var(--space-4)",
+        flex:           1,
+        minHeight:      0,
+        justifyContent: "center",
+        opacity:        isPending ? 0.5 : 1,
+        transition:     "opacity 200ms",
+      }}
+    >
+      {/* Hero — domain spend total */}
+      <div style={{ minWidth: 0 }}>
+        <p className="label-micro" style={{ color: "var(--theme-text-tertiary)", marginBottom: "var(--space-1)" }}>
+          Spend this period
+        </p>
+        <p
+          style={{
+            fontFamily:         "var(--font-serif)",
+            fontSize:           "clamp(var(--text-3xl), 2rem + 1.6vw, 3rem)",
+            fontWeight:         "var(--weight-semibold)",
+            fontVariantNumeric: "tabular-nums",
+            color:              "var(--theme-text-primary)",
+            lineHeight:         "var(--leading-none)",
+            margin:             0,
+            whiteSpace:         "nowrap",
+          }}
+        >
+          <AnimatedNumber value={formatCurrencyCompact(gauge.spent)} />
+        </p>
+      </div>
+
+      {/* Spend-derived trio: campaigns · leads · cost / lead */}
+      <div
+        style={{
+          display:             "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap:                 "var(--space-2)",
+          paddingTop:          "var(--space-1)",
+        }}
+      >
+        <TankStat label="Campaigns" value={formatCount(gauge.campaignCount)} color="var(--theme-text-primary)" />
+        <TankStat label="Leads"     value={formatCount(gauge.leadCount)}     color="var(--theme-text-primary)" />
+        <TankStat
+          label="Cost / Lead"
+          value={gauge.costPerLead != null ? formatCurrency(Math.round(gauge.costPerLead)) : "—"}
+          color="var(--theme-text-primary)"
+        />
+      </div>
+
+      {/* Domain caption — this is domain-scoped spend, never the org tank. */}
+      <p
+        style={{
+          fontSize:   "var(--text-2xs)",
+          color:      "var(--theme-text-tertiary)",
+          margin:     0,
+          flexShrink: 0,
+        }}
+      >
+        {domainLabel} campaign spend
+      </p>
+    </div>
+  );
+}
+
+/**
+ * No data to show. In org scope: no recharge to gauge against (surface the spend
+ * so the card isn't blank when there is spend-with-no-recharge). In domain scope:
+ * a manager's domain simply has no spend in the period (domainLabel names it).
+ */
+function EmptyGauge({ spent, domainLabel }: { spent: number; domainLabel?: string }) {
+  const title = domainLabel
+    ? `No spend in ${domainLabel} for this period.`
+    : spent > 0
+      ? "No recharge logged for this period."
+      : "No spend or recharge yet.";
   return (
     <div
       style={{
@@ -341,11 +450,8 @@ function EmptyGauge({ spent }: { spent: number }) {
       }}
     >
       <Fuel style={{ width: 22, height: 22, strokeWidth: 1.5, color: "var(--theme-text-tertiary)" }} />
-      <EmptyState
-        title={spent > 0 ? "No recharge logged for this period." : "No spend or recharge yet."}
-        style={{ padding: 0 }}
-      />
-      {spent > 0 && (
+      <EmptyState title={title} style={{ padding: 0 }} />
+      {spent > 0 && !domainLabel && (
         <p
           style={{
             fontFamily:         "var(--font-mono)",

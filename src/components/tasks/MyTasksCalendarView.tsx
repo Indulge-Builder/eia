@@ -20,15 +20,20 @@ import {
   CalendarDays,
   ChevronDown,
   Sparkles,
+  Plus,
 } from 'lucide-react';
 import { Calendar } from '@/components/ui/Calendar';
+import { Button } from '@/components/ui/Button';
 import { CollapseReveal } from '@/components/ui/CollapseReveal';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { MotionRow } from '@/components/ui/RowMotion';
 import type { TaskDotMeta } from '@/components/ui/Calendar';
 import { DatePicker } from '@/components/ui/DatePicker';
 import {
   createPersonalTaskAction,
   getPersonalTasksAction,
   getTaskRemarksAction,
+  deleteTaskAction,
 } from '@/lib/actions/tasks';
 import { TaskCompletionCircle } from '@/components/tasks/TaskCompletionCircle';
 import { useCreateTriggerModal } from '@/hooks/useCreateTriggerModal';
@@ -329,6 +334,41 @@ export function MyTasksCalendarView({
     setTaskModalOpen(true);
   }, []);
 
+  // ── Deferred delete (undo-instead-of-confirm, polish §06) ───────────────────
+  // The task row lifts out immediately (MotionRow), a charcoal undo toast counts
+  // down 5s, and deleteTaskAction fires ONLY on the toast timeout (Undo cancels
+  // it). onTimeout runs from the singleton toast store's timer, so the commit
+  // still fires if the user navigates away. Undo re-inserts the row.
+  const handleDeferDelete = useCallback((taskId: string) => {
+    let removed: PersonalTaskRow | undefined;
+    setActiveTasks((prev) => {
+      removed = prev.find((t) => t.id === taskId);
+      return prev.filter((t) => t.id !== taskId);
+    });
+    setTaskModalOpen(false);
+    setSelectedTask(null);
+    setSelectedTaskRemarks(null);
+    if (!removed) return;
+    const row = removed;
+
+    const restore = () =>
+      setActiveTasks((prev) =>
+        prev.some((t) => t.id === taskId) ? prev : [row, ...prev],
+      );
+
+    toast.undo('Task deleted', {
+      action: { label: 'Undo', onClick: restore },
+      onTimeout: () => {
+        void deleteTaskAction({ taskId }).then((result) => {
+          if (result.error) {
+            restore();
+            toast.danger("Couldn't delete task", { message: result.error });
+          }
+        });
+      },
+    });
+  }, []);
+
   // ── Calendar date click ────────────────────────────────────────────────────
   function handleCalendarSelect(date: Date) {
     const key = localKey(date);
@@ -371,10 +411,22 @@ export function MyTasksCalendarView({
     const today  = todayKey();
     // Map the selected calendar date to the right section key
     const sectionKey = selKey === today ? 'today' : selKey < today ? 'overdue' : selKey;
-    // For overdue mode we show ALL overdue tasks, for a specific future date we filter
+    // A specific past day shows only THAT day's overdue tasks — filter the merged
+    // overdue bucket by the selected day's key so the dot and the list agree. The
+    // merged "Overdue" section (all past days) only renders in all-mode (isAllMode
+    // above). No matching tasks → an empty overdue section so the day's empty state
+    // renders, mirroring the future/today no-tasks branch below.
     if (sectionKey === 'overdue') {
       const overdueSec = allSections.find((s) => s.isOverdue);
-      return overdueSec ? [overdueSec] : [];
+      const dayTasks = (overdueSec?.tasks ?? []).filter(
+        (t) => t.due_at !== null && taskLocalKey(t.due_at) === selKey,
+      );
+      return [{
+        key:       selKey,
+        label:     `Overdue — ${sectionLabel(selKey)}`,
+        tasks:     dayTasks,
+        isOverdue: true,
+      }];
     }
     const found = allSections.find((s) => s.key === sectionKey);
     if (found) return [found];
@@ -524,22 +576,27 @@ export function MyTasksCalendarView({
                   </p>
                 </div>
               ) : (
-                section.tasks.map((task, idx) => (
-                  <CalendarTaskRow
-                    key={task.id}
-                    task={task}
-                    idx={idx}
-                    isLast={idx === section.tasks.length - 1}
-                    effectiveStatus={optimisticStatus[task.id] ?? task.status}
-                    canComplete={canToggleTaskComplete(task, caller)}
-                    highlighted={hoveredTaskId === task.id}
-                    showDue={!sIsToday}
-                    currentUserId={currentUserId}
-                    onHoverChange={setHoveredTaskId}
-                    onToggle={handleToggle}
-                    onOpen={handleRowClick}
-                  />
-                ))
+                // Row choreography (polish §02): a completed/undone task lifts
+                // out and its siblings glide up. initial={false} so a section's
+                // first paint never cascades every existing row.
+                <AnimatePresence initial={false}>
+                  {section.tasks.map((task, idx) => (
+                    <MotionRow key={task.id}>
+                      <CalendarTaskRow
+                        task={task}
+                        isLast={idx === section.tasks.length - 1}
+                        effectiveStatus={optimisticStatus[task.id] ?? task.status}
+                        canComplete={canToggleTaskComplete(task, caller)}
+                        highlighted={hoveredTaskId === task.id}
+                        showDue={!sIsToday}
+                        currentUserId={currentUserId}
+                        onHoverChange={setHoveredTaskId}
+                        onToggle={handleToggle}
+                        onOpen={handleRowClick}
+                      />
+                    </MotionRow>
+                  ))}
+                </AnimatePresence>
               )}
             </CollapseReveal>
           )}
@@ -748,7 +805,23 @@ export function MyTasksCalendarView({
           )}
         </AnimatePresence>
 
-        {/* Date sections — each in its own card with gap between */}
+        {/* Whole-view branded empty (§08) — the user has NO active task at all
+            (fully drained, no filters, all-mode). One poetic line + a New task
+            action. A per-day / filtered empty keeps its own inline state below. */}
+        {isAllMode && !hasActiveFilters && !hasMore && !isLoadingMore && activeTasks.length === 0 ? (
+          <EmptyState
+            brand
+            title="A clear slate — nothing on your plate."
+            description="Add your first task and it will find its place on the calendar."
+            minHeight="340px"
+            action={
+              <Button variant="primary" iconLeft={Plus} onClick={() => setCreateModalOpen(true)}>
+                New task
+              </Button>
+            }
+          />
+        ) : (
+        /* Date sections — each in its own card with gap between */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {visibleSections.map((section) => renderSection(section))}
 
@@ -774,6 +847,7 @@ export function MyTasksCalendarView({
             </div>
           )}
         </div>
+        )}
 
         {/* Auto-loading the rest of the schedule — no manual "Load more" (the
             calendar must reflect every active task; pages drain on mount). */}
@@ -827,6 +901,7 @@ export function MyTasksCalendarView({
             initialRemarks={selectedTaskRemarks}
             callerProfile={{ id: currentUserId, role: callerRole, domain: callerDomain }}
             currentUserName={currentUserName}
+            onDeferDelete={handleDeferDelete}
           />
         )}
       </AnimatePresence>
@@ -853,7 +928,6 @@ export function MyTasksCalendarView({
 
 interface CalendarTaskRowProps {
   task:            PersonalTaskRow;
-  idx:             number;
   isLast:          boolean;
   effectiveStatus: TaskStatus;
   canComplete:     boolean;
@@ -867,7 +941,6 @@ interface CalendarTaskRowProps {
 
 const CalendarTaskRow = memo(function CalendarTaskRow({
   task,
-  idx,
   isLast,
   effectiveStatus,
   canComplete,
@@ -891,10 +964,9 @@ const CalendarTaskRow = memo(function CalendarTaskRow({
   const leadHref = task.lead_id ? `/leads/${task.lead_slug ?? task.lead_id}` : null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 3 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18, delay: Math.min(idx * 40, 200) / 1000, ease: EASE_OUT_EXPO }}
+    // Plain div — MotionRow (the parent map wrapper) owns enter/exit; row
+    // motion wins inside lists, so no second entrance animation here (§02).
+    <div
       style={{
         display:      'flex',
         alignItems:   'center',
@@ -998,7 +1070,7 @@ const CalendarTaskRow = memo(function CalendarTaskRow({
       >
         <ArrowRight style={{ width: 12, height: 12, strokeWidth: 1.5 }} />
       </button>
-    </motion.div>
+    </div>
   );
 });
 

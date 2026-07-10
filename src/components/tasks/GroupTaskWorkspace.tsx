@@ -63,6 +63,7 @@ import {
   getGroupSubtasksAction,
   getTaskRemarksAction,
   deleteGroupTaskAction,
+  deleteTaskAction,
 } from "@/lib/actions/tasks";
 import { getAssignableUsersAction } from "@/lib/actions/profiles";
 import { formatRelativeTime, formatDate } from "@/lib/utils/dates";
@@ -83,6 +84,7 @@ import type {
 import { Avatar } from "@/components/ui/Avatar";
 import { BackButton } from "@/components/ui/BackButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { MotionRow } from "@/components/ui/RowMotion";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { LoadingVeil } from "@/components/ui/LogoSpinner";
 import type {
@@ -427,6 +429,40 @@ export function GroupTaskWorkspace({
     setSubtasks((prev) => prev.filter((s) => s.id !== taskId));
     setSelectedSubtask(null);
     setModalOpen(false);
+  }, []);
+
+  // Undo-instead-of-confirm (polish §06): the subtask lifts out immediately
+  // (MotionRow in list view / AnimatePresence in board), a charcoal undo toast
+  // counts down 5s, and deleteTaskAction fires ONLY on the toast timeout (Undo
+  // cancels it). The onTimeout runs from the singleton toast store's timer, so
+  // the commit still fires if the user navigates away. Undo restores the row.
+  const handleSubtaskDeferDelete = useCallback((taskId: string) => {
+    let removed: SubtaskWithAssignee | undefined;
+    setSubtasks((prev) => {
+      removed = prev.find((s) => s.id === taskId);
+      return prev.filter((s) => s.id !== taskId);
+    });
+    setSelectedSubtask(null);
+    setModalOpen(false);
+    if (!removed) return;
+    const row = removed;
+
+    const restore = () =>
+      setSubtasks((prev) =>
+        prev.some((s) => s.id === taskId) ? prev : [...prev, row],
+      );
+
+    toast.undo("Subtask deleted", {
+      action: { label: "Undo", onClick: restore },
+      onTimeout: () => {
+        void deleteTaskAction({ taskId }).then((result) => {
+          if (result.error) {
+            restore();
+            toast.danger("Couldn't delete subtask", { message: result.error });
+          }
+        });
+      },
+    });
   }, []);
 
   function handleModalClose() {
@@ -788,6 +824,7 @@ export function GroupTaskWorkspace({
                 boxShadow: "var(--shadow-1)",
               }}
             >
+              <AnimatePresence initial={false}>
               {sortedSubtasks.map((subtask, idx) => {
                 const effectiveStatus = getEffectiveStatus(
                   subtask.id,
@@ -804,15 +841,10 @@ export function GroupTaskWorkspace({
                   effectiveStatus !== "error";
 
                 return (
-                  <motion.div
-                    key={subtask.id}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: BASE_DURATION,
-                      delay: Math.min(idx * 0.03, 0.24),
-                      ease: EASE_OUT_EXPO,
-                    }}
+                  // MotionRow owns enter/exit (§02) — the deleted-via-undo row
+                  // lifts out, siblings glide up. The row is a plain div.
+                  <MotionRow key={subtask.id}>
+                  <div
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -953,9 +985,11 @@ export function GroupTaskWorkspace({
                         style={{ width: 12, height: 12, strokeWidth: 1.5 }}
                       />
                     </button>
-                  </motion.div>
+                  </div>
+                  </MotionRow>
                 );
               })}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -1524,6 +1558,7 @@ export function GroupTaskWorkspace({
             currentUserName={currentUserName}
             onTaskUpdated={handleSubtaskUpdated}
             onTaskDeleted={handleSubtaskDeleted}
+            onDeferDelete={handleSubtaskDeferDelete}
           />
         )}
       </AnimatePresence>

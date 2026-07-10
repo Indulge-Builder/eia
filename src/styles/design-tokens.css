@@ -990,16 +990,10 @@
   to   { opacity: 1; letter-spacing: 0.42em; }
 }
 
-/* Boot tagline / progress track — fade up 8px. */
+/* Boot tagline — fade up 8px. */
 @keyframes serene-tagline-in {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: none;            }
-}
-
-/* Boot progress shimmer — 35%-wide accent sweep crossing the track. */
-@keyframes serene-progress-sweep {
-  from { left: -35%; }
-  to   { left: 105%; }
 }
 
 /* Skeleton sheen — left→right background sweep (replaces the opacity

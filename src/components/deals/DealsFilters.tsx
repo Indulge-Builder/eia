@@ -3,7 +3,6 @@
 import { FilterBar } from '@/components/ui/FilterBar';
 import { FilterDropdown } from '@/components/ui/FilterDropdown';
 import { useUrlFilters } from '@/hooks/useUrlFilters';
-import { GIA_DOMAIN_FILTER_ITEMS } from '@/lib/constants/domains';
 import {
   DEAL_TYPE_OPTIONS,
   DEAL_CATEGORY_OPTIONS,
@@ -36,23 +35,26 @@ export function DealsFilters({
   const url = useUrlFilters({ resetKeys: ['page'] });
   const { params, push } = url;
 
-  const domainFilter   = showDomainFilter ? params.get('domain') : null;
   const dealTypeFilter = params.get('deal_type');
   const categoryFilter = params.get('deal_category');
   const agentFilter    = showAgentFilter ? params.get('agent_id') : null;
   const dateFrom       = params.get('date_from');
   const dateTo         = params.get('date_to');
 
-  // The category filter only makes sense inside the shop domain slice (shop is
-  // the sole category-bearing deal_type). Surfaced when that slice is active.
+  // The in-page Domain dropdown was removed (2026-07-10) — the global
+  // DomainSelector now owns the `?domain=` param for admin/founder. We still
+  // READ the param (never write, never count it) to decide whether the shop
+  // slice is active, because the category filter only makes sense there (shop
+  // is the sole category-bearing deal_type). The global domain is NOT one of
+  // this bar's own filters, so it never enters `activeCount` or the Clear list.
+  const globalDomain = showDomainFilter ? params.get('domain') : null;
   const showCategoryFilter =
     showDomainFilter &&
-    domainFilter === CATEGORY_DOMAIN &&
+    globalDomain === CATEGORY_DOMAIN &&
     DOMAIN_DEAL_CONFIG[CATEGORY_DOMAIN].categories !== null;
 
   const activeCount =
     (params.get('search') ? 1 : 0) +
-    (domainFilter ? 1 : 0) +
     (dealTypeFilter ? 1 : 0) +
     (showCategoryFilter && categoryFilter ? 1 : 0) +
     (agentFilter ? 1 : 0) +
@@ -91,21 +93,6 @@ export function DealsFilters({
         onChange={(next) => push({ deal_type: next[0] ?? null })}
         menuPortal
       />
-
-      {/* Domain — admin/founder only.
-          Changing domain atomically clears agent_id AND deal_category — the
-          category filter is only valid inside the shop slice. */}
-      {showDomainFilter && (
-        <FilterDropdown
-          label="Domain"
-          items={GIA_DOMAIN_FILTER_ITEMS}
-          selected={domainFilter ? [domainFilter] : []}
-          onChange={(next) =>
-            push({ domain: next[0] ?? null, agent_id: null, deal_category: null })
-          }
-          menuPortal
-        />
-      )}
 
       {/* Category — only inside the shop domain slice (retail product category) */}
       {showCategoryFilter && (

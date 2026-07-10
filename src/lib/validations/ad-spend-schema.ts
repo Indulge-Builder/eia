@@ -13,7 +13,7 @@ const adSpendRowSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "spend_date_invalid"),
   spend: z
     .number()
-    .positive("spend_must_be_positive")
+    .min(0, "spend_must_be_non_negative")
     .max(100_000_000, "spend_too_large"),
   results:     z.number().int().nonnegative().nullable(),
   impressions: z.number().int().nonnegative().nullable(),
@@ -25,8 +25,8 @@ export const uploadAdSpendSchema = z.object({
   rows: z
     .array(adSpendRowSchema)
     .min(1, "no_rows")
-    .max(5000, "too_many_rows"),
-  /** Zero-spend rows the parser dropped — echoed back in the summary */
+    .max(10000, "too_many_rows"),
+  /** Unusable rows the parser dropped — echoed back in the summary */
   skipped: z.number().int().nonnegative(),
 });
 

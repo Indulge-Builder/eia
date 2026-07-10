@@ -15,6 +15,21 @@ The budget page has TWO data planes that share one date range and one page:
 agent/guest → `redirect('/dashboard')`. Two layers (A-09): the page role
 redirect AND RLS on both tables (manager+ SELECT, admin/founder write).
 
+**Manager scope — SPEND plane only (the finance rule that governs everything):**
+a manager sees ONLY their own domain's campaign SPEND. `BudgetPage` pins
+`scopeDomain = profile.domain` server-side (never a `?domain=` param — a manager
+can't widen it) and threads it into `BudgetAsync`. When non-null, `BudgetAsync`
+`filterBudgetRowsByDomain`s the campaign rows, SKIPS the recharge fetch, and
+renders the totals strip + `BudgetTable` only — the Accounts tab, per-account
+report, recharge history, and balance are never rendered. Everything
+recharge-derived (recharge ledger, balance, remaining, the fuel gauge) is
+admin/founder-only because recharges carry no domain — subtracting domain-scoped
+spend from org-wide recharges would misstate finance. Upload + Add-Recharge stay
+admin/founder only. Same rule on the dashboard budget widget: a manager gets a
+domain-scoped SPEND gauge (`scope: 'domain'`, recharge fields null); admin/founder
+get the org tank (`scope: 'org'`). Server pins the manager's domain in
+`getBudgetGaugeWidgetAction` via `profile.domain`.
+
 ---
 
 ## Account attribution — the one rule that must never drift

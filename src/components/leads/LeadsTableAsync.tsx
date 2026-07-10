@@ -73,6 +73,7 @@ export async function LeadsTableAsync({
 
       <LeadsTable
         leads={leads}
+        totalCount={totalCount}
         userId={userId}
         role={role}
         domain={domain}

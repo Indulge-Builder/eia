@@ -20,6 +20,8 @@ import {
   getBudgetSummary,
   getAccountRecharges,
   buildBudgetGaugeSummary,
+  buildDomainSpendGaugeSummary,
+  filterBudgetRowsByDomain,
   type BudgetGaugeSummary,
 } from '@/lib/services/ad-spend-service';
 import type { DashboardAgentTask } from '@/lib/types';
@@ -221,12 +223,14 @@ export async function getLeadVolumeForDomainAction(
 }
 
 // ─────────────────────────────────────────────
-// Campaign Budget fuel gauge (budget widget refresh / cohort change — admin/founder)
-// The org-wide ad-account "tank": recharged → spent → remaining + an ROI
-// roll-up, for the active date range. ALWAYS org-wide regardless of role —
-// recharges carry no domain, so there is no domain param and no manager pin
-// (a per-domain "remaining" would mix domain-filtered spend with org recharges
-// = a finance error). Admin/founder gate only — the gauge is finance-visible.
+// Campaign Budget fuel gauge (budget widget refresh / cohort change — manager+)
+// Admin/founder → the ORG-WIDE ad-account "tank": recharged → spent → remaining
+// + an ROI roll-up (scope 'org'). A MANAGER → their own domain's SPEND plane
+// only (scope 'domain'): spend + campaigns + CPL, with recharged/remaining/
+// consumed null — recharges carry no domain, so a per-domain "remaining" would
+// mix domain-filtered spend with org recharges (a finance error). The manager's
+// domain is pinned server-side from profile.domain (never a client param), so a
+// crafted request can never leak another domain's spend or the org recharge tank.
 // ─────────────────────────────────────────────
 const GaugeScopeSchema = z.object({
   from: z.string().datetime({ message: 'Invalid from date.' }),
@@ -243,15 +247,22 @@ export async function getBudgetGaugeWidgetAction(
   const parsed = GaugeScopeSchema.safeParse({ from, to });
   if (!parsed.success) return { data: null, error: formErrors.generic };
 
-  // Admin/founder only (mirrors the /budget page + the budget widget roles).
-  const auth = await requireProfile(['admin', 'founder']);
+  // Manager+ (mirrors the /budget page + the budget widget roles).
+  const auth = await requireProfile(['manager', 'admin', 'founder']);
   if (!auth.ok) return auth.result;
+  const profile = auth.profile;
 
-  const [rows, recharges] = await Promise.all([
-    getBudgetSummary(parsed.data.from, parsed.data.to),
-    getAccountRecharges(parsed.data.from, parsed.data.to),
-  ]);
+  const rows = await getBudgetSummary(parsed.data.from, parsed.data.to);
 
+  // Manager: domain-scoped spend plane only — pin to profile.domain server-side
+  // (never a client param) and skip the recharge fetch entirely.
+  if (profile.role === 'manager') {
+    const domainRows = filterBudgetRowsByDomain(rows, profile.domain as AppDomain);
+    return { data: buildDomainSpendGaugeSummary(domainRows), error: null };
+  }
+
+  // Admin/founder: the org-wide tank (unchanged) — spend + org recharges.
+  const recharges = await getAccountRecharges(parsed.data.from, parsed.data.to);
   return { data: buildBudgetGaugeSummary(rows, recharges), error: null };
 }
 

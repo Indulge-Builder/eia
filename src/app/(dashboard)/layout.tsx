@@ -1,13 +1,11 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getCurrentProfile } from "@/lib/services/profiles-service";
-import { getNotifications } from "@/lib/services/notifications-service";
 import { canAccessRoute } from "@/lib/utils/route-access";
 import { DEFAULT_THEME, isThemeKey } from "@/lib/constants/themes";
 import { DEFAULT_APPEARANCE, isAppearanceKey } from "@/lib/constants/appearance";
 import { DEFAULT_ICON, isIconKey } from "@/lib/constants/app-icons";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { ThemeInitializer } from "@/components/layout/ThemeInitializer";
 import { IconInitializer } from "@/components/layout/IconInitializer";
 import { AppBootScreen } from "@/components/layout/AppBootScreen";
@@ -16,6 +14,7 @@ import { CommandPaletteProvider } from "@/components/layout/CommandPaletteProvid
 import { ElayaWidget } from "@/components/elaya/ElayaWidget";
 import { UsagePresence } from "@/components/layout/UsagePresence";
 import { SuggestionFeedbackProvider } from "@/components/suggestions/SuggestionFeedbackProvider";
+import { NotificationsProvider } from "@/components/layout/NotificationsProvider";
 
 export default async function DashboardLayout({
   children,
@@ -31,15 +30,6 @@ export default async function DashboardLayout({
 
   const pathname = (await headers()).get('x-pathname') ?? '/';
   if (!canAccessRoute(profile, pathname)) redirect('/dashboard');
-
-  // The notification bell lives in the page title row (PageControls) when
-  // TOP_BAR_ENABLED — each page starts its own un-awaited getNotifications seed
-  // there. Only the OFF-path Sidebar footer bell needs the layout-level promise,
-  // so we create it ONLY when the flag is off (no wasted query when it's on).
-  // Deliberately NOT awaited — it streams into the bell's Suspense boundary.
-  const notificationsPromise = TOP_BAR_ENABLED
-    ? undefined
-    : getNotifications(profile.id);
 
   const safeTheme = isThemeKey(profile.theme) ? profile.theme : DEFAULT_THEME;
   const safeAppearance = isAppearanceKey(profile.appearance)
@@ -69,8 +59,13 @@ export default async function DashboardLayout({
         "Send feedback" button AND the mobile Elaya-card trigger share one
         composer instance (mounted once inside the provider). */}
     <SuggestionFeedbackProvider userId={profile.id}>
+    {/* Notification inbox state (Realtime + chime + optimistic) is owned by ONE
+        provider mounted here so the subscription survives navigation. Both the
+        title-row bell (PageControls) and the OFF-path Sidebar footer bell read it
+        via context — no per-page seed, no per-navigation channel teardown. */}
+    <NotificationsProvider userId={profile.id}>
     <div className="layout-shell serene-shell">
-      <Sidebar profile={profile} notificationsPromise={notificationsPromise} />
+      <Sidebar profile={profile} />
 
       {/* Toast stack — portal-like, sits at root of dashboard shell, outside scroll */}
       <ToastProvider />
@@ -100,6 +95,7 @@ export default async function DashboardLayout({
         </div>
       </div>
     </div>
+    </NotificationsProvider>
     </SuggestionFeedbackProvider>
     </>
   );

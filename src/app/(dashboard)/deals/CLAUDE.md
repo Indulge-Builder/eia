@@ -23,7 +23,9 @@ A deal's `deal_type` is **derived from its Gia domain — never free-picked** (d
   `recordDeal` derives from the lead's domain, `createWalkInDeal` from the server-forced deal
   domain. The Zod schemas no longer carry a `deal_type` field.
 - **Filter** (`DealsFilters`): the Category dropdown reads `DEAL_CATEGORY_OPTIONS`; the Type
-  dropdown reads `DEAL_TYPE_OPTIONS`.
+  dropdown reads `DEAL_TYPE_OPTIONS`. The Category dropdown surfaces only when the **global**
+  domain scope is `shop` (there is no in-page Domain dropdown — removed 2026-07-10; the global
+  `DomainSelector` owns `?domain=`).
 - **DB** (migration 0122): `deals_deal_type_check` (`membership`/`retail`/`sale`),
   `deals_deal_category_check` (value whitelist), `deals_retail_category_check` (`retail ⇒ category
   NOT NULL`, `non-retail ⇒ category NULL`). The CHECKs are the backstop; the action returns clean
@@ -107,7 +109,8 @@ Defined in `src/lib/types/database.ts`.
 ```typescript
 export type DealFilters = {
   search:        string | null
-  domain:        AppDomain | null   // admin/founder only; parseGiaDomainParam() validates
+  domain:        AppDomain | null   // admin/founder only; set by the GLOBAL DomainSelector, not an
+                                     // in-page dropdown; resolveDomainParam() → parseGiaDomainParam()
   deal_type:     string | null      // 'membership' | 'retail' | 'sale'
   deal_category: string | null      // retail product category; surfaced when domain=shop
   agent_id:      string | null
@@ -118,9 +121,16 @@ export type DealFilters = {
 }
 ```
 
-**No `status` field — see invariant 2 above.** `deal_category` is only meaningful inside the
-`shop` slice (the sole category-bearing `deal_type`); `DealsFilters` surfaces its dropdown only when
-the active domain filter is `shop`, and clears it atomically on any domain change.
+**No `status` field — see invariant 2 above.** **The in-page Domain dropdown was removed from
+`DealsFilters` (2026-07-10)** — the global `DomainSelector` (TopBar/`PageControls`) is the single
+domain control for admin/founder, writing the same `?domain=` param the query layer already reads
+(`resolveDomainParam`). `DealsFilters` still *reads* that param (never writes, never counts it) only
+to know when the `shop` slice is active. Consequences: the global domain is **not** one of the bar's
+own filters, so it never adds to the filter-count badge, and the bar's **Clear** (`useUrlFilters.clearAll`,
+identical to `LeadsFilters`) never resets the global scope — the `serene-domain` cookie survives the
+bare-pathname push and the selector re-resolves `param ?? cookie`. `deal_category` is only meaningful
+inside the `shop` slice (the sole category-bearing `deal_type`); `DealsFilters` surfaces its Category
+dropdown only when the global domain is `shop`.
 
 ---
 

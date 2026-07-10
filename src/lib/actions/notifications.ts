@@ -13,10 +13,12 @@ import { parseActionInput } from "@/lib/actions/_validation";
 import {
   markNotificationRead,
   markAllNotificationsRead,
+  getUnreadNotifications,
 } from "@/lib/services/notifications-service";
 import { uuidField } from "@/lib/validations/fields";
 import { formErrors } from "@/lib/validations/form-errors";
 import type { ActionResult } from "@/lib/types/index";
+import type { Notification } from "@/lib/types/database";
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
@@ -68,4 +70,24 @@ export async function markAllReadAction(): Promise<ActionResult<{ success: true 
   if (error) return { data: null, error };
 
   return { data: { success: true }, error: null };
+}
+
+/**
+ * Seed the notification bell with the caller's UNREAD notifications (newest first).
+ * Session-scoped — the identity is the verified profile, no input parameter.
+ * Called once by the layout-mounted NotificationsProvider on mount.
+ */
+export async function getMyNotificationsAction(): Promise<
+  ActionResult<Notification[]>
+> {
+  // Session auth — Rule 09 (no untrusted input → no Zod schema needed, the
+  // sibling markAllReadAction posture)
+  const auth = await requireProfile();
+  if (!auth.ok) return auth.result;
+  const profile = auth.profile;
+
+  const { data, error } = await getUnreadNotifications(profile.id);
+  if (error) return { data: null, error };
+
+  return { data: data ?? [], error: null };
 }

@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/services/profiles-service";
 import { getAgentUsage } from "@/lib/services/usage-service";
-import { getNotifications } from "@/lib/services/notifications-service";
 import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { PageControls } from "@/components/layout/PageControls";
 import { UsageDashboard } from "@/components/admin/usage/UsageDashboard";
@@ -38,9 +37,7 @@ export default async function AdminUsagePage() {
 
         {TOP_BAR_ENABLED && (
           <PageControls
-            userId={profile.id}
             isPrivileged={false}
-            notificationsPromise={getNotifications(profile.id)}
           />
         )}
       </div>

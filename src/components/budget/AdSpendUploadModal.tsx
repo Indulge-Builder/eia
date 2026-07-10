@@ -147,9 +147,9 @@ export function AdSpendUploadModal({ open, onClose }: Props) {
             : fileName ?? "Choose a Meta export (.csv / .xlsx)"}
         </button>
 
-        {/* Weekly cadence works today: a multi-day daily-breakdown export
-            uploads in one go (one row per day) and re-uploading is idempotent.
-            The only requirement is the Day time-breakdown — never a date range. */}
+        {/* Month-to-date is the default workflow: export from the 1st to today
+            with the Day time-breakdown and re-upload any time — every covered
+            day is overridden in place, including days that dropped to zero. */}
         <p
           style={{
             margin:     0,
@@ -159,11 +159,10 @@ export function AdSpendUploadModal({ open, onClose }: Props) {
             lineHeight: "var(--leading-snug)",
           }}
         >
-          Export with <strong style={{ color: "var(--theme-text-secondary)", fontWeight: "var(--weight-semibold)" }}>Breakdown → By time → Day</strong>{" "}
-          and pick any range — a week, a month, whatever cadence you run. The whole
-          range uploads in one go as one row per day, and re-uploading an
-          overlapping range is safe: matching days are updated in place, never
-          double-counted.
+          Export from Meta with <strong style={{ color: "var(--theme-text-secondary)", fontWeight: "var(--weight-semibold)" }}>Breakdown → By time → Day</strong>,
+          from the 1st of the month to today. Re-upload the same export any time —
+          every day it covers is updated in place, including days that dropped to
+          zero. Nothing is ever double-counted.
         </p>
 
         {/* Grain / parse error */}
@@ -208,7 +207,7 @@ export function AdSpendUploadModal({ open, onClose }: Props) {
             </Num>
             {parsed.skipped > 0 && (
               <span style={{ color: "var(--theme-text-tertiary)" }}>
-                <Num>{formatCount(parsed.skipped)}</Num> zero-spend row{parsed.skipped === 1 ? "" : "s"} will be skipped
+                <Num>{formatCount(parsed.skipped)}</Num> unreadable row{parsed.skipped === 1 ? "" : "s"} skipped
               </span>
             )}
           </div>

@@ -25,13 +25,16 @@ export const DOMAIN_ROUTE_MAP: Record<AppDomain, string[]> = {
       // /oversight is manager-read in practice — the page redirects agents/guests
       // (role gate), like /campaigns. /escalations is all-roles: agents get a
       // self-scoped view (own slipped leads/tasks), manager+ see the domain/org.
-      // /budget is admin/founder ONLY (they bypass this map in canAccessRoute);
-      // it is deliberately absent so a domain manager can't reach it by URL.
+      // /budget is manager+ (the page's role redirect IS the authorization
+      // boundary — this map only grants a Gia-domain manager REACHABILITY; agents
+      // still bounce at the page, like /oversight). A manager sees only their own
+      // domain's campaign SPEND (server-pinned via profile.domain) — the recharge
+      // ledger/balance/gauge stay admin/founder-only (recharges carry no domain).
       // /admin/elaya-training is manager+ (the page's role redirect IS the
       // authorization boundary — this map only grants a Gia-domain manager
       // REACHABILITY; agents still bounce at the page, like /oversight). It is NOT
       // in ALWAYS_ALLOWED_PREFIXES on purpose: that would expose it to agents/guests.
-      [domain]: ['/leads', '/deals', '/tasks', '/performance', '/oversight', '/campaigns', '/escalations', '/whatsapp', '/settings', '/admin/elaya-training'],
+      [domain]: ['/leads', '/deals', '/tasks', '/performance', '/oversight', '/campaigns', '/escalations', '/budget', '/whatsapp', '/settings', '/admin/elaya-training'],
     }),
     {} as Partial<Record<AppDomain, string[]>>,
   ),

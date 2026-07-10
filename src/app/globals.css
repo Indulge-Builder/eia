@@ -1010,6 +1010,10 @@ body {
 .serene-dashboard-grid {
   position: relative;
   width: 100%;
+  /* Cap the canvas on ultrawide screens — without this the 12 fluid columns
+     against the fixed 38px row height produce absurdly wide, short cards. */
+  max-width: 1760px;
+  margin-inline: auto;
 }
 
 /* RGL's OWN positioned container (it sets the computed grid height inline on

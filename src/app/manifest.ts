@@ -30,14 +30,17 @@ import {
 // square source covers the 192/512 slots (the browser downscales `sizes:"any"`);
 // the same file backs apple-touch-icon in the layout.
 //
-// The icon art is the seed-of-life glyph composited onto a SOLID #0d0c0a (the
-// legacy Earth canvas) plate — built by scripts/pad-app-icons.mjs from the
-// transparent sources, mirroring the original public/icons/icon-512.png look.
-// Because the fill is solid (no transparency) the `maskable` entry is valid:
-// Android crops it into a circle/squircle and the glyph sits inside the safe
-// zone (GLYPH_RATIO 0.82 in the build script), so the petals are never clipped
-// and corners are dark, not transparent. NEVER re-add maskable if the art
-// reverts to a transparent background — see the script comment.
+// The icon art is the umber→gold seed-of-life glyph composited onto a SOLID
+// #ECE8E1 (NEU_CANVAS_LIGHT — the boot screen canvas) plate — built by
+// scripts/pad-app-icons.mjs from the transparent sources. The cream plate
+// makes the OS-generated splash (background_color + this icon) read as the
+// AppBootScreen's own canvas instead of a separate black card (the previous
+// #0d0c0a plate — retired 2026-07-10). Because the fill is solid (no
+// transparency) the `maskable` entry is valid: Android crops it into a
+// circle/squircle and the glyph sits inside the safe zone (GLYPH_RATIO 0.82
+// in the build script), so the petals are never clipped and corners are
+// cream, not transparent. NEVER re-add maskable if the art reverts to a
+// transparent background — see the script comment.
 export function buildManifest(
   icon: IconKey,
   appearance: AppearanceKey = DEFAULT_APPEARANCE,

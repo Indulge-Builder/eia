@@ -6,8 +6,8 @@ import { SeedMandala } from '@/components/ui/SeedMandala';
 // AppBootScreen — the hero loading sequence (logo-motion handoff §Boot).
 // Full-viewport on --neu-canvas: the mark draws itself (1.9s), then breathes
 // on a barely-perceptible 90s turn inside a pulsing accent glow; the wordmark
-// opens its tracking at 1.5s, the tagline fades up at 2.1s, the progress
-// sweep starts at 2.4s. Plays once per app load (a hard navigation — the
+// opens its tracking at 1.5s, the tagline fades up at 2.1s. The draw IS the
+// progress indicator — no bar below the mark. Plays once per app load (a hard navigation — the
 // dashboard layout persists across client-side route changes, so soft navs
 // never replay it). The overlay SSRs with the shell, so it is visible from
 // first paint; the layout beneath only streams once the shell's data has
@@ -111,37 +111,9 @@ export function AppBootScreen() {
         </div>
       </div>
 
-      {/* Progress shimmer — inset track, 35%-wide accent sweep. */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'relative',
-          width: 220,
-          height: 8,
-          borderRadius: 'var(--neu-radius-pill)',
-          background: 'var(--neu-well)',
-          boxShadow: 'var(--neu-shadow-inset)',
-          overflow: 'hidden',
-          animation: 'serene-tagline-in 700ms ease 2.3s both',
-        }}
-      >
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            bottom: 0,
-            left: '-35%',
-            width: '35%',
-            borderRadius: 'var(--neu-radius-pill)',
-            background: 'linear-gradient(90deg, transparent, var(--neu-accent), transparent)',
-            animation: 'serene-progress-sweep 1.6s cubic-bezier(0.4, 0, 0.2, 1) 2.4s infinite',
-          }}
-        />
-      </div>
-
-      {/* Reduced motion: kill every loop; the mark rests finished, text and
-          track land static (the draw/spin classes are gated in the token
-          layer — these inline loops need their own gate). */}
+      {/* Reduced motion: kill every loop; the mark rests finished, text lands
+          static (the draw/spin classes are gated in the token layer — these
+          inline loops need their own gate). */}
       <style>{`
         @media (prefers-reduced-motion: reduce) {
           [role="status"][aria-label="Serene is loading"] * {
