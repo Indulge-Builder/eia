@@ -245,9 +245,11 @@ export async function getLeadsByRole(
   // Going-cold threshold: last_activity_at older than the cold window (the ONE
   // cutoff helper — shared verbatim with the count RPC's p_going_cold below).
   const goingColdThreshold = filters.going_cold ? goingColdCutoff() : null;
-  // Admin/founder Gia domain slice — agent/manager scoping never comes from filters
+  // Gia domain slice — admin/founder narrowing, plus the agent domain filter
+  // (2026-08-07: an ADDITIVE narrowing composed on top of assigned_to = userId,
+  // never a widening). Manager scoping never comes from filters.
   const domainSlice =
-    role !== "agent" && role !== "manager" && filters.domain && isGiaDomain(filters.domain)
+    role !== "manager" && filters.domain && isGiaDomain(filters.domain)
       ? filters.domain
       : null;
 
@@ -267,7 +269,13 @@ export async function getLeadsByRole(
   // Role-level constraints — applied before any filter, cannot be overridden
   if (role === "agent") {
     query = query.eq("assigned_to", userId);
-    // agent_id filter intentionally NOT applied here — role constraint wins
+    // agent_id filter intentionally NOT applied here — role constraint wins.
+    // domainSlice composes as an extra AND (a cross-domain agent narrowing to
+    // one of their own domains) — it can never widen the assigned_to scope.
+    // The count RPC's agent branch mirrors this (migration 0161).
+    if (domainSlice) {
+      query = query.eq("domain", domainSlice);
+    }
   } else if (role === "manager") {
     query = query.eq("domain", domain);
     // "My Leads" view — force-scope the manager to their own assigned leads.
@@ -1249,6 +1257,10 @@ export async function getLeadsForExport(
     // Role-level constraints — mirrors getLeadsByRole exactly
     if (role === "agent") {
       query = query.eq("assigned_to", userId);
+      // Agent domain filter (2026-08-07) — additive narrowing, mirrors the list
+      if (filters.domain && isGiaDomain(filters.domain)) {
+        query = query.eq("domain", filters.domain);
+      }
     } else if (role === "manager") {
       query = query.eq("domain", domain);
       // "My Leads" view scopes the export to the manager's own leads, exactly

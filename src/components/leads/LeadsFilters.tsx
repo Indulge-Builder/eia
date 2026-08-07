@@ -155,7 +155,9 @@ export function LeadsFilters({
         />
       )}
 
-      {/* Domain — single select, admin/founder only.
+      {/* Domain — single select, admin/founder + agent (2026-08-07: a cross-domain
+          agent narrows their own list; the service composes it on top of
+          assigned_to, never widening scope).
           Domain change atomically clears agent_id + campaign (same push). */}
       {showDomainFilter && (
         <FilterDropdown

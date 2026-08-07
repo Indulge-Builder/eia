@@ -28,13 +28,15 @@ function readDomainSearchParam(searchParams: Awaited<SearchParams>): string | nu
  *   - admin / founder → the chosen Gia domain: `?domain=` param first, then the
  *     `serene-domain` cookie (the TopBar selector's cross-page memory), else
  *     `null` ("All" scope). The cookie is consulted only when TOP_BAR_ENABLED.
- *   - manager / agent → ALWAYS `null` — manager is force-scoped to `callerDomain`
- *     by the service, agent has no domain filter. Neither the param nor the
- *     cookie is ever read for them.
+ *   - agent → `null` UNLESS the page opts in via `opts.allowAgentParam` (the
+ *     /leads domain filter for cross-domain agents, 2026-08-07) — then the
+ *     `?domain=` PARAM ONLY. The serene-domain cookie is never read for agents:
+ *     that is the TopBar's admin/founder cross-page memory.
+ *   - manager → ALWAYS `null` — force-scoped to `callerDomain` by the service.
  *
  * NOT a security boundary: the page parsers + service role-gates remain the
- * authority. A crafted `?domain=` or cookie can never widen a manager/agent's
- * scope because this returns `null` for them regardless of input.
+ * authority. A crafted `?domain=` can never widen an agent's scope — the
+ * service composes it as an extra AND on top of `assigned_to = userId`.
  *
  * Synchronous: the caller passes the already-awaited searchParams + cookieStore
  * (`await cookies()`), so this does no awaiting itself.
@@ -43,8 +45,16 @@ export function resolveDomainParam(
   searchParams: Awaited<SearchParams>,
   cookieStore: CookieStore,
   role: string,
+  opts?: { allowAgentParam?: boolean },
 ): GiaDomain | null {
-  // Manager/agent: scope is server-forced — param and cookie are both ignored.
+  // Agent: param-only narrowing, and only where the page opts in.
+  if (role === "agent") {
+    if (!opts?.allowAgentParam) return null;
+    return parseGiaDomainParam(readDomainSearchParam(searchParams));
+  }
+
+  // Manager (and any other non-privileged role): scope is server-forced —
+  // param and cookie are both ignored.
   if (role !== "admin" && role !== "founder") return null;
 
   const fromParam = parseGiaDomainParam(readDomainSearchParam(searchParams));

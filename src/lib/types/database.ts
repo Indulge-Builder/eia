@@ -3056,7 +3056,7 @@ export type CampaignFilters = {
 // never a URL param. agent role constraint is applied before agent_id filter.
 export type DealFilters = {
   search:        string | null
-  domain:        AppDomain | null   // admin/founder only via parseGiaDomainParam()
+  domain:        AppDomain | null   // admin/founder + agent (additive narrowing) via parseGiaDomainParam()
   deal_type:     string | null      // 'membership' | 'retail' | 'sale'
   deal_category: string | null      // retail product category; surfaced when domain=shop
   agent_id:      string | null

@@ -73,12 +73,19 @@ export default async function LeadsPage({
   const [resolvedParams, cookieStore] = await Promise.all([searchParams, cookies()]);
   const filters = parseFilters(resolvedParams);
 
-  const showDomainFilter = profile.role === 'admin' || profile.role === 'founder';
+  const isPrivileged = profile.role === 'admin' || profile.role === 'founder';
+  // Agents also get the domain filter (2026-08-07) — a cross-domain agent can
+  // narrow their own list to one domain. Additive narrowing only: the service
+  // composes it on top of assigned_to = userId, never widening scope.
+  const showDomainFilter = isPrivileged || profile.role === 'agent';
 
   // Single shared resolver owns the domain decision: param-first, serene-domain
-  // cookie fallback for admin/founder; null for manager/agent (getLeadsByRole
+  // cookie fallback for admin/founder; agent reads the ?domain= param only
+  // (allowAgentParam — this page opts in); null for manager (getLeadsByRole
   // force-scopes them regardless). Overwrites the param-only value parseFilters set.
-  filters.domain = resolveDomainParam(resolvedParams, cookieStore, profile.role);
+  filters.domain = resolveDomainParam(resolvedParams, cookieStore, profile.role, {
+    allowAgentParam: true,
+  });
 
   // Manager "My Leads" default: a manager lands on their own assigned leads
   // (same daily experience as an agent) unless they explicitly switch to All
@@ -132,7 +139,7 @@ export default async function LeadsPage({
           />
           {TOP_BAR_ENABLED && (
             <PageControls
-              isPrivileged={showDomainFilter}
+              isPrivileged={isPrivileged}
             />
           )}
         </CondensingPageHeader>
