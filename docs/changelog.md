@@ -12,6 +12,29 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-08 — TimePicker: typed time input above the wheels
+
+**Why:** the time wheels (hours 1–12, minutes 0–59) were scroll-only. On a trackpad, dragging
+through up to 59 minute rows is slow and fiddly. The scroll wheel stays for the premium feel;
+typing becomes the fast path.
+
+**What changed (`src/components/ui/TimePicker.tsx` only — one shared panel serves both surfaces):**
+
+- **`TimeTypeInput`** — a compact mono input mounted at the top of `TimePickerWheelPanel`, so
+  both the standalone `TimePicker` popover **and** the `DatePicker` embedded time panel get it.
+- **`parseTypedTime()`** accepts `9`, `930`, `0930`, `9:30`, `9.30`, `21:30`, and `9:30 pm`
+  (am/pm suffix with or without dots). 24-hour entries (`0`, `13`–`23`) derive their own
+  meridiem; 12-hour entries keep the current AM/PM toggle unless a suffix is typed.
+- Commits on **Enter or blur**; invalid input reverts to the current value with a brief
+  `--color-danger` border. **Escape** cancels the edit without closing the popover
+  (`stopPropagation` keeps it from the panel's window Escape listener). Focus selects all.
+- The input mirrors wheel scrolls and AM/PM taps live while not being edited; committing a
+  typed time snaps the wheels to it through the existing `onChange` path.
+- `PANEL_EST_HEIGHT` 248 → 290 for the flip-up estimate (the post-mount re-measure still
+  corrects the real height).
+
+---
+
 ## 2026-08-07 — Leads domain filter opened to agents (additive narrowing)
 
 **Why:** some agents carry leads from two Gia domains. The `/leads` domain filter was gated to

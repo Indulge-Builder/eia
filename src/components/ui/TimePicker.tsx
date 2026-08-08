@@ -77,8 +77,154 @@ function displayLabel(v: string): string {
 
 const DEFAULT_STATE: TimeState = { hour: 9, minute: 0, meridiem: "AM" };
 
+/**
+ * Parse a free-typed time string into display state.
+ * Accepts: "9", "930", "0930", "9:30", "9.30", "21:30", "9:30pm", "9 pm", "9:30 a.m."
+ * Returns null when the input cannot be read as a time.
+ */
+function parseTypedTime(
+  raw: string,
+  fallbackMeridiem: Meridiem,
+): TimeState | null {
+  let s = raw.trim().toLowerCase();
+  if (!s) return null;
+
+  // Peel an am/pm suffix (with or without dots/space) off the end.
+  let typedMeridiem: Meridiem | null = null;
+  const merMatch = s.match(/(a\.?m?\.?|p\.?m?\.?)$/);
+  if (merMatch && /[ap]/.test(merMatch[1])) {
+    typedMeridiem = merMatch[1].startsWith("p") ? "PM" : "AM";
+    s = s.slice(0, merMatch.index).trim();
+  }
+  if (!s) return null;
+
+  let hour: number;
+  let minute: number;
+
+  const sep = s.match(/^(\d{1,2})[:. ](\d{1,2})$/);
+  if (sep) {
+    hour = parseInt(sep[1], 10);
+    minute = parseInt(sep[2], 10);
+  } else if (/^\d+$/.test(s)) {
+    if (s.length <= 2) {
+      hour = parseInt(s, 10);
+      minute = 0;
+    } else if (s.length <= 4) {
+      // "930" → 9:30, "0930"/"2130" → 09:30 / 21:30
+      hour = parseInt(s.slice(0, s.length - 2), 10);
+      minute = parseInt(s.slice(-2), 10);
+    } else {
+      return null;
+    }
+  } else {
+    return null;
+  }
+
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+  if (hour > 23 || minute > 59) return null;
+
+  // 24-hour entry (0 or 13–23) carries its own meridiem and wins over a suffix.
+  if (hour === 0 || hour > 12) {
+    const meridiem: Meridiem = hour >= 12 ? "PM" : "AM";
+    const h12 = hour % 12 === 0 ? 12 : hour % 12;
+    return { hour: h12, minute, meridiem };
+  }
+
+  return { hour, minute, meridiem: typedMeridiem ?? fallbackMeridiem };
+}
+
+/** The editable fast path above the wheels — type "9:30" instead of scrolling. */
+function TimeTypeInput({
+  hour,
+  minute,
+  meridiem,
+  onCommit,
+}: {
+  hour: number;
+  minute: number;
+  meridiem: Meridiem;
+  onCommit: (s: TimeState) => void;
+}) {
+  const formatted = `${hour}:${String(minute).padStart(2, "0")}`;
+  const [draft, setDraft] = useState(formatted);
+  const [editing, setEditing] = useState(false);
+  const [invalid, setInvalid] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Mirror external changes (wheel scrolls, AM/PM taps) while not editing.
+  useEffect(() => {
+    if (!editing) setDraft(formatted);
+  }, [formatted, editing]);
+
+  const commit = useCallback(() => {
+    const parsed = parseTypedTime(draft, meridiem);
+    if (parsed) {
+      onCommit(parsed);
+      setInvalid(false);
+    } else {
+      setDraft(formatted);
+      setInvalid(draft.trim() !== "" && draft !== formatted);
+    }
+  }, [draft, meridiem, onCommit, formatted]);
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      aria-label="Type a time"
+      placeholder="9:30"
+      value={draft}
+      onFocus={(e) => {
+        setEditing(true);
+        setInvalid(false);
+        e.target.select();
+      }}
+      onBlur={() => {
+        setEditing(false);
+        commit();
+      }}
+      onChange={(e) => {
+        setDraft(e.target.value);
+        if (invalid) setInvalid(false);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+          inputRef.current?.blur();
+        } else if (e.key === "Escape") {
+          setDraft(formatted);
+          setInvalid(false);
+          inputRef.current?.blur();
+          // Keep the panel open — Escape here only cancels the edit.
+          e.stopPropagation();
+        }
+      }}
+      style={{
+        width: "100%",
+        height: 30,
+        textAlign: "center",
+        background: "var(--neu-input-bg)",
+        border: `1px solid ${invalid ? "var(--color-danger)" : editing ? "var(--theme-accent)" : "var(--neu-input-edge)"}`,
+        borderRadius: "var(--radius-sm)",
+        boxShadow: "var(--neu-shadow-input)",
+        fontFamily: "var(--font-mono)",
+        fontVariantNumeric: "tabular-nums",
+        fontSize: "var(--text-sm)",
+        fontWeight: "var(--weight-medium)",
+        color: "var(--theme-text-primary)",
+        caretColor: "var(--theme-accent)",
+        outline: "none",
+        transition: "var(--transition-hover)",
+      }}
+    />
+  );
+}
+
 const PANEL_WIDTH = 220;
-const PANEL_EST_HEIGHT = 248;
+const PANEL_EST_HEIGHT = 290;
 
 // ─── Scroll wheel ─────────────────────────────────────────────────────────────
 
@@ -405,6 +551,15 @@ export function TimePickerWheelPanel({
   variant = "standalone",
   style,
 }: TimePickerWheelPanelProps) {
+  const typeInput = (
+    <TimeTypeInput
+      hour={hour}
+      minute={minute}
+      meridiem={meridiem}
+      onCommit={(s) => onChange(s.hour, s.minute, s.meridiem)}
+    />
+  );
+
   const wheels = (
     <div
       style={{
@@ -465,6 +620,7 @@ export function TimePickerWheelPanel({
           ...style,
         }}
       >
+        {typeInput}
         {wheels}
         {ampm}
       </div>
@@ -473,9 +629,10 @@ export function TimePickerWheelPanel({
 
   return (
     <>
-      <div style={{ padding: "var(--space-3) var(--space-3) var(--space-2)" }}>
-        {wheels}
+      <div style={{ padding: "var(--space-3) var(--space-3) 0" }}>
+        {typeInput}
       </div>
+      <div style={{ padding: "var(--space-2) var(--space-3)" }}>{wheels}</div>
       <div style={{ padding: "0 var(--space-3) var(--space-3)" }}>{ampm}</div>
     </>
   );
