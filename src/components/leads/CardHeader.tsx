@@ -23,6 +23,9 @@ type Props = {
  * card; tune the intensity in serene-neumorphic-tokens.css ONLY.
  * Never repaint the strip with --theme-paper-subtle (the sunken well tone,
  * inset marks state only — neu Rule 4) or theme-invariant grey text.
+ * Icon + label take --neu-header-icon / --neu-header-ink — NEVER
+ * --theme-accent: accent text on the accent wash is the same hue at nearly
+ * the same lightness and measured 1.6–2.0:1 (2026-08-10).
  * Display-only (A-06); server-component-safe.
  */
 export function CardHeader({ icon: Icon, label, right, style, iconStyle, labelStyle }: Props) {
@@ -42,13 +45,13 @@ export function CardHeader({ icon: Icon, label, right, style, iconStyle, labelSt
         style={{
           width:       '0.875rem',
           height:      '0.875rem',
-          color:       'var(--theme-accent)',
+          color:       'var(--neu-header-icon)',
           strokeWidth: 1.5,
           flexShrink:  0,
           ...iconStyle,
         }}
       />
-      <span className="label-micro" style={{ color: 'var(--theme-accent)', ...labelStyle }}>
+      <span className="label-micro" style={{ color: 'var(--neu-header-ink)', ...labelStyle }}>
         {label}
       </span>
       {right}

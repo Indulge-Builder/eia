@@ -262,6 +262,17 @@
   --neu-header-wash: color-mix(in srgb, var(--neu-accent) 22%, var(--neu-surface));
   --neu-header-edge: color-mix(in srgb, var(--neu-accent) 32%, transparent);
 
+  /* Header TEXT vocabulary (2026-08-10). The wash and the label can never be the
+     same tone: full --theme-accent on the 22% accent wash measured 1.6–2.0:1, and
+     .label-micro is 10px — WCAG normal text, bar 4.5:1. Swapping to accent-muted
+     is NOT enough (3.9–4.1:1); the tint under it raises the floor. So the hue is
+     split across three tiers: the wash keeps the colour, the label takes the
+     theme's OWN dark ink softened into that wash (~5.9–7.8:1), and the icon —
+     a graphic, 3:1 bar — keeps real chroma at accent-muted (~3.9–4.1:1) so the
+     strip never reads monochrome. Tune header TEXT here only, as with the wash. */
+  --neu-header-ink:  color-mix(in srgb, var(--theme-accent-fg) 82%, var(--neu-header-wash));
+  --neu-header-icon: var(--theme-accent-muted);
+
   --neu-focus-ring:
     0 0 0 1px var(--theme-accent, var(--neu-accent)),
     6px 6px 14px rgb(var(--neu-dark) / 0.38),
@@ -392,6 +403,14 @@
     color-mix(in srgb, var(--neu-accent) 86%, black)
   );
   --neu-accent-wash:     color-mix(in srgb, var(--neu-accent) 14%, transparent);
+
+  /* Header ink INVERTS on charcoal. The light formula (theme dark ink mixed into
+     the wash) measures 1.3–1.7:1 here — the same failure, mirrored. Both tones
+     move to the LIGHT end of the hue instead: label at accent-deep (5.0–5.4:1),
+     icon at the lifted accent (4.2–4.8:1, clears its 3:1 graphic bar). The wash
+     itself needs no override — it derives from --neu-accent/--neu-surface. */
+  --neu-header-ink:  var(--neu-accent-deep);
+  --neu-header-icon: var(--neu-accent);
 
   --neu-text-primary:   #E8E0D4;
   --neu-text-secondary: #A39A88;

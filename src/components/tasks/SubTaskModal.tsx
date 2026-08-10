@@ -1372,8 +1372,8 @@ export function SubTaskModal({
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                         {/* Themed header (the CardHeader accent-surface treatment) */}
-                        <CheckSquare style={{ width: 13, height: 13, strokeWidth: 1.5, color: "var(--theme-accent)", flexShrink: 0 }} />
-                        <span className="label-micro" style={{ color: "var(--theme-accent)" }}>Action Items</span>
+                        <CheckSquare style={{ width: 13, height: 13, strokeWidth: 1.5, color: "var(--neu-header-icon)", flexShrink: 0 }} />
+                        <span className="label-micro" style={{ color: "var(--neu-header-ink)" }}>Action Items</span>
                       </div>
                       {totalCount > 0 && (
                         <span
@@ -1510,8 +1510,8 @@ export function SubTaskModal({
                       background:   "var(--neu-header-wash)",
                     }}
                   >
-                    <CalendarDays style={{ width: 13, height: 13, strokeWidth: 1.5, color: "var(--theme-accent)", flexShrink: 0 }} />
-                    <span className="label-micro" style={{ color: "var(--theme-accent)" }}>Details</span>
+                    <CalendarDays style={{ width: 13, height: 13, strokeWidth: 1.5, color: "var(--neu-header-icon)", flexShrink: 0 }} />
+                    <span className="label-micro" style={{ color: "var(--neu-header-ink)" }}>Details</span>
                   </div>
                   <div
                     style={{

@@ -58,7 +58,7 @@ export function SectionCard({
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 className="label-micro" style={{ margin: 0, color: "var(--theme-accent)" }}>
+          <h2 className="label-micro" style={{ margin: 0, color: "var(--neu-header-ink)" }}>
             {title}
           </h2>
           {description && (
@@ -66,7 +66,9 @@ export function SectionCard({
               style={{
                 fontFamily: "var(--font-sans)",
                 fontSize:   "var(--text-xs)",
-                color:      "var(--theme-text-tertiary)",
+                /* Inside the accent wash, so header ink — tertiary measures
+                   1.8:1 here. Size and case still separate it from the title. */
+                color:      "var(--neu-header-ink)",
                 margin:     "var(--space-1) 0 0",
               }}
             >

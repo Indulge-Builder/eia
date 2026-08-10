@@ -12,6 +12,49 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-10 — Card header legibility: the wash and its text can't be the same tone
+
+**Why:** the card header strip is painted `--neu-header-wash` (22% accent into the surface) and
+its label was painted `--theme-accent` — the same hue only slightly lighter. Measured across the
+eight themes that label lands at **1.63–1.95:1**, the lowest-contrast text anywhere in Serene.
+`.label-micro` is 10px semibold uppercase, which is WCAG *normal* text (bar 4.5:1), and small
+uppercase letterforms are the hardest shapes on the page — the worst place to spend contrast.
+The accompanying icon failed too, under even the looser 3:1 non-text bar.
+
+**The trap:** swapping the label to the retuned `--theme-accent-muted` does **not** fix it
+(3.92–4.10:1). The tint underneath raises the floor and eats the gain. The header needed its own
+answer, not the palette's.
+
+**What changed — the hue is split across three tiers instead of one doing two jobs:**
+
+- Two new tokens in `serene-neumorphic-tokens.css`, beside `--neu-header-wash` (the same
+  "tune the header here only" contract): **`--neu-header-ink`** = the theme's OWN dark ink
+  (`--theme-accent-fg`) softened 82% into the wash → **5.94–7.78:1**, and
+  **`--neu-header-icon`** = `--theme-accent-muted` → ~4:1, clearing the 3:1 graphic bar while
+  keeping real chroma so the strip never reads monochrome.
+- **The wash is unchanged at 22%** — the header stays unmistakably the theme-coloured zone, and
+  the text is still the theme's colour, just the far end of that hue's lightness range.
+- **Dark mode inverts and gets its own values** (measured, not assumed): the light formula lands
+  at **1.34–1.69:1** on charcoal — the same failure mirrored. Both tones move to the light end
+  instead: ink = `--neu-accent-deep` (5.0–5.4:1), icon = `--neu-accent` (4.2–4.8:1). The wash
+  needs no dark override; it derives from `--neu-accent`/`--neu-surface`.
+- **Adopters:** `leads/CardHeader.tsx` (all 7 dossier cards), `ui/SectionCard.tsx` (title **and**
+  its description, which also sits inside the strip at 1.8:1), `tasks/SubTaskModal.tsx` (two
+  inline header copies: Action Items, Details), and `whatsapp/ConversationPanel.tsx` — whose
+  header failed the same way for a different reason: the phone subtitle was `--theme-text-tertiary`
+  (1.8:1 on the wash) and the back arrow `--theme-text-secondary` (2.8:1, under the graphic bar).
+  The serif contact name stays `--theme-text-primary`, so the hierarchy still reads.
+- No `iconStyle`/`labelStyle` overrides exist at any `CardHeader` call site, so every consumer
+  picks the new defaults up with no per-file work. `LeadWhatsAppCard`'s local `CardHeader` is a
+  separate component on `--theme-paper-subtle`, not the wash — deliberately untouched.
+
+**Found, not fixed (needs a product decision):** `--theme-text-tertiary` measures **2.14:1** and
+`--theme-text-secondary` **3.26:1** on plain paper — both under the 4.5:1 body bar, app-wide and
+independent of any wash. That is a systemic call about how quiet Serene's quiet text is allowed
+to be, affecting hundreds of surfaces, so it is deliberately not bundled into this header fix.
+
+---
+
 ## 2026-08-10 — Accent palette contrast retune (all 8 themes, token-only)
 
 **Why:** a measured OKLCH/WCAG audit confirmed the softened accents were too close to the cream

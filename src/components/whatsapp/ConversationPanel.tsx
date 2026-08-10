@@ -391,7 +391,9 @@ export function ConversationPanel({
               background:     "transparent",
               border:         "none",
               borderRadius:   "var(--radius-md)",
-              color:          "var(--theme-text-secondary)",
+              /* On the accent wash, secondary lands at 2.8:1 — under the 3:1
+                 graphic bar. The header icon tone clears it. */
+              color:          "var(--neu-header-icon)",
               cursor:         "pointer",
               padding:        0,
             }}
@@ -428,7 +430,10 @@ export function ConversationPanel({
             style={{
               fontFamily: "var(--font-mono)",
               fontSize:   "var(--text-xs)",
-              color:      "var(--theme-text-tertiary)",
+              /* Header ink, not tertiary: this strip is the accent wash, where
+                 tertiary measured 1.8:1 (2026-08-10). The serif name above stays
+                 text-primary, so the hierarchy still reads. */
+              color:      "var(--neu-header-ink)",
               margin:     0,
             }}
           >
