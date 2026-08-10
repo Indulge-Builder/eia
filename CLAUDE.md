@@ -339,16 +339,18 @@ Marshmallow radii, one cream material #ECE8E1/#F1EDE6). A theme changes
 ONLY the accent family — surfaces, shadow pairs, text, semantic status
 chips, and the --domain-* chart palette NEVER re-tint. EIGHT themes;
 the neu layer overrides the stock design-tokens accents with these
-design-approved softened values:
+design-approved softened values (2026-08-10 contrast retune: accents
+unified into the OKLCH L 0.70–0.76 band, all deep tones AA ≥4.6:1 on
+paper; hues unchanged — fills read on cream instead of vanishing):
 
-data-theme="earth" → honey gold       #D6BC82 (deep #8A7448, fg #33290F)
-data-theme="air"   → powder sky       #97B5D2 (deep #587A96, fg #223240)
-data-theme="water" → soft seafoam     #8FC3B9 (deep #4E7E74, fg #1C2E2A)
-data-theme="fire"  → terracotta peach #DC9877 (deep #A05C3E, fg #3A1F12)
-data-theme="candy" → soft pink        #F0B5D2 (deep #A85C87, fg #2E1522)
-data-theme="rose"  → English rose     #D9A0A5 (deep #B57F84, fg #45272A)
-data-theme="moss"  → matcha sage      #A9C4A0 (deep #6F8A66, fg #26301F)
-data-theme="lilac" → light lilac      #C9C0E4 (deep #8E83B8, fg #2E2840)
+data-theme="earth" → honey gold       #D0AC5A (deep #7D6738, fg #33290F)
+data-theme="air"   → powder sky       #7CA3C8 (deep #4B6E8B, fg #223240)
+data-theme="water" → soft seafoam     #68B1A5 (deep #407369, fg #1C2E2A)
+data-theme="fire"  → terracotta peach #E18C63 (deep #9D5637, fg #3A1F12)
+data-theme="candy" → rose-pink        #DF8DB7 (deep #9D4E7C, fg #2E1522)
+data-theme="rose"  → English rose     #D68891 (deep #915B61, fg #45272A)
+data-theme="moss"  → matcha sage      #8DB181 (deep #56714D, fg #26301F)
+data-theme="lilac" → light lilac      #A99BCF (deep #6E6297, fg #2E2840)
 
 Default (no attribute) = Earth. Theme attribute goes on <html>.
 ALL accents take DARK INK --theme-accent-fg — pastel fills can never

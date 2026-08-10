@@ -315,8 +315,8 @@
     "semantic_hash": ""
   },
   "src/app/(dashboard)/leads/page.tsx": {
-    "mtime": 1783668278.0279777,
-    "ast_hash": "b3ef2b6c9817afa560a08fcc929e1564",
+    "mtime": 1786097290.2997334,
+    "ast_hash": "5996b86111b8d9a0b892c226a9d86b22",
     "semantic_hash": ""
   },
   "src/app/(dashboard)/performance/FounderDrillDownDeck.tsx": {
@@ -945,8 +945,8 @@
     "semantic_hash": ""
   },
   "src/components/leads/LeadsFilters.tsx": {
-    "mtime": 1783089222.4315796,
-    "ast_hash": "9cb90f5b2e18f7e09b81b99aaf41567f",
+    "mtime": 1786097313.1458292,
+    "ast_hash": "64f326a8968ecc64b6711617f2e083a9",
     "semantic_hash": ""
   },
   "src/components/leads/LeadsPagination.tsx": {
@@ -1400,8 +1400,8 @@
     "semantic_hash": ""
   },
   "src/components/ui/TimePicker.tsx": {
-    "mtime": 1783033269.1566803,
-    "ast_hash": "de8fc300aeab61fab788ad5d90d6f61f",
+    "mtime": 1786172940.7258177,
+    "ast_hash": "3a7c6dedf17c716152dbc13272fa4802",
     "semantic_hash": ""
   },
   "src/components/ui/Toggle.tsx": {
@@ -1980,8 +1980,8 @@
     "semantic_hash": ""
   },
   "src/lib/services/leads-service.ts": {
-    "mtime": 1782993368.2711563,
-    "ast_hash": "f1784ca6c952e7e8e37225e052e9afc2",
+    "mtime": 1786097299.7385128,
+    "ast_hash": "dde2e1f5011795104f544cf9f709fe14",
     "semantic_hash": ""
   },
   "src/lib/services/llm-providers-service.ts": {
@@ -2095,8 +2095,8 @@
     "semantic_hash": ""
   },
   "src/lib/types/database.ts": {
-    "mtime": 1783082148.9994466,
-    "ast_hash": "f3ef64c28267d4bf20c286da40961596",
+    "mtime": 1786097318.6068525,
+    "ast_hash": "b2e10c815eeeb6a644c753f750995fb9",
     "semantic_hash": ""
   },
   "src/lib/types/elaya.ts": {
@@ -2160,8 +2160,8 @@
     "semantic_hash": ""
   },
   "src/lib/utils/domain-scope.ts": {
-    "mtime": 1781520999.4592886,
-    "ast_hash": "6b2ea90491df56674420b73e164301a4",
+    "mtime": 1786097280.3332684,
+    "ast_hash": "7272e73ea445db72063bc32d83fffd4a",
     "semantic_hash": ""
   },
   "src/lib/utils/export.ts": {
@@ -3085,8 +3085,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1783286331.300927,
-    "ast_hash": "10205e3c796ecddaca5f6a7da0436825",
+    "mtime": 1786353830.1756563,
+    "ast_hash": "bada5953c76606c4e4d362537975777c",
     "semantic_hash": ""
   },
   "README.md": {
@@ -3170,8 +3170,8 @@
     "semantic_hash": ""
   },
   "docs/changelog.md": {
-    "mtime": 1783679816.1290853,
-    "ast_hash": "fac0e786dd1dbd53425b1751624af0b4",
+    "mtime": 1786353855.4276464,
+    "ast_hash": "7e62aeac73f32ed07174dd98ae68411e",
     "semantic_hash": ""
   },
   "docs/claude-project/1-product-and-status.md": {
@@ -4657,6 +4657,66 @@
   "supabase/migrations/20260710000162_notifications_type_check_sync.sql": {
     "mtime": 1783667793.5444694,
     "ast_hash": "0c069a9bbf142ab619a53130b212f0dd",
+    "semantic_hash": ""
+  },
+  "scripts/obsidian-vault/fix-vault.sh": {
+    "mtime": 1786092105.302085,
+    "ast_hash": "62d1e5e7f58eac1bd3bb0b4fe4252520",
+    "semantic_hash": ""
+  },
+  "scripts/obsidian-vault/obsidian-config/app.json": {
+    "mtime": 1786092105.3179796,
+    "ast_hash": "a7c56e215bb035fda8f05886bfd0928a",
+    "semantic_hash": ""
+  },
+  "scripts/obsidian-vault/obsidian-config/appearance.json": {
+    "mtime": 1786092105.3211076,
+    "ast_hash": "7a0147c2840cd533088c639727a52ed4",
+    "semantic_hash": ""
+  },
+  "scripts/obsidian-vault/obsidian-config/core-plugins.json": {
+    "mtime": 1786092105.3241878,
+    "ast_hash": "7c877bea49eaeabb100563bd157b9051",
+    "semantic_hash": ""
+  },
+  "scripts/obsidian-vault/obsidian-config/graph-colorful.json": {
+    "mtime": 1786092105.3304036,
+    "ast_hash": "78c93793c8016e273f41ecbb5151e0fe",
+    "semantic_hash": ""
+  },
+  "scripts/obsidian-vault/obsidian-config/graph-serene.json": {
+    "mtime": 1786092105.327417,
+    "ast_hash": "c06a45682c1447f9dcbccde57b93047a",
+    "semantic_hash": ""
+  },
+  "scripts/obsidian-vault/switch-graph.sh": {
+    "mtime": 1786092105.3062632,
+    "ast_hash": "25acbebc63f4ad9f813de3e7b80bc5f9",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260807000161_status_counts_agent_domain.sql": {
+    "mtime": 1786097270.7511907,
+    "ast_hash": "802412a194b1b33a544cdf55b9dfefc0",
+    "semantic_hash": ""
+  },
+  "scripts/obsidian-vault/Home.md": {
+    "mtime": 1786092105.309724,
+    "ast_hash": "acf045e3fb43c0edd9429bdd498f8425",
+    "semantic_hash": ""
+  },
+  "scripts/obsidian-vault/README.md": {
+    "mtime": 1786092142.493206,
+    "ast_hash": "22a37f4dc70811db47633748aeb92f19",
+    "semantic_hash": ""
+  },
+  "Serene-Guide.pdf": {
+    "mtime": 1782303027.8459742,
+    "ast_hash": "bf9681db8266f34364a15d2ce470f6ac",
+    "semantic_hash": ""
+  },
+  "elaya-model/luma.png": {
+    "mtime": 1781200238.1297877,
+    "ast_hash": "60db40978d459d9e6894c8e910fefecd",
     "semantic_hash": ""
   }
 }

@@ -12,6 +12,44 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-10 — Accent palette contrast retune (all 8 themes, token-only)
+
+**Why:** a measured OKLCH/WCAG audit confirmed the softened accents were too close to the cream
+paper to register. Paper sits at OKLCH lightness 0.92–0.95 while accents sat at 0.74–0.84 —
+candy measured 1.47:1 and lilac 1.48:1 against `#F1EDE6`, so primary buttons nearly matched the
+card behind them (fire, at 2.04:1, was the only theme that read "present"). Worse: every theme's
+"text-safe" `--theme-accent-muted` failed WCAG AA on paper (2.84:1 rose … 4.39:1 fire, bar is
+4.5:1) — these paint eyebrows, sidebar-active labels, and tab pills. The 12% accent washes
+rendered at ~1.05:1 (invisible; the 22% header wash of 2026-07-03 was compensating for this).
+
+**What changed (hex swaps in the two token files only — zero component changes):**
+
+- **Accents** moved one register deeper into a unified OKLCH L 0.70–0.76 band with 25–50% more
+  chroma, hues untouched. Fills now sit 1.85–2.31:1 vs paper. Earth `#D6BC82→#D0AC5A`,
+  air `#97B5D2→#7CA3C8`, water `#8FC3B9→#68B1A5`, fire `#DC9877→#E18C63`,
+  candy `#F0B5D2→#DF8DB7`, rose `#D9A0A5→#D68891`, moss `#A9C4A0→#8DB181`,
+  lilac `#C9C0E4→#A99BCF`.
+- **Deep tones** recalibrated to pass AA (all ≥4.6:1 on paper): earth `#7D6738`, air `#4B6E8B`,
+  water `#407369`, fire `#9D5637`, candy `#9D4E7C`, rose `#915B61`, moss `#56714D`,
+  lilac `#6E6297`.
+- **Washes**: `--neu-accent-wash`, the per-theme `--theme-accent-surface` mixes, and the
+  `.neu-selected` recipe move 12% → 16% so selected states are actually visible. The 22%
+  `--neu-header-wash` stays and automatically reads richer from the stronger source.
+- **Files**: `serene-neumorphic-tokens.css` (§2 softened blocks for earth/air/water/fire/candy,
+  wash, rose-default fallbacks) and `design-tokens.css` (rose/moss/lilac blocks — their finals
+  live there; hovers switched from stale literals to the `color-mix(86%, black)` convention).
+  CLAUDE.md Theme Quick Reference table updated to match.
+- **Untouched by design**: every `--theme-accent-fg` ink (all still pass 4.9–6.9:1 on the new
+  fills), all surfaces, the semantic pastel/chip families, the `--domain-*` chart palette, and
+  both dark blocks — dark mode white-lifts from `--theme-accent`, so deeper bases produce
+  slightly richer dark accents for free.
+- **Deliberate ceiling:** fills stop at ~2:1, not the 3:1 non-text-UI bar — Serene buttons carry
+  a paired shadow, hairline edge, and dark ink text, and pushing fills to 3:1 (L≈0.62) would
+  break the whisper-pastel identity. A shadow-definition garnish (`--neu-dark` → `158 148 130`,
+  raised alphas +0.03) was audited but deferred pending review on the live app.
+
+---
+
 ## 2026-08-08 — TimePicker: typed time input above the wheels
 
 **Why:** the time wheels (hours 1–12, minutes 0–59) were scroll-only. On a trackpad, dragging

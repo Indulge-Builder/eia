@@ -218,7 +218,7 @@
   --neu-palette-bg:      var(--neu-surface);
   --neu-palette-shadow:  var(--neu-shadow-floating);
   /* Chat: the sender's bubble wash (incoming bubbles stay surface-high) */
-  --neu-chat-user-bg: color-mix(in srgb, var(--theme-accent, #D9A0A5) 12%, var(--neu-surface));
+  --neu-chat-user-bg: color-mix(in srgb, var(--theme-accent, #D68891) 12%, var(--neu-surface));
   /* Hairline on accent-gradient fills (buttons, active accent tab chips) */
   --neu-accent-btn-edge: rgba(255, 255, 255, 0.25);
   /* SeedMandala gradient stops — BRAND-FIXED, never theme-tinted; dark
@@ -229,7 +229,7 @@
   --neu-mandala-disc-to:   #C08A4E;
   /* Empty-state corner watermark mandala + boot-screen ambient glow */
   --neu-watermark-opacity: 0.08;
-  --neu-boot-glow: color-mix(in srgb, var(--neu-accent, #D9A0A5) 28%, transparent);
+  --neu-boot-glow: color-mix(in srgb, var(--neu-accent, #D68891) 28%, transparent);
 }
 
 
@@ -245,15 +245,15 @@
    ================================================================ */
 
 :root {
-  --neu-accent:      var(--theme-accent, #D9A0A5);
-  --neu-accent-deep: var(--theme-accent-muted, #B57F84); /* text-safe on cream */
+  --neu-accent:      var(--theme-accent, #D68891);
+  --neu-accent-deep: var(--theme-accent-muted, #915B61); /* text-safe on cream */
   --neu-accent-fg:   var(--theme-accent-fg, #45272A);    /* ink on accent fills */
   --neu-accent-gradient: linear-gradient(
     145deg,
     color-mix(in srgb, var(--neu-accent) 88%, white),
     color-mix(in srgb, var(--neu-accent) 90%, black)
   );
-  --neu-accent-wash: color-mix(in srgb, var(--neu-accent) 12%, transparent);
+  --neu-accent-wash: color-mix(in srgb, var(--neu-accent) 16%, transparent);
 
   /* Card-header strip wash (CardHeader / SectionCard / SubTaskModal headers) —
      deliberately STRONGER than --neu-accent-wash: 12% of the softened pastel
@@ -279,38 +279,38 @@
    new theme honey-gold. */
 :root:not([data-theme]),
 [data-theme="earth"] {
-  --theme-accent:         #D6BC82;   /* soft honey gold (was #c9a553) */
-  --theme-accent-hover:   color-mix(in srgb, #D6BC82 86%, black);
-  --theme-accent-muted:   #8A7448;   /* text-safe on cream */
-  --theme-accent-surface: color-mix(in srgb, #D6BC82 12%, transparent);
+  --theme-accent:         #D0AC5A;   /* honey gold (2026-08-10 retune; was #D6BC82, stock #c9a553) */
+  --theme-accent-hover:   color-mix(in srgb, #D0AC5A 86%, black);
+  --theme-accent-muted:   #7D6738;   /* text-safe on cream (AA 4.65:1) */
+  --theme-accent-surface: color-mix(in srgb, #D0AC5A 16%, transparent);
   --theme-accent-fg:      #33290F;
 }
 [data-theme="air"] {
-  --theme-accent:         #97B5D2;   /* powder sky (was #54769e) */
-  --theme-accent-hover:   color-mix(in srgb, #97B5D2 86%, black);
-  --theme-accent-muted:   #587A96;
-  --theme-accent-surface: color-mix(in srgb, #97B5D2 12%, transparent);
+  --theme-accent:         #7CA3C8;   /* powder sky (retune; was #97B5D2, stock #54769e) */
+  --theme-accent-hover:   color-mix(in srgb, #7CA3C8 86%, black);
+  --theme-accent-muted:   #4B6E8B;
+  --theme-accent-surface: color-mix(in srgb, #7CA3C8 16%, transparent);
   --theme-accent-fg:      #223240;
 }
 [data-theme="water"] {
-  --theme-accent:         #8FC3B9;   /* soft seafoam (was #1e7d72) */
-  --theme-accent-hover:   color-mix(in srgb, #8FC3B9 86%, black);
-  --theme-accent-muted:   #4E7E74;
-  --theme-accent-surface: color-mix(in srgb, #8FC3B9 12%, transparent);
+  --theme-accent:         #68B1A5;   /* seafoam (retune; was #8FC3B9, stock #1e7d72) */
+  --theme-accent-hover:   color-mix(in srgb, #68B1A5 86%, black);
+  --theme-accent-muted:   #407369;
+  --theme-accent-surface: color-mix(in srgb, #68B1A5 16%, transparent);
   --theme-accent-fg:      #1C2E2A;
 }
 [data-theme="fire"] {
-  --theme-accent:         #DC9877;   /* soft terracotta peach (was #c25022) */
-  --theme-accent-hover:   color-mix(in srgb, #DC9877 86%, black);
-  --theme-accent-muted:   #A05C3E;
-  --theme-accent-surface: color-mix(in srgb, #DC9877 12%, transparent);
+  --theme-accent:         #E18C63;   /* terracotta peach (retune; was #DC9877, stock #c25022) */
+  --theme-accent-hover:   color-mix(in srgb, #E18C63 86%, black);
+  --theme-accent-muted:   #9D5637;
+  --theme-accent-surface: color-mix(in srgb, #E18C63 16%, transparent);
   --theme-accent-fg:      #3A1F12;
 }
 [data-theme="candy"] {
-  --theme-accent:         #F0B5D2;   /* softened candy pink (was #f9b2d7) */
-  --theme-accent-hover:   color-mix(in srgb, #F0B5D2 86%, black);
-  --theme-accent-muted:   #A85C87;
-  --theme-accent-surface: color-mix(in srgb, #F0B5D2 12%, transparent);
+  --theme-accent:         #DF8DB7;   /* rose-pink (retune; was #F0B5D2, stock #f9b2d7) */
+  --theme-accent-hover:   color-mix(in srgb, #DF8DB7 86%, black);
+  --theme-accent-muted:   #9D4E7C;
+  --theme-accent-surface: color-mix(in srgb, #DF8DB7 16%, transparent);
   --theme-accent-fg:      #2E1522;
 }
 
@@ -383,8 +383,8 @@
   --neu-scrim: rgba(12, 10, 7, 0.5);
 
   /* Dark: accent lifts lighter so it holds on charcoal */
-  --neu-accent:          color-mix(in srgb, var(--theme-accent, #D9A0A5) 82%, white);
-  --neu-accent-deep:     color-mix(in srgb, var(--theme-accent, #D9A0A5) 66%, white);
+  --neu-accent:          color-mix(in srgb, var(--theme-accent, #D68891) 82%, white);
+  --neu-accent-deep:     color-mix(in srgb, var(--theme-accent, #D68891) 66%, white);
   --neu-accent-fg:       var(--theme-accent-fg, #45272A);
   --neu-accent-gradient: linear-gradient(
     145deg,
@@ -709,7 +709,7 @@
 
 /* Selected/active/applied — accent wash + slight lift, never inset (Rule 4) */
 .neu-selected {
-  background: color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface));
+  background: color-mix(in srgb, var(--theme-accent) 16%, var(--neu-surface));
   border: 1px solid var(--neu-edge);
   box-shadow: var(--neu-shadow-raised-sm);
 }

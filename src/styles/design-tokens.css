@@ -314,10 +314,10 @@
   --theme-paper-subtle:      #f8eeef;
   --theme-paper-border:      #f0dbdd;
 
-  --theme-accent:            #D9A0A5;
-  --theme-accent-hover:      #c2868b;
-  --theme-accent-muted:      #B57F84;
-  --theme-accent-surface:    rgba(217, 160, 165, 0.12);
+  --theme-accent:            #D68891; /* 2026-08-10 retune (was #D9A0A5) */
+  --theme-accent-hover:      color-mix(in srgb, #D68891 86%, black);
+  --theme-accent-muted:      #915B61; /* text-safe on cream (AA 4.65:1; was #B57F84 at 2.84:1) */
+  --theme-accent-surface:    rgba(214, 136, 145, 0.16);
   --theme-accent-fg:         #45272A; /* rosewood ink — rose cannot hold white */
 
   --theme-text-primary:      #251a1b;
@@ -328,10 +328,10 @@
   --theme-sidebar-bg:              #130c0d;
   --theme-sidebar-border:          #291a1c;
   --theme-sidebar-text:            rgba(255, 235, 238, 0.48);
-  --theme-sidebar-active:          #D9A0A5;
-  --theme-sidebar-hover-bg:        rgba(217, 160, 165, 0.06);
-  --theme-sidebar-active-bg:       rgba(217, 160, 165, 0.13);
-  --theme-sidebar-active-pill:     #D9A0A5;
+  --theme-sidebar-active:          #D68891;
+  --theme-sidebar-hover-bg:        rgba(214, 136, 145, 0.06);
+  --theme-sidebar-active-bg:       rgba(214, 136, 145, 0.13);
+  --theme-sidebar-active-pill:     #D68891;
 
   --shadow-color: 16 10 11;
 }
@@ -358,10 +358,10 @@
   --theme-paper-subtle:      #eff4ec;
   --theme-paper-border:      #dde8d8;
 
-  --theme-accent:            #A9C4A0;
-  --theme-accent-hover:      #8fac85;
-  --theme-accent-muted:      #6F8A66;
-  --theme-accent-surface:    rgba(169, 196, 160, 0.12);
+  --theme-accent:            #8DB181; /* 2026-08-10 retune (was #A9C4A0) */
+  --theme-accent-hover:      color-mix(in srgb, #8DB181 86%, black);
+  --theme-accent-muted:      #56714D; /* text-safe on cream (AA 4.66:1; was #6F8A66 at 3.27:1) */
+  --theme-accent-surface:    rgba(141, 177, 129, 0.16);
   --theme-accent-fg:         #26301F; /* forest ink — sage cannot hold white */
 
   --theme-text-primary:      #1c231a;
@@ -372,10 +372,10 @@
   --theme-sidebar-bg:              #0d100b;
   --theme-sidebar-border:          #1c2419;
   --theme-sidebar-text:            rgba(240, 250, 236, 0.48);
-  --theme-sidebar-active:          #A9C4A0;
-  --theme-sidebar-hover-bg:        rgba(169, 196, 160, 0.06);
-  --theme-sidebar-active-bg:       rgba(169, 196, 160, 0.13);
-  --theme-sidebar-active-pill:     #A9C4A0;
+  --theme-sidebar-active:          #8DB181;
+  --theme-sidebar-hover-bg:        rgba(141, 177, 129, 0.06);
+  --theme-sidebar-active-bg:       rgba(141, 177, 129, 0.13);
+  --theme-sidebar-active-pill:     #8DB181;
 
   --shadow-color: 10 14 8;
 }
@@ -401,10 +401,10 @@
   --theme-paper-subtle:      #f1eff8;
   --theme-paper-border:      #e2def0;
 
-  --theme-accent:            #C9C0E4;
-  --theme-accent-hover:      #ada2d0;
-  --theme-accent-muted:      #8E83B8;
-  --theme-accent-surface:    rgba(201, 192, 228, 0.14);
+  --theme-accent:            #A99BCF; /* 2026-08-10 retune (was #C9C0E4) */
+  --theme-accent-hover:      color-mix(in srgb, #A99BCF 86%, black);
+  --theme-accent-muted:      #6E6297; /* text-safe on cream (AA 4.67:1; was #8E83B8 at 2.96:1) */
+  --theme-accent-surface:    rgba(169, 155, 207, 0.16);
   --theme-accent-fg:         #2E2840; /* deep violet ink — lilac cannot hold white */
 
   --theme-text-primary:      #201c2b;
@@ -415,10 +415,10 @@
   --theme-sidebar-bg:              #0e0c14;
   --theme-sidebar-border:          #1e1a2c;
   --theme-sidebar-text:            rgba(242, 238, 255, 0.48);
-  --theme-sidebar-active:          #C9C0E4;
-  --theme-sidebar-hover-bg:        rgba(201, 192, 228, 0.06);
-  --theme-sidebar-active-bg:       rgba(201, 192, 228, 0.13);
-  --theme-sidebar-active-pill:     #C9C0E4;
+  --theme-sidebar-active:          #A99BCF;
+  --theme-sidebar-hover-bg:        rgba(169, 155, 207, 0.06);
+  --theme-sidebar-active-bg:       rgba(169, 155, 207, 0.13);
+  --theme-sidebar-active-pill:     #A99BCF;
 
   --shadow-color: 12 10 20;
 }
