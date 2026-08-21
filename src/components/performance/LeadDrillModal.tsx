@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { DrillModalShell } from './DrillModalShell';
 import { LeadDrillRow } from './LeadDrillRow';
-import { Spinner } from '@/components/ui/Spinner';
+import { Num } from '@/components/ui/Num';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { ActionResult } from '@/lib/types/index';
 import type { LeadListItemWithAssignee } from '@/lib/services/leads-service';
@@ -80,15 +81,20 @@ export function LeadDrillModal({ open, title, subtitle, emptyLabel = 'No leads h
   }, [open, fetchKey]);
 
   const fullSubtitle =
-    rows.length > 0
-      ? `${subtitle ? `${subtitle} · ` : ''}${rows.length} lead${rows.length === 1 ? '' : 's'}`
-      : subtitle;
+    rows.length > 0 ? (
+      <>
+        {subtitle ? `${subtitle} · ` : ''}
+        <Num>{rows.length}</Num> lead{rows.length === 1 ? '' : 's'}
+      </>
+    ) : (
+      subtitle
+    );
 
   return (
     <DrillModalShell open={open} title={title} subtitle={fullSubtitle} onClose={onClose}>
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-8)' }}>
-          <Spinner size="md" />
+          <LogoSpinner size="md" />
         </div>
       ) : error ? (
         <EmptyState variant="inline" title="Couldn't load leads." size="sm" />

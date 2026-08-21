@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { updateProfile } from "@/lib/actions/profiles";
-import { Button } from "@/components/ui/Button";
+import { Button, type ButtonStatus } from "@/components/ui/Button";
 import type { Profile } from "@/lib/types/database";
 import type { ActionResult } from "@/lib/types";
 
@@ -14,6 +14,21 @@ export function EditProfileForm({ user }: Props) {
   const [state, formAction, isPending] = useActionState(updateProfile, initialState);
 
   const succeeded = state.data !== null;
+
+  // Save morph (polish §03): the button confirms — sage re-tint + check draw +
+  // "Saved" — holds 1.8s, then returns to idle. Fires once per submission.
+  const handledSaveRef = useRef<Profile | null>(null);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (state.data && state.data !== handledSaveRef.current) {
+      handledSaveRef.current = state.data;
+      setSaved(true);
+      const t = setTimeout(() => setSaved(false), 1800);
+      return () => clearTimeout(t);
+    }
+  }, [state.data]);
+
+  const saveStatus: ButtonStatus = isPending ? "pending" : saved ? "success" : "idle";
 
   return (
     <form action={formAction}>
@@ -111,8 +126,14 @@ export function EditProfileForm({ user }: Props) {
             paddingTop:     "var(--space-2)",
           }}
         >
-          <Button variant="primary" type="submit" disabled={isPending} loading={isPending}>
-            {isPending ? 'Saving…' : 'Save Changes'}
+          <Button
+            variant="primary"
+            type="submit"
+            status={saveStatus}
+            loadingLabel="Saving…"
+            successLabel="Saved"
+          >
+            Save Changes
           </Button>
         </div>
       </div>

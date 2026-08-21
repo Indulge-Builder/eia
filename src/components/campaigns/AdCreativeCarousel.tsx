@@ -96,8 +96,9 @@ export function AdCreativeCarousel({ creatives, showMeta = false, align = 'cente
                 width:        i === safeIndex ? '18px' : '6px',
                 height:       '6px',
                 borderRadius: 'var(--radius-full)',
-                background:   i === safeIndex ? 'var(--theme-accent)' : 'var(--theme-paper-border)',
-                transition:   'width var(--duration-fast) var(--ease-out-expo), background var(--duration-fast) var(--ease-in-out)',
+                background:   i === safeIndex ? 'var(--neu-accent-gradient)' : 'var(--neu-chart-grid)',
+                boxShadow:    i === safeIndex ? 'var(--neu-shadow-knob)' : 'none',
+                transition:   'width var(--duration-fast) var(--ease-out-expo), background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out)',
               }}
             />
           ))}

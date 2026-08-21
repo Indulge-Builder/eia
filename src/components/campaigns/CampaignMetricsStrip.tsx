@@ -161,7 +161,7 @@ export function CampaignMetricsStrip({
             marginTop:    'var(--space-3)',
             background:   'var(--theme-paper)',
             border:       '1px solid var(--theme-paper-border)',
-            borderRadius: 'var(--radius-md)',
+            borderRadius: 'var(--neu-radius-card)',
             boxShadow:    'var(--shadow-1)',
             padding:      'var(--space-4)',
           }}

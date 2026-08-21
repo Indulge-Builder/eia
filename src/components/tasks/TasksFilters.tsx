@@ -2,6 +2,7 @@
 
 import { FilterBar } from '@/components/ui/FilterBar';
 import { FilterDropdown } from '@/components/ui/FilterDropdown';
+import { useMediaQuery, MQ } from '@/hooks/useMediaQuery';
 import {
   TASK_STATUS_FILTER_ITEMS,
   MY_TASKS_STATUS_FILTER_ITEMS,
@@ -42,6 +43,7 @@ export function TasksFilters({
   showGroupDomainFilter,
 }: TasksFiltersProps) {
   const isPersonal = activeTab === 'personal';
+  const isMobile   = useMediaQuery(MQ.mobile);
 
   const searchValue = isPersonal ? personalFilters.search : groupFilters.search;
 
@@ -64,7 +66,15 @@ export function TasksFilters({
 
   return (
     <FilterBar
-      style={{ flex: '1 1 0', minWidth: 0 }}
+      // Desktop: share the strip row with the tab tray (grow into the gap).
+      // Mobile: flex-basis 0 never wraps, so the tab tray + count crush the
+      // bar into an unusably narrow scroll viewport — take a full row of the
+      // wrapping strip instead (order 1 keeps tabs + count together on row 1).
+      style={
+        isMobile
+          ? { flexBasis: '100%', minWidth: 0, order: 1 }
+          : { flex: '1 1 0', minWidth: 0 }
+      }
       searchValue={searchValue}
       onSearchChange={(search) => {
         if (isPersonal) patchPersonal({ search });

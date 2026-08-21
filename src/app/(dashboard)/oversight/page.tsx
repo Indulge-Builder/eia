@@ -1,10 +1,10 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/services/profiles-service";
-import { getNotifications } from "@/lib/services/notifications-service";
 import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { PageControls } from "@/components/layout/PageControls";
 import { getTeamTaskOverview } from "@/lib/services/oversight-service";
+import type { AppDomain } from "@/lib/types/database";
 import { OversightSkeleton } from "./OversightSkeleton";
 import { TeamOverviewGrid } from "@/components/oversight/TeamOverviewGrid";
 
@@ -20,14 +20,13 @@ async function TeamOverviewAsync({
   domain,
 }: {
   role: "admin" | "founder";
-  domain: string;
+  domain: AppDomain;
 }) {
   // ONE aggregation query (get_team_task_overview) — admin/founder see every
   // rostered domain, present-agent pulse overlaid from listLivePresence().
   const rows = await getTeamTaskOverview({
     role,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    domain: domain as any,
+    domain,
   });
   return <TeamOverviewGrid rows={rows} />;
 }
@@ -52,9 +51,7 @@ export default async function OversightPage() {
         </h1>
         {TOP_BAR_ENABLED && (
           <PageControls
-            userId={profile.id}
             isPrivileged
-            notificationsPromise={getNotifications(profile.id)}
           />
         )}
       </div>

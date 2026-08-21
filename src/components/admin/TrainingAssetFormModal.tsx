@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { UploadCloud, FileText, ChevronDown, X } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/Button";
-import { Spinner } from "@/components/ui/Spinner";
+import { LogoSpinner } from "@/components/ui/LogoSpinner";
 import { Toggle } from "@/components/ui/Toggle";
 import { createClient } from "@/lib/supabase/client";
 import { upsertTrainingAsset } from "@/lib/actions/elaya-training";
@@ -392,7 +392,7 @@ export function TrainingAssetFormModal({
               >
                 {uploading ? (
                   <>
-                    <Spinner size="md" />
+                    <LogoSpinner size="md" />
                     <span style={{ fontSize: "var(--text-sm)" }}>Uploading…</span>
                   </>
                 ) : (

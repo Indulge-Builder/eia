@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { m as motion } from "framer-motion";
 import { Phone } from "lucide-react";
@@ -10,10 +10,11 @@ import {
   LEAD_STATUS_COLORS,
 } from "@/lib/constants/lead-statuses";
 import { DOMAIN_LABELS } from "@/lib/constants/domains";
-import { EASE_OUT_EXPO, BASE_DURATION } from "@/lib/constants/motion";
+import { EASE_OUT_EXPO, BASE_DURATION, SPRING_CONFIG } from "@/lib/constants/motion";
 import { formatRelativeTime } from "@/lib/utils/dates";
 import { getAgentRecentActivityAction } from "@/lib/actions/dashboard";
 import { useWidgetData } from "@/hooks/useWidgetData";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { DashboardRecentLead } from "@/lib/types";
 import type { WidgetProps } from "../DashboardWidgetSlot";
 import type { CallOutcome, LeadStatus } from "@/lib/types/database";
@@ -37,6 +38,7 @@ function StatusChip({ status }: { status: string }) {
         color: colors?.text ?? "var(--theme-text-secondary)",
         background: colors?.light ?? "var(--theme-paper-subtle)",
         border: `1px solid ${colors?.border ?? "var(--theme-paper-border)"}`,
+        boxShadow: "var(--neu-shadow-chip)",
         whiteSpace: "nowrap",
         flexShrink: 0,
       }}
@@ -255,7 +257,8 @@ function ScopeSwitch({
         display: "inline-flex",
         padding: "2px",
         borderRadius: "var(--radius-full)",
-        background: "var(--theme-paper-subtle)",
+        background: "var(--neu-track-bg)",
+        boxShadow: "var(--neu-shadow-track)",
         border: "1px solid var(--theme-paper-border)",
         opacity: disabled ? 0.6 : 1,
       }}
@@ -265,7 +268,7 @@ function ScopeSwitch({
         aria-hidden
         initial={false}
         animate={{ x: scope === "mine" ? 0 : "100%" }}
-        transition={{ type: "spring", stiffness: 420, damping: 34 }}
+        transition={SPRING_CONFIG}
         style={{
           position: "absolute",
           top: 2,
@@ -273,8 +276,8 @@ function ScopeSwitch({
           left: 2,
           width: "calc(50% - 2px)",
           borderRadius: "var(--radius-full)",
-          background: "var(--theme-accent)",
-          boxShadow: "var(--shadow-1)",
+          background: "var(--neu-accent-gradient)",
+          boxShadow: "var(--neu-shadow-knob)",
         }}
       />
       {options.map((opt) => {
@@ -378,7 +381,10 @@ export function AgentActivityWidget({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
 
-  const leads = data ?? [];
+  // Memoised so the `[leads]` dep on the marquee-measure effect below only
+  // fires on a REAL data change — `data ?? []` would mint a fresh [] every
+  // render while data is null and re-run the effect each time.
+  const leads = useMemo(() => data ?? [], [data]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
 
@@ -421,7 +427,7 @@ export function AgentActivityWidget({
   return (
     <div
       style={{
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         border: "1px solid var(--theme-paper-border)",
         background: "var(--theme-paper)",
         boxShadow: "var(--shadow-1)",
@@ -477,7 +483,8 @@ export function AgentActivityWidget({
               fontWeight: "var(--weight-medium)",
               color: "var(--color-success-text)",
               background: "var(--color-success-light)",
-              border: "1px solid var(--color-success-text)",
+              border: "1px solid var(--neu-edge)",
+              boxShadow: "var(--neu-shadow-chip)",
               borderRadius: "var(--radius-full)",
               padding: "1px 6px",
               letterSpacing: "0.03em",
@@ -517,21 +524,10 @@ export function AgentActivityWidget({
           }}
         >
           {loaded && leads.length === 0 ? (
-            <p
-              style={{
-                fontFamily: "var(--font-serif)",
-                fontStyle: "italic",
-                fontSize: "var(--text-sm)",
-                color: "var(--theme-text-tertiary)",
-                textAlign: "center",
-                padding: "var(--space-6) 0",
-                margin: 0,
-              }}
-            >
-              {scope === "mine"
-                ? "No leads worked yet."
-                : "Nothing logged yet."}
-            </p>
+            <EmptyState
+              title={scope === "mine" ? "No leads worked yet." : "Nothing logged yet."}
+              style={{ padding: "var(--space-6) 0" }}
+            />
           ) : (
             // The animated track. When `marquee` is on, the keyframe translates
             // it up by exactly one copy's height + the inter-copy gap

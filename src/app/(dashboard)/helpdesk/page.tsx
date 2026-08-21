@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getCurrentProfile } from '@/lib/services/profiles-service';
 import { getHelpdeskLibrary } from '@/lib/services/intelligence-service';
-import { getNotifications } from '@/lib/services/notifications-service';
 import { DEFAULT_GIA_DOMAIN, isGiaDomain } from '@/lib/constants/domains';
 import { resolveDomainParam } from '@/lib/utils/domain-scope';
 import { TOP_BAR_ENABLED } from '@/lib/constants/feature-flags';
@@ -51,9 +50,7 @@ export default async function HelpdeskPage({ searchParams }: Props) {
           {canEdit && <AddSuggestionButton domain={domain} />}
           {TOP_BAR_ENABLED && (
             <PageControls
-              userId={profile.id}
               isPrivileged={false}
-              notificationsPromise={getNotifications(profile.id)}
             />
           )}
         </div>

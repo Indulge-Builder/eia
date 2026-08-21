@@ -31,6 +31,13 @@ export interface CarouselProps<T> {
   ariaLabel?: string;
   /** Hide the dot indicator (e.g. when slide count is large). Default false. */
   hideDots?: boolean;
+  /**
+   * Hide the whole controls bar (arrows + dots + counter). For consumers
+   * that own their own pager affordance — e.g. the mobile DomainSwiper,
+   * which supplies a neu-token indicator (mobile-ops.md §6). Swipe +
+   * keyboard navigation stay live. Default false.
+   */
+  hideControls?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -48,6 +55,7 @@ export function Carousel<T>({
   getKey,
   ariaLabel = 'Carousel',
   hideDots = false,
+  hideControls = false,
   className,
   style,
 }: CarouselProps<T>) {
@@ -150,7 +158,7 @@ export function Carousel<T>({
           the viewport. The arrows used to overlay the slide edges (absolute,
           on top of card content); docking them in this row keeps them off the
           content and reads as one navigation cluster. */}
-      {multiple && (
+      {multiple && !hideControls && (
         <div
           style={{
             display: 'flex',
@@ -177,7 +185,9 @@ export function Carousel<T>({
                     padding: 0,
                     border: 'none',
                     borderRadius: 'var(--radius-full)',
-                    background: i === safeIndex ? 'var(--theme-accent)' : 'var(--theme-paper-border)',
+                    // Inactive dots need a visible putty tone — the bridged
+                    // paper-border white hairline disappears on cream.
+                    background: i === safeIndex ? 'var(--theme-accent)' : 'var(--neu-text-disabled)',
                     cursor: 'pointer',
                     transition:
                       'width var(--duration-fast) var(--ease-out-expo), background var(--duration-fast) var(--ease-in-out)',
@@ -235,7 +245,8 @@ function CarouselArrow({
         height: '2.25rem',
         flexShrink: 0,
         borderRadius: 'var(--radius-full)',
-        background: 'var(--theme-paper-subtle)',
+        // Raised = touchable: buttons sit on the surface tone, never the well.
+        background: 'var(--neu-surface)',
         border: '1px solid var(--theme-paper-border)',
         boxShadow: 'var(--shadow-1)',
         color: disabled ? 'var(--theme-text-tertiary)' : 'var(--theme-text-primary)',

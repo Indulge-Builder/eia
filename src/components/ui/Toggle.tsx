@@ -73,18 +73,23 @@ export function Toggle({
           width:      track.width,
           height:     track.height,
           borderRadius: 'var(--radius-full)',
-          background: checked ? 'var(--theme-accent)' : 'var(--theme-paper-border)',
+          // Neumorphic Rule 4: the track is a satin inset well in BOTH states —
+          // the knob carries the on-state (accent gradient), never the track.
+          background: checked
+            ? 'color-mix(in srgb, var(--theme-accent) 14%, var(--neu-well))'
+            : 'var(--neu-well)',
           border:     'none',
+          boxShadow:  'var(--neu-shadow-inset)',
           cursor:     disabled ? 'not-allowed' : 'pointer',
           padding:    0,
           transition: `background var(--duration-base) var(--ease-spring)`,
           outline:    'none',
         }}
         onFocus={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--shadow-focus)';
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--neu-focus-ring)';
         }}
         onBlur={(e) => {
-          (e.currentTarget as HTMLButtonElement).style.boxShadow = 'none';
+          (e.currentTarget as HTMLButtonElement).style.boxShadow = 'var(--neu-shadow-inset)';
         }}
       >
         {/* Thumb */}
@@ -98,8 +103,9 @@ export function Toggle({
             width:        thumb.size,
             height:       thumb.size,
             borderRadius: 'var(--radius-full)',
-            background:   'var(--theme-paper)',
-            boxShadow:    'var(--shadow-1)',
+            // Rose-gradient knob when on; raised cream knob when off (specimen).
+            background:   checked ? 'var(--neu-accent-gradient)' : 'var(--neu-surface)',
+            boxShadow:    'var(--neu-shadow-knob)',
             display:      'block',
           }}
         />

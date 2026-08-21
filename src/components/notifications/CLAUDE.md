@@ -4,9 +4,10 @@
 
 | File | Role |
 | ---- | ---- |
-| `NotificationBell.tsx` | Bell icon + unread dot. Owns open/close state. Wraps panel. |
+| `NotificationBell.tsx` | Bell icon + unread dot. Owns open/close state. Wraps panel. Reads inbox state from `<NotificationsProvider>` via `useNotifications()` — takes no seed prop. |
 | `NotificationPanel.tsx` | Dropdown panel. Header + scrollable list. Empty state. |
 | `NotificationItem.tsx` | Single row. Icon. Title/body/timestamp. One uniform style (no unread dot / read pill — the list is unread-only). |
+| `layout/NotificationsProvider.tsx` | The single mount that owns notification state (Realtime + chime + optimistic mark-read/all). Mounted once in the dashboard layout. See `src/components/layout/CLAUDE.md`. |
 
 ## Unread-only display contract (2026-06-17)
 
@@ -25,15 +26,16 @@ read rows.
 
 ## Hook
 
-`src/hooks/useNotifications.ts` is **the only place** that owns notification state.
+`src/components/layout/NotificationsProvider.tsx` is **the only place** that owns notification state;
+`src/hooks/useNotifications.ts` is now a thin `useContext(NotificationsContext)` read.
 
 ```typescript
 const { notifications, unreadCount, markRead, markAllRead, isLoading } =
-  useNotifications({ userId, initialData });
+  useNotifications();
 // `notifications` is the UNREAD slice; `unreadCount === notifications.length`.
 ```
 
-- Initial data seeded from a server-fetched prop. **Streaming contract (perf A-2, 2026-06-11):** the layout starts `getNotifications(profile.id)` WITHOUT awaiting and passes the promise to `Sidebar` as `notificationsPromise`; `Sidebar` unwraps it with React `use()` inside a `<Suspense>` boundary (`SeededNotificationBell`, static same-size `BellFallback`). Never re-add a blocking `await getNotifications` to the layout — it stalls every navigation's TTFB for a bell seed. `getNotifications` must keep returning `[]` on error (never reject) — a rejected promise would throw from `use()`. (The seed may include read rows; the hook filters them out — so no seed wiring needs to switch to `getUnreadNotifications`.)
+- **Single provider mount (2026-07-10):** `<NotificationsProvider userId={profile.id}>` is mounted ONCE in the dashboard layout wrapping the shell, so the Realtime subscription + chime survive navigation. The old model mounted the state inside `PageControls` (the bell), which remounted on every route change — tearing down and recreating the channel per navigation, so INSERTs landing in the gap were silently dropped and the badge flickered. The provider seeds **unread-only** on mount via `getMyNotificationsAction()` (`.is('read_at', null)` + `.limit(50)` — 50+ recent READ rows can no longer push older unread rows out of the window). `NotificationBell` takes no seed prop.
 - Realtime subscription via Supabase `postgres_changes` — filtered strictly at channel level by `recipient_id=eq.${userId}`. Not filtered in JS after the event — filtering in JS leaks data.
 - Optimistic updates for `markRead` and `markAllRead` operate on the full `allNotifications` array (mutate by id) — rollback on error restores the item, which re-enters the unread slice.
 - Subscribe on mount, unsubscribe on unmount.
@@ -113,15 +115,15 @@ Never move the filter into the JS handler. It must be on the channel to prevent 
 
 `src/hooks/useNotificationSound.ts` — synthesised C6/E6 major-third chime via Web Audio API.
 
-- `play()` fires in `useNotifications` INSERT handler only. Never on initial seed, markRead, or markAllRead.
-- `useNotifications` calls `useNotificationSound()` at its top and calls `sound.play()` after prepending the new notification to state.
+- `play()` fires in the `NotificationsProvider` INSERT handler only. Never on initial seed, markRead, or markAllRead.
+- `NotificationsProvider` calls `useNotificationSound()` at its top and calls `sound.play()` (via a latest-ref `playRef`) after prepending the new notification to state.
 - **localStorage key:** `serene:notifications:sound:v1`. Default `true` when absent. Persists across page refresh.
 - **Debounce:** 1500ms minimum between plays. Three rapid Realtime inserts → one chime.
 - **Autoplay guard:** checks `context.state`. If `'suspended'`, calls `context.resume()`. If still not `'running'`, returns silently. No `console.error`, no throw — silence is correct fallback for first-load Realtime events.
 - **Settings toggle:** `src/components/profile/NotificationPreferences.tsx` — first row, live (not stubbed). `Toggle` controlled by `sound.enabled` / `sound.setEnabled`.
 - **No audio files** — sound is entirely synthesised (two oscillators, GainNode exponential decay).
 
-**Rule:** No file outside `useNotifications.ts` may call `sound.play()`. The hook is the single owner.
+**Rule:** No file outside `NotificationsProvider.tsx` may call `sound.play()`. The provider is the single owner.
 
 ## Wire-up: where notifications are created
 

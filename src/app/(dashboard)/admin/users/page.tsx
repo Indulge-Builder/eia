@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { getCurrentProfile, getAllProfiles } from "@/lib/services/profiles-service";
-import { getNotifications } from "@/lib/services/notifications-service";
 import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { PageControls } from "@/components/layout/PageControls";
 import { UsersTable } from "@/components/admin/UsersTable";
@@ -48,9 +47,7 @@ export default async function AdminUsersPage() {
         </Link>
           {TOP_BAR_ENABLED && (
             <PageControls
-              userId={profile.id}
               isPrivileged={false}
-              notificationsPromise={getNotifications(profile.id)}
             />
           )}
         </div>

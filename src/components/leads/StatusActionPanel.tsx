@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { updateLeadStatus, recordDeal } from '@/lib/actions/leads';
 import { CalledModal } from './CalledModal';
 import { WonDealModal } from './WonDealModal';
+import { DEAL_CELEBRATE_STORAGE_KEY } from '@/components/deals/DealCard';
 import { Modal } from '@/components/ui/modal';
 import { formErrors } from '@/lib/validations/form-errors';
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS } from '@/lib/constants/lead-statuses';
@@ -99,6 +100,16 @@ export function StatusActionPanel({ lead, callerProfile }: Props) {
       if (result.error) {
         setError(result.error);
         throw new Error(result.error);
+      }
+      // Arm the one-shot petal-fall celebration for the lead→Won transition —
+      // the matching DealCard plays it once when the user lands on /deals
+      // (polish handoff §03, reserved exclusively for Won).
+      try {
+        if (result.data?.dealId) {
+          sessionStorage.setItem(DEAL_CELEBRATE_STORAGE_KEY, result.data.dealId);
+        }
+      } catch {
+        // sessionStorage unavailable — the celebration is decorative, skip it
       }
       closeModal();
       router.refresh();
@@ -254,7 +265,7 @@ export function StatusActionPanel({ lead, callerProfile }: Props) {
         style={{
           background:   'var(--theme-paper)',
           border:       '1px solid var(--theme-paper-border)',
-          borderRadius: 'var(--radius-lg)',
+          borderRadius: 'var(--neu-radius-card)',
           boxShadow:    'var(--shadow-1)',
           padding:      'var(--space-4) var(--space-5)',
           display:      'flex',
@@ -416,32 +427,34 @@ type ButtonVariant = 'primary' | 'secondary' | 'success' | 'accent' | 'danger-ou
 
 const VARIANT_STYLES: Record<ButtonVariant, React.CSSProperties> = {
   primary: {
-    background: 'var(--theme-accent)',
+    background: 'var(--neu-accent-gradient)',
     color:      'var(--theme-accent-fg)',
-    border:     'none',
-    boxShadow:  'var(--shadow-accent-glow)',
+    border:     '1px solid var(--neu-edge)',
+    boxShadow:  'var(--neu-shadow-raised-sm)',
   },
   secondary: {
-    background: 'var(--theme-paper-subtle)',
+    background: 'var(--neu-surface)',
     color:      'var(--theme-text-primary)',
-    border:     '1px solid var(--theme-paper-border)',
-    boxShadow:  'var(--shadow-1)',
+    border:     '1px solid var(--neu-edge)',
+    boxShadow:  'var(--neu-shadow-raised-sm)',
   },
   success: {
-    background: 'var(--color-success)',
-    color:      'var(--color-success-fg)',
-    border:     '1px solid var(--color-success)',
-    boxShadow:  '0 0 0 1px color-mix(in srgb, var(--color-success) 40%, transparent), 0 2px 8px color-mix(in srgb, var(--color-success) 25%, transparent)',
+    background: 'var(--color-success-light)',
+    color:      'var(--color-success-text)',
+    border:     '1px solid var(--neu-edge)',
+    boxShadow:  'var(--neu-shadow-chip)',
   },
   accent: {
-    background: 'var(--theme-accent-surface)',
-    color:      'var(--theme-accent)',
-    border:     '1px solid var(--theme-accent-surface)',
+    background: 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))',
+    color:      'var(--neu-accent-deep)',
+    border:     '1px solid var(--neu-edge)',
+    boxShadow:  'var(--neu-shadow-chip)',
   },
   'danger-outline': {
-    background: 'transparent',
+    background: 'var(--color-danger-light)',
     color:      'var(--color-danger-text)',
-    border:     '1px solid var(--color-danger)',
+    border:     '1px solid var(--neu-edge)',
+    boxShadow:  'var(--neu-shadow-chip)',
   },
   'ghost-danger': {
     background: 'transparent',
@@ -451,7 +464,8 @@ const VARIANT_STYLES: Record<ButtonVariant, React.CSSProperties> = {
   revive: {
     background: 'var(--color-warning-light)',
     color:      'var(--color-warning-text)',
-    border:     '1px solid var(--color-warning)',
+    border:     '1px solid var(--neu-edge)',
+    boxShadow:  'var(--neu-shadow-chip)',
     fontWeight: 'var(--weight-semibold)' as string,
   },
 };
@@ -716,8 +730,9 @@ function ReasonModal({
                     gap:          'var(--space-3)',
                     width:        '100%',
                     padding:      'var(--space-2) var(--space-3)',
-                    background:   active ? 'var(--theme-accent-surface)' : 'var(--theme-paper-subtle)',
-                    border:       `1px solid ${active ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
+                    background:   active ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))' : 'var(--neu-surface)',
+                    border:       '1px solid var(--neu-edge)',
+                    boxShadow:    active ? 'var(--neu-shadow-chip)' : 'none',
                     borderRadius: 'var(--radius-sm)',
                     cursor:       'pointer',
                     transition:   'var(--transition-hover)',
@@ -725,7 +740,7 @@ function ReasonModal({
                     fontFamily:   'var(--font-sans)',
                     fontSize:     'var(--text-sm)',
                     fontWeight:   'var(--weight-medium)',
-                    color:        active ? 'var(--theme-accent)' : 'var(--theme-text-primary)',
+                    color:        active ? 'var(--neu-accent-deep)' : 'var(--theme-text-primary)',
                   }}
                 >
                   {/* Radio dot */}
@@ -736,7 +751,7 @@ function ReasonModal({
                       width:          16,
                       height:         16,
                       borderRadius:   'var(--radius-full)',
-                      border:         `1.5px solid ${active ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
+                      border:         `1.5px solid ${active ? 'var(--theme-accent)' : 'var(--neu-text-tertiary)'}`,
                       display:        'flex',
                       alignItems:     'center',
                       justifyContent: 'center',
@@ -780,9 +795,10 @@ function ReasonModal({
               width:        '100%',
               minHeight:    '80px',
               padding:      'var(--space-3)',
-              border:       '1px solid var(--theme-paper-border)',
-              borderRadius: 'var(--radius-sm)',
-              background:   'var(--theme-paper)',
+              border:       '1px solid var(--neu-input-edge)',
+              borderRadius: 'var(--radius-lg)',
+              background:   'var(--neu-input-bg)',
+              boxShadow:    'var(--neu-shadow-input)',
               fontSize:     'var(--text-sm)',
               color:        'var(--theme-text-primary)',
               lineHeight:   'var(--leading-relaxed)',
@@ -790,16 +806,14 @@ function ReasonModal({
               outline:      'none',
               fontFamily:   'var(--font-sans)',
               boxSizing:    'border-box',
-              transition:   'height var(--duration-base) var(--ease-out-soft), border-color var(--duration-fast) var(--ease-in-out)',
+              transition:   'height var(--duration-base) var(--ease-out-soft), box-shadow var(--duration-fast) var(--ease-in-out)',
               opacity:      isPending ? 0.6 : 1,
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = 'var(--theme-accent)';
-              e.currentTarget.style.boxShadow   = 'var(--shadow-focus)';
+              e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)';
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = 'var(--theme-paper-border)';
-              e.currentTarget.style.boxShadow   = 'none';
+              e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)';
             }}
           />
         </div>

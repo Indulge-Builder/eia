@@ -23,7 +23,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, m as motion, useReducedMotion } from 'framer-motion';
-import { ElayaGlyph } from '@/components/ui/elaya-glyph';
+import { ElayaGlyphDisc } from '@/components/ui/elaya-glyph';
 import { Dialog } from '@/components/ui/Dialog';
 import { useToast } from '@/hooks/useToast';
 import { getElayaChatSeedAction } from '@/lib/actions/elaya';
@@ -139,7 +139,9 @@ export function ElayaWidget() {
         whileHover={reduceMotion ? undefined : { scale: 1.05 }}
         whileTap={reduceMotion ? undefined : { scale: 0.95 }}
       >
-        <ElayaGlyph size={24} />
+        {/* The company-logo glyph on its charcoal disc (README §Assets) —
+            breathing = Elaya is present. */}
+        <ElayaGlyphDisc size={40} />
       </motion.button>
 
       {/* The chat IS the modal surface — no card-in-a-card. The Dialog provides

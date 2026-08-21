@@ -2,6 +2,7 @@
 
 import { m as motion } from 'framer-motion';
 import { ENTER_DURATION, EASE_OUT_EXPO } from '@/lib/constants/motion';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 
 // Semantic stat-card palettes — shared by AgentDetailPanel and DomainOverviewPanel.
 export const STAT_PALETTES = [
@@ -45,12 +46,12 @@ export function StatAtom({ label, value, paletteIndex, delay = 0, onClick }: Sta
           padding:        'var(--space-3) var(--space-4)',
           background:     p.bg,
           borderRadius:   'var(--radius-lg)',
-          border:         `1px solid ${p.border}`,
+          border:         '1px solid var(--neu-edge)',
           minWidth:       0,
           overflow:       'hidden',
           cursor:         'pointer',
           textAlign:      'left',
-          boxShadow:      'var(--shadow-1)',
+          boxShadow:      'var(--neu-shadow-chip)',
           transition:     'box-shadow var(--duration-fast) var(--ease-in-out)',
         }}
       >
@@ -73,7 +74,8 @@ export function StatAtom({ label, value, paletteIndex, delay = 0, onClick }: Sta
         padding:        'var(--space-3) var(--space-4)',
         background:     p.bg,
         borderRadius:   'var(--radius-lg)',
-        border:         `1px solid ${p.border}`,
+        border:         '1px solid var(--neu-edge)',
+        boxShadow:      'var(--neu-shadow-chip)',
         minWidth:       0,
         overflow:       'hidden',
       }}
@@ -114,16 +116,16 @@ function StatAtomBody({
       </span>
       <span
         style={{
-          fontFamily:         'var(--font-mono)',
+          fontFamily:         'var(--font-serif)',
           fontSize:           'var(--text-xl)',
-          fontWeight:         'var(--weight-normal)',
+          fontWeight:         'var(--weight-semibold)',
           fontVariantNumeric: 'tabular-nums',
           color:              palette.value,
           lineHeight:         '1',
           whiteSpace:         'nowrap',
         }}
       >
-        {value}
+        <AnimatedNumber value={value} />
       </span>
     </>
   );

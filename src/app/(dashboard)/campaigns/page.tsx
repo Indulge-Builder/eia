@@ -4,7 +4,6 @@ import type { SearchParams } from 'next/dist/server/request/search-params';
 import { cookies } from 'next/headers';
 import { getCurrentProfile } from '@/lib/services/profiles-service';
 import { resolveDomainParam } from '@/lib/utils/domain-scope';
-import { getNotifications } from '@/lib/services/notifications-service';
 import { TOP_BAR_ENABLED } from '@/lib/constants/feature-flags';
 import { PageControls } from '@/components/layout/PageControls';
 import type { CampaignFilters, AppDomain } from '@/lib/types/database';
@@ -73,9 +72,7 @@ export default async function CampaignsPage({
         <h1 className="type-page-title m-0">Campaigns<span className="page-title-dot">.</span></h1>
         {TOP_BAR_ENABLED && (
           <PageControls
-            userId={profile.id}
             isPrivileged={showDomainFilter}
-            notificationsPromise={getNotifications(profile.id)}
           />
         )}
       </div>

@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserCircle, Check } from 'lucide-react';
-import { Spinner } from '@/components/ui/Spinner';
+import { CardHeader } from '@/components/leads/CardHeader';
+import { SeedMandala } from '@/components/ui/SeedMandala';
 import { Button } from '@/components/ui/Button';
 import { updatePersonalDetails, updateLeadCity } from '@/lib/actions/leads';
 import type { Lead } from '@/lib/types/database';
@@ -30,26 +31,30 @@ const JSONB_FIELD_KEYS = [...JSONB_GRID_FIELDS.map((f) => f.key), DETAILS_FIELD.
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
+/* Inputs FLOAT (neumorphic Rule 3): gradient sheen + paired input shadow. */
 const inputStyle: React.CSSProperties = {
   width:        '100%',
   height:       '2.25rem',
   padding:      '0 var(--space-3)',
-  border:       '1px solid var(--theme-paper-border)',
-  borderRadius: 'var(--radius-sm)',
-  background:   'var(--theme-paper)',
+  border:       '1px solid var(--neu-input-edge)',
+  borderRadius: 'var(--radius-lg)',
+  background:   'var(--neu-input-bg)',
+  boxShadow:    'var(--neu-shadow-input)',
   fontFamily:   'var(--font-sans)',
   fontSize:     'var(--text-sm)',
   color:        'var(--theme-text-primary)',
   outline:      'none',
   boxSizing:    'border-box',
+  transition:   'box-shadow var(--duration-fast) var(--ease-in-out)',
 };
 
 const textareaStyle: React.CSSProperties = {
   width:        '100%',
   padding:      'var(--space-2) var(--space-3)',
-  border:       '1px solid var(--theme-paper-border)',
-  borderRadius: 'var(--radius-sm)',
-  background:   'var(--theme-paper)',
+  border:       '1px solid var(--neu-input-edge)',
+  borderRadius: 'var(--radius-lg)',
+  background:   'var(--neu-input-bg)',
+  boxShadow:    'var(--neu-shadow-input)',
   fontFamily:   'var(--font-sans)',
   fontSize:     'var(--text-sm)',
   color:        'var(--theme-text-primary)',
@@ -57,6 +62,7 @@ const textareaStyle: React.CSSProperties = {
   resize:       'vertical',
   outline:      'none',
   boxSizing:    'border-box',
+  transition:   'box-shadow var(--duration-fast) var(--ease-in-out)',
 };
 
 const labelStyle: React.CSSProperties = {
@@ -78,10 +84,10 @@ const readValueStyle = (hasValue: boolean): React.CSSProperties => ({
 });
 
 function focusAccent(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
-  e.currentTarget.style.borderColor = 'var(--theme-accent)';
+  e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)';
 }
 function blurReset(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
-  e.currentTarget.style.borderColor = 'var(--theme-paper-border)';
+  e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)';
 }
 
 export function PersonalDetailsCard({ lead, canEdit }: Props) {
@@ -157,53 +163,32 @@ export function PersonalDetailsCard({ lead, canEdit }: Props) {
       style={{
         background:   'var(--theme-paper)',
         border:       `1px solid ${active ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    active ? 'var(--shadow-focus)' : 'var(--shadow-1)',
         overflow:     'hidden',
         transition:   'border-color 0.15s ease, box-shadow 0.15s ease',
       }}
     >
       {/* Header */}
-      <div
-        style={{
-          display:      'flex',
-          alignItems:   'center',
-          gap:          'var(--space-2)',
-          padding:      'var(--space-4) var(--space-5)',
-          borderBottom: '1px solid var(--theme-paper-border)',
-          background:   'var(--theme-paper-subtle)',
-        }}
-      >
-        <UserCircle
-          style={{
-            width:       '0.875rem',
-            height:      '0.875rem',
-            color:       active ? 'var(--theme-accent)' : 'var(--theme-text-tertiary)',
-            strokeWidth: 1.5,
-            flexShrink:  0,
-            transition:  'color 0.15s ease',
-          }}
-        />
-        <span
-          style={{
-            fontFamily:    'var(--font-sans)',
-            fontSize:      'var(--text-2xs)',
-            fontWeight:    'var(--weight-semibold)',
-            letterSpacing: 'var(--tracking-widest)',
-            textTransform: 'uppercase',
-            color:         'var(--theme-text-tertiary)',
-          }}
-        >
-          Personal Details
-        </span>
-
-        <span style={{ marginLeft: 'auto' }}>
-          {saveState === 'saving' && <Spinner size="sm" />}
-          {saveState === 'saved' && (
-            <Check style={{ width: '0.75rem', height: '0.75rem', color: 'var(--color-success)', strokeWidth: 2 }} />
-          )}
-        </span>
-      </div>
+      <CardHeader
+        icon={UserCircle}
+        label="Personal Details"
+        right={
+          <span style={{ marginLeft: 'auto' }}>
+            {saveState === 'saving' && (
+              <SeedMandala
+                size={14}
+                variant="currentColor"
+                spin={3.5}
+                style={{ color: 'var(--theme-accent)' }}
+              />
+            )}
+            {saveState === 'saved' && (
+              <Check style={{ width: '0.75rem', height: '0.75rem', color: 'var(--color-success)', strokeWidth: 2 }} />
+            )}
+          </span>
+        }
+      />
 
       {/* Body */}
       <form onSubmit={handleSave}>

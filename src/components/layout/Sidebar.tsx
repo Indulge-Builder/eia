@@ -1,15 +1,14 @@
 "use client";
 
-import { Suspense, use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, m as motion, useReducedMotion } from "framer-motion";
-import { SPRING_CONFIG, BASE_DURATION, EASE_OUT_EXPO } from "@/lib/constants/motion";
+import { BASE_DURATION, EASE_OUT_EXPO } from "@/lib/constants/motion";
 import {
   LayoutDashboard,
   UserRound,
   Shield,
-  ChevronRight,
   LogOut,
   BarChart2,
   TrendingUp,
@@ -18,7 +17,6 @@ import {
   Settings,
   MessageCircle,
   Film,
-  Bell,
   Wallet,
   BookOpen,
   AlertTriangle,
@@ -35,10 +33,12 @@ import { useSuggestionFeedback } from "@/components/suggestions/SuggestionFeedba
 import { ROLE_LABELS } from "@/lib/constants/roles";
 import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { canAccessRoute } from "@/lib/utils/route-access";
-import { getInitials } from "@/lib/utils/strings";
+import { Avatar } from "@/components/ui/Avatar";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { useMediaQuery, MQ } from "@/hooks/useMediaQuery";
 import { lockBodyScroll } from "@/lib/utils/scroll";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import type { Profile, Notification } from "@/lib/types/database";
+import type { Profile } from "@/lib/types/database";
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -65,11 +65,12 @@ const MAIN_NAV: NavItem[] = [
 // Analytics section — Performance + Escalations for all roles (agents get a
 // self-scoped Escalations view); Oversight + Campaigns for manager+ (the shared
 // isManager gate below; Escalations stays Gia-domain-only via canAccessRoute). Budget is
-// admin/founder ONLY — it rides the same isManager gate but is gated down to
-// admin/founder by canAccessRoute (it's absent from DOMAIN_ROUTE_MAP, and only
-// admin/founder bypass that map). Oversight sits directly below Performance and
-// is manager+ only (it rides the isManager gate, unlike Performance which is the
-// all-roles special-case in the filter below).
+// manager+ — it rides the same isManager gate and, since /budget is now in the
+// Gia-domain DOMAIN_ROUTE_MAP, a Gia-domain manager passes canAccessRoute (a
+// non-Gia manager still doesn't). A manager sees only their own domain's SPEND
+// (server-pinned); admin/founder bypass the map and see all domains + recharges.
+// Oversight sits directly below Performance and is manager+ only (it rides the
+// isManager gate, unlike Performance which is the all-roles special-case below).
 const ANALYTICS_NAV: NavItem[] = [
   { href: "/performance", label: "Performance", icon: BarChart2 },
   { href: "/oversight", label: "Oversight", icon: Telescope },
@@ -126,21 +127,31 @@ function NavLink({
   isActive,
 }: NavItem & { isActive: boolean }) {
   const reduceMotion = useReducedMotion();
+  // Hover feedback is the ICON colour fill (accent) — no background wash
+  // (removed 2026-07-03); tracked as state so the icon tile can react.
+  const [hovered, setHovered] = useState(false);
+  // md icon rail (md..lg) hides labels — the charcoal Tooltip (right side)
+  // carries them there; full sidebar / mobile drawer show the label inline,
+  // so the pill is disabled (never tooltip a visible label).
+  const tabletDown = useMediaQuery(MQ.tabletDown);
+  const mobile = useMediaQuery(MQ.mobile);
+  const isRail = tabletDown && !mobile;
   return (
+    <Tooltip label={label} side="right" wrap="block" disabled={!isRail}>
     <Link
       href={href}
       // Layout props live in .serene-nav-link (globals.css) so the md icon-rail
       // media query can centre the icon — inline styles would win otherwise.
       className="serene-nav-link"
-      title={label}
+      // Active nav item stays CLEAN (2026-07-03): no background wash, no
+      // border/shadow chip, no left pill — the accent icon tile below is the
+      // one active indicator. Label just firms up (active colour + medium).
       style={{
         color: isActive
           ? "var(--theme-sidebar-active)"
           : "var(--theme-sidebar-text)",
-        background: isActive ? "var(--theme-sidebar-active-bg)" : "transparent",
-        border: isActive
-          ? "1px solid color-mix(in srgb, var(--theme-accent) 18%, transparent)"
-          : "1px solid transparent",
+        background: "transparent",
+        border: "1px solid transparent",
         fontFamily: "var(--font-sans)",
         fontSize: "var(--text-sm)",
         fontWeight: isActive ? "var(--weight-medium)" : "var(--weight-normal)",
@@ -150,62 +161,61 @@ function NavLink({
       }}
       onMouseEnter={(e) => {
         if (!isActive) {
-          e.currentTarget.style.background = "var(--theme-sidebar-hover-bg)";
-          e.currentTarget.style.color = "var(--theme-canvas-text)";
+          setHovered(true);
           // design-dna §6.3 — nav item hover nudge, x: 2
           if (!reduceMotion) e.currentTarget.style.transform = "translateX(2px)";
         }
       }}
       onMouseLeave={(e) => {
         if (!isActive) {
-          e.currentTarget.style.background = "transparent";
-          e.currentTarget.style.color = "var(--theme-sidebar-text)";
+          setHovered(false);
           e.currentTarget.style.transform = "translateX(0)";
         }
       }}
     >
-      {/* Active left pill — design-dna §5.99 #01: it does not toggle, it travels.
-          top is offset-positioned (not translateY) so Framer owns transform. */}
-      {isActive && (
-        <motion.span
-          layoutId="sidebar-active-pill"
-          aria-hidden="true"
-          transition={reduceMotion ? { duration: 0 } : SPRING_CONFIG}
+      {/* Icon tile — THE active indicator: the current page's icon sits on a
+          small accent-gradient tile; inactive icons stay bare. (The left
+          travelling pill + active background wash were removed 2026-07-03.)
+          Hover on an inactive item fills the ICON with the theme accent —
+          no row background (removed 2026-07-03). */}
+      <span
+        aria-hidden="true"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "26px",
+          height: "26px",
+          borderRadius: "9px",
+          flexShrink: 0,
+          margin: "-4px 0",
+          background: isActive ? "var(--neu-accent-gradient)" : "transparent",
+          boxShadow: isActive ? "var(--neu-shadow-knob)" : "none",
+          // Hover fill uses the DEEP accent (the pastel --theme-accent is too
+          // faint on the cream rail) + a heavier stroke — bold and unmissable.
+          color: isActive
+            ? "var(--theme-accent-fg)"
+            : hovered
+              ? "var(--neu-accent-deep)"
+              : "inherit",
+          transition:
+            "background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)",
+        }}
+      >
+        <Icon
           style={{
-            position: "absolute",
-            left: 0,
-            top: "calc(50% - 8px)",
-            width: "3px",
-            height: "16px",
-            borderRadius: "0 var(--radius-full) var(--radius-full) 0",
-            background: "var(--theme-sidebar-active-pill)",
+            width: "15px",
+            height: "15px",
+            strokeWidth: hovered && !isActive ? 2.2 : 1.5,
+            flexShrink: 0,
+            transition: "stroke-width var(--duration-fast) var(--ease-in-out)",
           }}
         />
-      )}
-
-      <Icon
-        style={{
-          width: "15px",
-          height: "15px",
-          strokeWidth: 1.5,
-          flexShrink: 0,
-        }}
-      />
+      </span>
       {/* Hidden on the md icon rail — the title attr carries the label there */}
       <span className="serene-sidebar-rail-hide" style={{ flex: 1 }}>{label}</span>
-
-      {isActive && (
-        <motion.span
-          className="serene-sidebar-rail-hide serene-nav-chevron"
-          aria-hidden="true"
-          initial={reduceMotion ? false : { opacity: 0, x: -4 }}
-          animate={{ opacity: 0.5, x: 0 }}
-          transition={{ duration: BASE_DURATION, ease: EASE_OUT_EXPO }}
-        >
-          <ChevronRight style={{ width: "12px", height: "12px" }} />
-        </motion.span>
-      )}
     </Link>
+    </Tooltip>
   );
 }
 
@@ -237,55 +247,13 @@ function NavSection({ label }: { label: string }) {
   );
 }
 
-// ─── Notification bell seed (streamed) ────────────────────
-
-// The layout starts getNotifications() without awaiting and passes the
-// promise down — the shell paints immediately and the seed streams into
-// this Suspense boundary. getNotifications never rejects (returns [] on
-// error), so use() here cannot throw.
-function SeededNotificationBell({
-  userId,
-  promise,
-}: {
-  userId: string;
-  promise: Promise<Notification[]>;
-}) {
-  const initialData = use(promise);
-  return (
-    <NotificationBell userId={userId} initialData={initialData} variant="sidebar" />
-  );
-}
-
-// Static, same-size stand-in while the seed streams — no layout shift.
-function BellFallback() {
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        display:        "flex",
-        alignItems:     "center",
-        justifyContent: "center",
-        width:          "32px",
-        height:         "32px",
-        color:          "var(--theme-sidebar-text)",
-        flexShrink:     0,
-      }}
-    >
-      <Bell style={{ width: "14px", height: "14px", strokeWidth: 1.5 }} />
-    </div>
-  );
-}
-
 // ─── Sidebar ──────────────────────────────────────────────
 
 type SidebarProps = {
   profile: Profile;
-  // Only present (and only consumed) when TOP_BAR_ENABLED is off — the OFF-path
-  // footer bell. When on, the bell lives in PageControls and this is undefined.
-  notificationsPromise?: Promise<Notification[]>;
 };
 
-export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
+export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
   const { openComposer } = useSuggestionFeedback();
   const isPrivileged = profile.role === "admin" || profile.role === "founder";
@@ -315,7 +283,6 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
     };
   }, [drawerOpen]);
 
-  const initials = getInitials(profile.full_name);
   const roleLabel = ROLE_LABELS[profile.role];
 
   return (
@@ -361,10 +328,14 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
     <aside
       className="serene-sidebar"
       data-open={drawerOpen ? "true" : "false"}
+      // Cream raised rail (neumorphic Sidebar specimen): the dark shell
+      // retires — the rail floats on the canvas with the paired shadow +
+      // hairline edge. Height/margin/radius live in .serene-sidebar
+      // (globals.css) so the mobile drawer + md icon-rail modes can differ.
       style={{
-        height: "100dvh",
         background: "var(--theme-sidebar-bg)",
-        boxShadow: "var(--shadow-sidebar)",
+        border: "1px solid var(--neu-edge)",
+        boxShadow: "var(--neu-shadow-raised)",
         display: "flex",
         flexDirection: "column",
         flexShrink: 0,
@@ -399,16 +370,16 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
           }}
         >
           <img
-            src="/logo-light.avif"
+            // Dark-ink logo variant — the light-on-dark logo washes out on the
+            // cream rail (same asset the mobile trigger bubble uses).
+            src="/logo.webp"
             alt=""
             aria-hidden="true"
             className="serene-sidebar-logo-img"
             style={{
               objectFit: "contain",
-              filter: `
-                drop-shadow(0 0 8px  color-mix(in srgb, var(--theme-accent) 30%, transparent))
-                drop-shadow(0 0 20px color-mix(in srgb, var(--theme-accent) 12%, transparent))
-              `,
+              filter:
+                "drop-shadow(0 0 12px color-mix(in srgb, var(--theme-accent) 18%, transparent))",
             }}
           />
         </Link>
@@ -527,11 +498,10 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
               "color var(--duration-fast) var(--ease-in-out), background var(--duration-fast) var(--ease-in-out)",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = "var(--theme-sidebar-hover-bg)";
-            e.currentTarget.style.color = "var(--theme-canvas-text)";
+            // No hover background (2026-07-03) — the icon takes the deep accent fill.
+            e.currentTarget.style.color = "var(--neu-accent-deep)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
             e.currentTarget.style.color = "var(--theme-sidebar-text)";
           }}
         >
@@ -553,20 +523,15 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
         />
 
         <div className="serene-sidebar-footer-row">
-          {/* Notification bell — seed streams in without blocking the shell.
+          {/* Notification bell — reads inbox state from <NotificationsProvider>
+              (mounted once in the dashboard layout) via context; no seed prop.
               Hidden on the md icon rail (avatar only there).
-              TOP_BAR_ENABLED relocates the bell to the TopBar: the footer mount
+              TOP_BAR_ENABLED relocates the bell to PageControls: the footer mount
               is removed entirely (not CSS-hidden) so exactly one NotificationBell
-              is alive — a second mount would open a duplicate Realtime channel
-              (`notifications:${userId}`, no mount suffix) and double the state. */}
-          {!TOP_BAR_ENABLED && notificationsPromise && (
+              is rendered (the bell state itself lives in the provider regardless). */}
+          {!TOP_BAR_ENABLED && (
             <span className="serene-sidebar-rail-hide">
-              <Suspense fallback={<BellFallback />}>
-                <SeededNotificationBell
-                  userId={profile.id}
-                  promise={notificationsPromise}
-                />
-              </Suspense>
+              <NotificationBell variant="sidebar" />
             </span>
           )}
 
@@ -584,56 +549,21 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
                 : "1px solid transparent",
               transition: "background var(--duration-fast) var(--ease-in-out)",
             }}
-            onMouseEnter={(e) => {
-              if (!isOnProfile)
-                e.currentTarget.style.background =
-                  "var(--theme-sidebar-hover-bg)";
-            }}
-            onMouseLeave={(e) => {
-              if (!isOnProfile)
-                e.currentTarget.style.background = "transparent";
-            }}
+            // No hover background (2026-07-03) — the sidebar hover vocabulary
+            // is icon accent fill only; the avatar row keeps just the cursor.
           >
             {/* Avatar */}
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={profile.full_name}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "var(--radius-sm)",
-                  objectFit: "cover",
-                  flexShrink: 0,
-                  border:
-                    "1px solid color-mix(in srgb, var(--theme-canvas-text) 10%, transparent)",
-                }}
-              />
-            ) : (
-              <div
-                aria-hidden="true"
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "var(--radius-sm)",
-                  background: "var(--theme-accent-surface)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "var(--text-xs)",
-                  fontWeight: "var(--weight-semibold)",
-                  color: isOnProfile
-                    ? "var(--theme-sidebar-active)"
-                    : "var(--theme-sidebar-active)",
-                  border:
-                    "1px solid color-mix(in srgb, var(--theme-accent) 20%, transparent)",
-                }}
-              >
-                {initials}
-              </div>
-            )}
+            <Avatar
+              src={profile.avatar_url}
+              name={profile.full_name}
+              alt={profile.full_name}
+              size="sm"
+              style={{
+                borderRadius: "var(--radius-sm)",
+                border:
+                  "1px solid color-mix(in srgb, var(--theme-canvas-text) 10%, transparent)",
+              }}
+            />
 
             {/* Name + role — hidden on the md icon rail */}
             <div className="serene-sidebar-rail-hide" style={{ flex: 1, minWidth: 0 }}>
@@ -697,13 +627,11 @@ export function Sidebar({ profile, notificationsPromise }: SidebarProps) {
                 "background var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out), transform var(--duration-base) var(--ease-spring)",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background =
-                "var(--theme-sidebar-hover-bg)";
-              e.currentTarget.style.color = "var(--theme-canvas-text)";
+              // No hover background (2026-07-03) — deep-accent icon fill only.
+              e.currentTarget.style.color = "var(--neu-accent-deep)";
               e.currentTarget.style.transform = "rotate(5deg) scale(1.05)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
               e.currentTarget.style.color =
                 "color-mix(in srgb, var(--theme-sidebar-text) 50%, transparent)";
               e.currentTarget.style.transform = "rotate(0deg) scale(1)";

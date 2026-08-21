@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { AtSign, Briefcase, Mail, Phone, Settings2, User, X } from "lucide-react";
 import { updateProfile }  from "@/lib/actions/profiles";
-import { Button } from "@/components/ui/Button";
+import { Button, type ButtonStatus } from "@/components/ui/Button";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { InfoRow } from "@/components/ui/InfoRow";
 import { FormNotice } from "@/components/profile/FormNotice";
@@ -35,13 +35,23 @@ export function ProfileDetailsForm({ profile }: Props) {
   // Freshest values: the action's returned row wins until the RSC revalidates.
   const current = state.data ?? profile;
 
+  // Save morph (polish §03): the button itself confirms — sage re-tint +
+  // check draw + "Saved" — holds 1.8s, then the form folds back to read view.
+  const [saved, setSaved] = useState(false);
   useEffect(() => {
     if (state.data && state.data !== handledSaveRef.current) {
       handledSaveRef.current = state.data;
       toast.success("Profile updated");
-      setEditing(false);
+      setSaved(true);
+      const t = setTimeout(() => {
+        setSaved(false);
+        setEditing(false);
+      }, 1800);
+      return () => clearTimeout(t);
     }
   }, [state.data]);
+
+  const saveStatus: ButtonStatus = isPending ? "pending" : saved ? "success" : "idle";
 
   function normalizePhoneOnBlur() {
     const raw = phoneNumberRef.current?.value ?? "";
@@ -243,11 +253,12 @@ export function ProfileDetailsForm({ profile }: Props) {
               <Button
                 variant="primary"
                 type="submit"
-                disabled={isPending}
-                loading={isPending}
-                style={{ boxShadow: isPending ? "none" : "var(--shadow-accent-glow)" }}
+                status={saveStatus}
+                loadingLabel="Saving…"
+                successLabel="Saved"
+                style={{ boxShadow: saveStatus === "idle" ? "var(--shadow-accent-glow)" : "none" }}
               >
-                {isPending ? "Saving…" : "Save Changes"}
+                Save Changes
               </Button>
             </div>
           </div>

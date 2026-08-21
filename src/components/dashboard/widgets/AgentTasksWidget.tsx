@@ -5,7 +5,10 @@ import Link from "next/link";
 import { RefreshCcw } from "lucide-react";
 import { getAgentTasksSummaryAction } from "@/lib/actions/dashboard";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { formatDate } from "@/lib/utils/dates";
+import { formatCount } from "@/lib/utils/numbers";
 import {
   TASK_CATEGORY,
   TASK_PRIORITY,
@@ -212,7 +215,7 @@ export function AgentTasksWidget({ userId, initialData }: WidgetProps) {
 
       <div
         style={{
-          borderRadius: "var(--radius-lg)",
+          borderRadius: "var(--neu-radius-card)",
           border: "1px solid var(--theme-paper-border)",
           background: "var(--theme-paper)",
           boxShadow: "var(--shadow-1)",
@@ -273,14 +276,14 @@ export function AgentTasksWidget({ userId, initialData }: WidgetProps) {
           >
             <span
               style={{
-                fontFamily: "var(--font-mono)",
+                fontFamily: "var(--font-serif)",
                 fontSize: "var(--text-2xl)",
                 fontWeight: "var(--weight-semibold)",
                 lineHeight: 1,
                 color: "var(--theme-text-primary)",
               }}
             >
-              {tasks.length}
+              <AnimatedNumber value={formatCount(tasks.length)} />
             </span>
             <span
               style={{
@@ -368,19 +371,10 @@ export function AgentTasksWidget({ userId, initialData }: WidgetProps) {
 
           {/* Empty state */}
           {loaded && tasks.length === 0 && (
-            <p
-              style={{
-                fontFamily: "var(--font-serif)",
-                fontStyle: "italic",
-                fontSize: "var(--text-sm)",
-                color: "var(--theme-text-tertiary)",
-                textAlign: "center",
-                padding: "var(--space-6) 0",
-                margin: 0,
-              }}
-            >
-              Nothing on your plate. Enjoy the quiet.
-            </p>
+            <EmptyState
+              title="Nothing on your plate. Enjoy the quiet."
+              style={{ padding: "var(--space-6) 0" }}
+            />
           )}
         </div>
         )}

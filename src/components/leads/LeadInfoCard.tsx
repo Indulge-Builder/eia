@@ -37,9 +37,10 @@ import { DROPDOWN_VARIANTS } from '@/lib/constants/motion';
 import { formatDate } from '@/lib/utils/dates';
 import { getDomainInterests, getServiceCategoryLabel } from '@/lib/constants/interests';
 import { InfoRow } from '@/components/ui/InfoRow';
-import { Spinner } from '@/components/ui/Spinner';
+import { SeedMandala } from '@/components/ui/SeedMandala';
 import { FormChip } from '@/components/ui/TaskFormFields';
 import { CampaignVideoModal } from '@/components/leads/CampaignVideoModal';
+import { CardHeader } from '@/components/leads/CardHeader';
 import {
   assignLead,
   updateLeadEmail,
@@ -102,44 +103,15 @@ export function LeadInfoCard({
       style={{
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    'var(--shadow-1)',
         overflow:     'hidden',
       }}
     >
-      <div
-        style={{
-          display:      'flex',
-          alignItems:   'center',
-          gap:          'var(--space-2)',
-          padding:      'var(--space-4) var(--space-5)',
-          borderBottom: '1px solid var(--theme-paper-border)',
-          background:   'var(--theme-paper-subtle)',
-        }}
-      >
-        <User
-          style={{
-            width:       '0.875rem',
-            height:      '0.875rem',
-            color:       'var(--theme-text-tertiary)',
-            strokeWidth: 1.5,
-            flexShrink:  0,
-          }}
-        />
-        <span
-          style={{
-            fontFamily:    'var(--font-sans)',
-            fontSize:      'var(--text-2xs)',
-            fontWeight:    'var(--weight-semibold)',
-            letterSpacing: 'var(--tracking-widest)',
-            textTransform: 'uppercase',
-            color:         'var(--theme-text-tertiary)',
-          }}
-        >
-          Lead Information
-        </span>
-
-        {lead.lead_intent && (
+      <CardHeader
+        icon={User}
+        label="Lead Information"
+        right={lead.lead_intent && (
           <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
             <span
               style={{
@@ -162,7 +134,7 @@ export function LeadInfoCard({
             </span>
           </span>
         )}
-      </div>
+      />
 
       <div style={{ padding: 'var(--space-5)' }}>
         {/* Single column below sm — two ~140px columns clip values on phones */}
@@ -444,7 +416,15 @@ function FieldSaveFeedback({
   success: boolean;
   error:   string | null;
 }) {
-  if (saving) return <Spinner size="sm" />;
+  if (saving)
+    return (
+      <SeedMandala
+        size={16}
+        variant="currentColor"
+        spin={3.5}
+        style={{ color: 'var(--theme-accent)' }}
+      />
+    );
   if (success) {
     return (
       <Check
@@ -699,7 +679,7 @@ function InterestsInlineField({
                   fontFamily: 'var(--font-sans)', cursor: saving ? 'not-allowed' : 'pointer',
                 }}
               >
-                {saving ? <Spinner size="sm" /> : <Check style={{ width: '0.7rem', height: '0.7rem', strokeWidth: 2 }} />}
+                {saving ? <SeedMandala size={14} variant="currentColor" spin={3.5} /> : <Check style={{ width: '0.7rem', height: '0.7rem', strokeWidth: 2 }} />}
                 Save
               </button>
               <button
@@ -1022,7 +1002,7 @@ function InlineSelectField({
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected) {
-                      (e.currentTarget as HTMLButtonElement).style.background = 'var(--theme-paper-subtle)';
+                      (e.currentTarget as HTMLButtonElement).style.background = 'color-mix(in srgb, var(--theme-accent) 5%, transparent)';
                     }
                   }}
                   onMouseLeave={(e) => {

@@ -28,8 +28,17 @@ export interface CreateNotificationPayload {
 
 // ─── Reads ────────────────────────────────────────────────────────────────────
 
-/** Last 20 unread notifications for `userId`, newest first. */
-export async function getUnreadNotifications(userId: string): Promise<Notification[]> {
+/**
+ * Unread rows only, newest first — the bell panel renders only unread.
+ * The read path is unread-only, keeping the 50 cap.
+ * The unread-only seed keeps 50+ recent READ rows from pushing older unread rows
+ * out of the window (the badge otherwise under-reports). Returns { data, error }
+ * — this backs a server action seed, not a streamed `use()` promise, so it does
+ * not need to swallow errors into [].
+ */
+export async function getUnreadNotifications(
+  userId: string,
+): Promise<{ data: Notification[] | null; error: string | null }> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("notifications")
@@ -37,30 +46,13 @@ export async function getUnreadNotifications(userId: string): Promise<Notificati
     .eq("recipient_id", userId)
     .is("read_at", null)
     .order("created_at", { ascending: false })
-    .limit(20);
-
-  if (error) {
-    console.error("[notifications-service] getUnreadNotifications error:", error);
-    return [];
-  }
-  return data ?? [];
-}
-
-/** Last 50 notifications (read + unread) for `userId`, newest first. */
-export async function getNotifications(userId: string): Promise<Notification[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("*")
-    .eq("recipient_id", userId)
-    .order("created_at", { ascending: false })
     .limit(50);
 
   if (error) {
-    console.error("[notifications-service] getNotifications error:", error);
-    return [];
+    console.error("[notifications-service] getUnreadNotifications error:", error);
+    return { data: null, error: "Failed to load notifications." };
   }
-  return data ?? [];
+  return { data: data ?? [], error: null };
 }
 
 // ─── Mutations ────────────────────────────────────────────────────────────────

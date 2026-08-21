@@ -4,12 +4,14 @@ import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireProfile } from "@/lib/actions/_auth";
-import { getAssignableUsers } from "@/lib/services/profiles-service";
+import { parseActionInput } from "@/lib/actions/_validation";
+import { getAssignableUsers, getDomainDecisionMakers } from "@/lib/services/profiles-service";
 import { createNotification } from "@/lib/services/notifications-service";
 import { RecordDealSchema, CreateWalkInDealSchema } from "@/lib/validations/deal-schema";
 import { formErrors } from "@/lib/validations/form-errors";
 import { normalizeToE164 } from "@/lib/utils/phone";
 import { recordDealCore, type MutationActor } from "@/lib/services/lead-mutations";
+import { emitActivityEvent } from "@/lib/services/activity-events";
 import type { ActionResult } from "@/lib/types/index";
 import type { AppDomain } from "@/lib/types/database";
 import { isGiaDomain, type GiaDomain } from "@/lib/constants/domains";
@@ -34,13 +36,7 @@ async function notifyDealCreated(opts: {
   amount:      number;
   byName:      string;
 }): Promise<void> {
-  const admin = createAdminClient();
-  const { data: recipients } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("domain", opts.domain)
-    .in("role", ["manager", "admin", "founder"])
-    .eq("is_active", true);
+  const recipients = await getDomainDecisionMakers<{ id: string }>(opts.domain);
 
   if (!recipients || recipients.length === 0) return;
 
@@ -70,13 +66,10 @@ async function notifyDealCreated(opts: {
 // ─────────────────────────────────────────────
 export async function recordDeal(
   input: unknown,
-): Promise<ActionResult<{ leadId: string }>> {
+): Promise<ActionResult<{ leadId: string; dealId: string }>> {
   // S-01: Zod validation first line
-  const parsed = RecordDealSchema.safeParse(input);
-  if (!parsed.success) {
-    const first = parsed.error.issues[0];
-    return { data: null, error: first?.message ?? formErrors.generic };
-  }
+  const parsed = parseActionInput(RecordDealSchema, input);
+  if (!parsed.ok) return { data: null, error: parsed.error };
 
   const { leadId, deal_duration, deal_category, deal_amount } = parsed.data;
 
@@ -144,7 +137,11 @@ export async function recordDeal(
   revalidatePath("/leads");
   revalidatePath(`/leads/${(lead.slug as string | null) ?? leadId}`);
 
-  return { data: { leadId }, error: null };
+  // Return the new deal id so the caller (the lead→Won flow in StatusActionPanel)
+  // can stamp the one-shot petal-fall celebration key — the celebration is
+  // reserved for a lead transitioning into Won, played once when the matching
+  // DealCard renders on /deals (polish handoff §03).
+  return { data: { leadId, dealId: core.dealId }, error: null };
 }
 
 // ─────────────────────────────────────────────
@@ -158,11 +155,8 @@ export async function createWalkInDeal(
   input: unknown,
 ): Promise<ActionResult<{ dealId: string }>> {
   // S-01: Zod validation first line
-  const parsed = CreateWalkInDealSchema.safeParse(input);
-  if (!parsed.success) {
-    const first = parsed.error.issues[0];
-    return { data: null, error: first?.message ?? formErrors.generic };
-  }
+  const parsed = parseActionInput(CreateWalkInDealSchema, input);
+  if (!parsed.ok) return { data: null, error: parsed.error };
 
   const data = parsed.data;
 
@@ -248,6 +242,18 @@ export async function createWalkInDeal(
   if (insertError || !inserted) return { data: null, error: formErrors.generic };
 
   const dealId = (inserted as { id: string }).id;
+
+  // Activity stream (mobile-ops §8) — walk-ins have no lead core, so the emit
+  // sits beside the insert here. Best-effort, never fails the write.
+  await emitActivityEvent({
+    domain: finalDomain,
+    actorId: caller.id,
+    subjectType: "deal",
+    subjectId: dealId,
+    eventType: "deal_logged",
+    title: data.contact_name,
+    meta: { amount: data.deal_amount, deal_type: resolved.shape.deal_type, walk_in: true },
+  });
 
   // Bust the /deals route cache so the new row appears on the next load — the
   // server action is the authoritative invalidation, not the modal's

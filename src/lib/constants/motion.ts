@@ -111,6 +111,9 @@ export const SPRING_CONFIG = {
   damping: 30,
 } as const;
 
+/** Gentler spring for sliding tab indicators — settles without snap (V-13). */
+export const SPRING_TAB = { type: 'spring', stiffness: 260, damping: 32 } as const;
+
 /**
  * Bouncier spring for tiny "arrival" pops (notification dot, badges).
  * Lower damping than SPRING_CONFIG → one visible overshoot. Use sparingly.
@@ -119,6 +122,65 @@ export const SPRING_BOUNCE = {
   type: 'spring' as const,
   stiffness: 400,
   damping: 20,
+} as const;
+
+/* ── Polish layer (design_handoff_polish_layer README, "global rules") ──
+   Fixed durations — never re-tune per call site. */
+
+/** Command-palette rise — 320ms spring-out. */
+export const PALETTE_DURATION = 0.32;
+
+/** List-row enter/exit choreography — 380ms spring-out on height/transform. */
+export const ROW_DURATION = 0.38;
+
+/** Row choreography opacity leg — 320ms ease. */
+export const ROW_FADE_DURATION = 0.32;
+
+/** Tooltip fade + 5px directional slide — 180ms. */
+export const TOOLTIP_DURATION = 0.18;
+
+/** Tooltip hover-intent delay before first show (ms). */
+export const TOOLTIP_INTENT_MS = 500;
+
+/** Header condense on scroll — 300ms. */
+export const CONDENSE_DURATION = 0.3;
+
+/** Living-number count-up — 1.4s ease-out-cubic (rAF-driven, not Framer). */
+export const COUNT_UP_MS = 1400;
+
+/** Undo-toast window — the accent depletion bar IS the countdown. */
+export const UNDO_WINDOW_MS = 5000;
+
+/**
+ * List-row choreography (polish handoff §02) — enter settles in from
+ * above, exit collapses and drifts right. Pair with <AnimatePresence>
+ * + `layout` on siblings via <MotionRow> (src/components/ui/RowMotion.tsx).
+ * The height:auto animation here is the handoff-sanctioned exception to
+ * the height-animation ban — Framer measures and tweens it; rows must
+ * carry overflow:hidden (MotionRow does).
+ */
+export const ROW_VARIANTS = {
+  initial: { height: 0, opacity: 0, y: -8 },
+  animate: {
+    height: 'auto',
+    opacity: 1,
+    y: 0,
+    transition: {
+      height:  { duration: ROW_DURATION, ease: EASE_SPRING },
+      y:       { duration: ROW_DURATION, ease: EASE_SPRING },
+      opacity: { duration: ROW_FADE_DURATION, ease: EASE_IN_OUT },
+    },
+  },
+  exit: {
+    height: 0,
+    opacity: 0,
+    x: 24,
+    transition: {
+      height:  { duration: ROW_DURATION, ease: EASE_SPRING },
+      x:       { duration: ROW_DURATION, ease: EASE_SPRING },
+      opacity: { duration: ROW_FADE_DURATION, ease: EASE_IN_OUT },
+    },
+  },
 } as const;
 
 /** Minimal fade only */

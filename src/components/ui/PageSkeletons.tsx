@@ -8,14 +8,15 @@
 // own the chrome once; loading files compose them with page-specific interiors.
 //
 // Server-component-safe: no hooks, no Framer Motion — shimmer comes from the
-// global `.skeleton` CSS class. Bespoke interiors (dashboard bento, whatsapp
-// split-pane) stay bespoke — only the repeated blocks live here.
+// global `.skeleton` CSS class (left→right sheen since the logo-motion
+// handoff; the opacity pulse is gone). Bespoke interiors (dashboard bento,
+// whatsapp split-pane) stay bespoke — only the repeated blocks live here.
 
 import React from 'react';
 
-/** §11.4 stagger: 0/80/160/240/320ms, capped. */
+/** Logo-motion handoff shimmer stagger: 150ms per element, capped. */
 export function skeletonStagger(index: number): number {
-  return Math.min(index * 80, 320);
+  return Math.min(index * 150, 600);
 }
 
 export interface ShimmerProps {
@@ -54,8 +55,14 @@ export interface PageHeaderSkeletonProps {
   actionWidth?: number;
 }
 
-/** Row 1 of the Standard Page Layout Contract — title left, optional CTA right. */
-export function PageHeaderSkeleton({ titleWidth = 80, actionWidth }: PageHeaderSkeletonProps) {
+/** Row 1 of the Standard Page Layout Contract — title left, optional CTA right.
+ *  The spinning seed-mandala watermark was removed 2026-07-06 — it read as
+ *  clutter behind the shimmer blocks. The brand mark now rests only on the
+ *  empty-state (`ui/EmptyState.tsx` `brand`), never on loading skeletons. */
+export function PageHeaderSkeleton({
+  titleWidth = 80,
+  actionWidth,
+}: PageHeaderSkeletonProps) {
   return (
     <div
       style={{
@@ -152,7 +159,7 @@ export function SkeletonCard({ style, children }: SkeletonCardProps) {
         padding:      'var(--space-4) var(--space-5)',
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    'var(--shadow-1)',
         ...style,
       }}

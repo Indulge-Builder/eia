@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import { requireProfile } from '@/lib/actions/_auth';
+import { formErrors } from '@/lib/validations/form-errors';
 import {
   getAgentTasksSummary,
   getAgentRecentActivity,
@@ -18,9 +19,9 @@ import {
 import {
   getBudgetSummary,
   getAccountRecharges,
-  filterBudgetRowsByDomain,
   buildBudgetGaugeSummary,
-  type BudgetCampaignRow,
+  buildDomainSpendGaugeSummary,
+  filterBudgetRowsByDomain,
   type BudgetGaugeSummary,
 } from '@/lib/services/ad-spend-service';
 import type { DashboardAgentTask } from '@/lib/types';
@@ -137,7 +138,7 @@ export async function getLeadStatusSummaryAction(
   targetDomain?: AppDomain,
 ): Promise<{ data: LeadStatusSummary | null; error: string | null }> {
   const parsed = WidgetScopeSchema.safeParse({ from, to, domain: targetDomain });
-  if (!parsed.success) return { data: null, error: 'Invalid domain or date range.' };
+  if (!parsed.success) return { data: null, error: formErrors.generic };
 
   const auth = await requireProfile(['manager', 'admin', 'founder']);
   if (!auth.ok) return auth.result;
@@ -161,7 +162,7 @@ export async function getLeadsByCampaignAction(
   targetDomain?: AppDomain,
 ): Promise<{ data: CampaignStatusMix[] | null; error: string | null }> {
   const parsed = WidgetScopeSchema.safeParse({ from, to, domain: targetDomain });
-  if (!parsed.success) return { data: null, error: 'Invalid domain or date range.' };
+  if (!parsed.success) return { data: null, error: formErrors.generic };
 
   const auth = await requireProfile(['manager', 'admin', 'founder']);
   if (!auth.ok) return auth.result;
@@ -187,7 +188,7 @@ export async function getLeadVolumeByDomainsAction(
   domains: AppDomain[],
 ): Promise<{ data: MultiDomainVolumeSummary | null; error: string | null }> {
   const parsed = DomainsVolumeSchema.safeParse({ from, to, domains });
-  if (!parsed.success) return { data: null, error: 'Invalid parameters.' };
+  if (!parsed.success) return { data: null, error: formErrors.generic };
 
   const auth = await requireProfile(['manager', 'admin', 'founder']);
   if (!auth.ok) return auth.result;
@@ -208,7 +209,7 @@ export async function getLeadVolumeForDomainAction(
   targetDomain: AppDomain,
 ): Promise<{ data: LeadVolumeSummary | null; error: string | null }> {
   const parsed = VolumeScopeSchema.safeParse({ from, to, domain: targetDomain });
-  if (!parsed.success) return { data: null, error: 'Invalid parameters.' };
+  if (!parsed.success) return { data: null, error: formErrors.generic };
 
   const auth = await requireProfile(['manager', 'admin', 'founder']);
   if (!auth.ok) return auth.result;
@@ -222,54 +223,14 @@ export async function getLeadVolumeForDomainAction(
 }
 
 // ─────────────────────────────────────────────
-// Campaign Budget (budget widget refresh / cohort change — admin/founder)
-// Spend joined to lead + deal outcomes via getBudgetSummary (ad-spend-service).
-// Managers are pinned to their own domain via effectiveWidgetDomain — the
-// domain is derived from the campaign-key prefix, same map lead ingestion uses.
-// ─────────────────────────────────────────────
-const BudgetScopeSchema = z.object({
-  from:   z.string().datetime({ message: 'Invalid from date.' }),
-  to:     z.string().datetime({ message: 'Invalid to date.'   }),
-  domain: z.enum(GIA_DOMAIN_ENUM).optional(),
-}).refine(
-  ({ from, to }) => new Date(from) < new Date(to),
-  { message: 'from must be before to.' },
-);
-
-export async function getBudgetSummaryWidgetAction(
-  from: string,
-  to:   string,
-  targetDomain?: AppDomain,
-): Promise<{ data: BudgetCampaignRow[] | null; error: string | null }> {
-  const parsed = BudgetScopeSchema.safeParse({ from, to, domain: targetDomain });
-  if (!parsed.success) return { data: null, error: 'Invalid domain or date range.' };
-
-  // Admin/founder only (mirrors the /budget page + the budget widget roles).
-  const auth = await requireProfile(['admin', 'founder']);
-  if (!auth.ok) return auth.result;
-  const profile = auth.profile;
-
-  // Admin/founder get the target they asked for (or the all-domain view).
-  const scopeDomain = effectiveWidgetDomain(
-    profile.role,
-    profile.domain as AppDomain,
-    parsed.data.domain,
-  );
-
-  const rows = await getBudgetSummary(parsed.data.from, parsed.data.to);
-  return {
-    data: scopeDomain ? filterBudgetRowsByDomain(rows, scopeDomain) : rows,
-    error: null,
-  };
-}
-
-// ─────────────────────────────────────────────
-// Campaign Budget fuel gauge (budget widget refresh / cohort change — admin/founder)
-// The org-wide ad-account "tank": recharged → spent → remaining + an ROI
-// roll-up, for the active date range. ALWAYS org-wide regardless of role —
-// recharges carry no domain, so there is no domain param and no manager pin
-// (a per-domain "remaining" would mix domain-filtered spend with org recharges
-// = a finance error). Admin/founder gate only — the gauge is finance-visible.
+// Campaign Budget fuel gauge (budget widget refresh / cohort change — manager+)
+// Admin/founder → the ORG-WIDE ad-account "tank": recharged → spent → remaining
+// + an ROI roll-up (scope 'org'). A MANAGER → their own domain's SPEND plane
+// only (scope 'domain'): spend + campaigns + CPL, with recharged/remaining/
+// consumed null — recharges carry no domain, so a per-domain "remaining" would
+// mix domain-filtered spend with org recharges (a finance error). The manager's
+// domain is pinned server-side from profile.domain (never a client param), so a
+// crafted request can never leak another domain's spend or the org recharge tank.
 // ─────────────────────────────────────────────
 const GaugeScopeSchema = z.object({
   from: z.string().datetime({ message: 'Invalid from date.' }),
@@ -284,17 +245,24 @@ export async function getBudgetGaugeWidgetAction(
   to:   string,
 ): Promise<{ data: BudgetGaugeSummary | null; error: string | null }> {
   const parsed = GaugeScopeSchema.safeParse({ from, to });
-  if (!parsed.success) return { data: null, error: 'Invalid date range.' };
+  if (!parsed.success) return { data: null, error: formErrors.generic };
 
-  // Admin/founder only (mirrors the /budget page + the budget widget roles).
-  const auth = await requireProfile(['admin', 'founder']);
+  // Manager+ (mirrors the /budget page + the budget widget roles).
+  const auth = await requireProfile(['manager', 'admin', 'founder']);
   if (!auth.ok) return auth.result;
+  const profile = auth.profile;
 
-  const [rows, recharges] = await Promise.all([
-    getBudgetSummary(parsed.data.from, parsed.data.to),
-    getAccountRecharges(parsed.data.from, parsed.data.to),
-  ]);
+  const rows = await getBudgetSummary(parsed.data.from, parsed.data.to);
 
+  // Manager: domain-scoped spend plane only — pin to profile.domain server-side
+  // (never a client param) and skip the recharge fetch entirely.
+  if (profile.role === 'manager') {
+    const domainRows = filterBudgetRowsByDomain(rows, profile.domain as AppDomain);
+    return { data: buildDomainSpendGaugeSummary(domainRows), error: null };
+  }
+
+  // Admin/founder: the org-wide tank (unchanged) — spend + org recharges.
+  const recharges = await getAccountRecharges(parsed.data.from, parsed.data.to);
   return { data: buildBudgetGaugeSummary(rows, recharges), error: null };
 }
 

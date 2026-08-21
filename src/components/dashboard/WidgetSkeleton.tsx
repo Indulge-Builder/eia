@@ -8,7 +8,7 @@ export function WidgetSkeleton({ fill = true }: WidgetSkeletonProps) {
     <div
       style={{
         height: fill ? "100%" : undefined,
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         border: "1px solid var(--theme-paper-border)",
         background: "var(--theme-paper)",
         boxShadow: "var(--shadow-1)",
@@ -25,7 +25,7 @@ export function WidgetSkeleton({ fill = true }: WidgetSkeletonProps) {
           height: "10px",
           width: "35%",
           borderRadius: "var(--radius-full)",
-          background: "var(--theme-paper-border)",
+          background: "var(--neu-well)",
           animation: "pulse 1.8s ease-in-out infinite",
         }}
       />
@@ -35,7 +35,7 @@ export function WidgetSkeleton({ fill = true }: WidgetSkeletonProps) {
           height: "20px",
           width: "55%",
           borderRadius: "var(--radius-sm)",
-          background: "var(--theme-paper-border)",
+          background: "var(--neu-well)",
           animation: "pulse 1.8s ease-in-out 80ms infinite",
         }}
       />
@@ -56,7 +56,7 @@ export function WidgetSkeleton({ fill = true }: WidgetSkeletonProps) {
               height: "14px",
               width: `${80 - i * 8}%`,
               borderRadius: "var(--radius-xs)",
-              background: "var(--theme-paper-border)",
+              background: "var(--neu-well)",
               animation: `pulse 1.8s ease-in-out ${i * 80}ms infinite`,
             }}
           />

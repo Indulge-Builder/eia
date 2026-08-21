@@ -20,7 +20,7 @@ export function DossierCardSkeleton({ headerWidth = 120, rows = 3 }: Props) {
       style={{
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    'var(--shadow-1)',
         overflow:     'hidden',
       }}

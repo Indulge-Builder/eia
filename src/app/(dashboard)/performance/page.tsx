@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/services/profiles-service";
-import { getNotifications } from "@/lib/services/notifications-service";
 import { resolveDomainParam } from "@/lib/utils/domain-scope";
 import { DEFAULT_GIA_DOMAIN, GIA_DOMAINS } from "@/lib/constants/domains";
 import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
@@ -173,9 +172,7 @@ export default async function PerformancePage({
           </h1>
           {TOP_BAR_ENABLED && (
             <PageControls
-              userId={profile.id}
               isPrivileged={false}
-              notificationsPromise={getNotifications(profile.id)}
             />
           )}
         </div>
@@ -206,9 +203,7 @@ export default async function PerformancePage({
           </h1>
           {TOP_BAR_ENABLED && (
             <PageControls
-              userId={profile.id}
               isPrivileged={false}
-              notificationsPromise={getNotifications(profile.id)}
             />
           )}
         </div>
@@ -269,11 +264,9 @@ export default async function PerformancePage({
         </h1>
         {TOP_BAR_ENABLED && (
           <PageControls
-            userId={profile.id}
             // Founder/admin: the global domain selector seeds the roster filter
             // (ManagerPerformancePanel reads serene-domain on mount).
             isPrivileged
-            notificationsPromise={getNotifications(profile.id)}
           />
         )}
       </div>

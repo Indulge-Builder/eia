@@ -9,16 +9,21 @@
 
 import { z } from "zod";
 import { requireProfile } from "@/lib/actions/_auth";
+import { parseActionInput } from "@/lib/actions/_validation";
 import {
   markNotificationRead,
   markAllNotificationsRead,
+  getUnreadNotifications,
 } from "@/lib/services/notifications-service";
+import { uuidField } from "@/lib/validations/fields";
+import { formErrors } from "@/lib/validations/form-errors";
 import type { ActionResult } from "@/lib/types/index";
+import type { Notification } from "@/lib/types/database";
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 const markReadSchema = z.object({
-  id: z.string().uuid("Invalid notification ID."),
+  id: uuidField("Invalid notification ID."),
 });
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
@@ -31,10 +36,8 @@ export async function markNotificationReadAction(
   id: string,
 ): Promise<ActionResult<{ id: string }>> {
   // Zod validation — Rule 02
-  const parsed = markReadSchema.safeParse({ id });
-  if (!parsed.success) {
-    return { data: null, error: parsed.error.issues[0]?.message ?? "Invalid input." };
-  }
+  const parsed = parseActionInput(markReadSchema, { id });
+  if (!parsed.ok) return { data: null, error: parsed.error };
 
   // Session auth — Rule 09
   const auth = await requireProfile();
@@ -55,7 +58,7 @@ export async function markAllReadAction(): Promise<ActionResult<{ success: true 
   // Zod validation — Rule 02 (no schema needed — session-scoped, no untrusted input)
   const parsed = z.object({}).safeParse({});
   if (!parsed.success) {
-    return { data: null, error: "Invalid input." };
+    return { data: null, error: formErrors.generic };
   }
 
   // Session auth — Rule 09
@@ -67,4 +70,24 @@ export async function markAllReadAction(): Promise<ActionResult<{ success: true 
   if (error) return { data: null, error };
 
   return { data: { success: true }, error: null };
+}
+
+/**
+ * Seed the notification bell with the caller's UNREAD notifications (newest first).
+ * Session-scoped — the identity is the verified profile, no input parameter.
+ * Called once by the layout-mounted NotificationsProvider on mount.
+ */
+export async function getMyNotificationsAction(): Promise<
+  ActionResult<Notification[]>
+> {
+  // Session auth — Rule 09 (no untrusted input → no Zod schema needed, the
+  // sibling markAllReadAction posture)
+  const auth = await requireProfile();
+  if (!auth.ok) return auth.result;
+  const profile = auth.profile;
+
+  const { data, error } = await getUnreadNotifications(profile.id);
+  if (error) return { data: null, error };
+
+  return { data: data ?? [], error: null };
 }

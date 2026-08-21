@@ -1,4 +1,5 @@
 import { CheckCircle2, Circle, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { CardHeader } from '@/components/leads/CardHeader';
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS } from '@/lib/constants/lead-statuses';
 import { formatDate } from '@/lib/utils/dates';
 import type { Lead, LeadStatus } from '@/lib/types/database';
@@ -81,46 +82,17 @@ export function LeadJourneyTimeline({ lead, activities }: Props) {
       style={{
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    'var(--shadow-1)',
         overflow:     'hidden',
       }}
     >
       {/* Header */}
-      <div
-        style={{
-          display:      'flex',
-          alignItems:   'center',
-          gap:          'var(--space-2)',
-          padding:      'var(--space-4) var(--space-5)',
-          borderBottom: '1px solid var(--theme-paper-border)',
-          background:   'var(--theme-paper-subtle)',
-        }}
-      >
-        <Clock
-          style={{
-            width:       '0.875rem',
-            height:      '0.875rem',
-            color:       'var(--theme-text-tertiary)',
-            strokeWidth: 1.5,
-            flexShrink:  0,
-          }}
-        />
-        <span
-          style={{
-            fontFamily:    'var(--font-sans)',
-            fontSize:      'var(--text-2xs)',
-            fontWeight:    'var(--weight-semibold)',
-            letterSpacing: 'var(--tracking-widest)',
-            textTransform: 'uppercase',
-            color:         'var(--theme-text-tertiary)',
-          }}
-        >
-          Lead Journey
-        </span>
-
-        {/* Terminal outcome badge */}
-        {isTerminal && terminalConf && (
+      <CardHeader
+        icon={Clock}
+        label="Lead Journey"
+        right={isTerminal && terminalConf && (
+          /* Terminal outcome badge */
           <span
             style={{
               marginLeft:   'auto',
@@ -137,7 +109,7 @@ export function LeadJourneyTimeline({ lead, activities }: Props) {
             {LEAD_STATUS_LABELS[lead.status as LeadStatus]}
           </span>
         )}
-      </div>
+      />
 
       {/* Stages */}
       <div style={{ padding: 'var(--space-6) var(--space-5)' }}>
@@ -157,7 +129,7 @@ export function LeadJourneyTimeline({ lead, activities }: Props) {
               left:       `calc(50% / ${stages.length})`,
               right:      `calc(50% / ${stages.length})`,
               height:     '2px',
-              background: 'var(--theme-paper-border)',
+              background: 'var(--neu-chart-grid)',
               zIndex:     0,
             }}
           />
@@ -195,34 +167,39 @@ export function LeadJourneyTimeline({ lead, activities }: Props) {
               if (isActive && isTerminalStage && termInfo) {
                 return {
                   bg:     termInfo.bg,
-                  border: `2px solid ${termInfo.border}`,
+                  border: '1px solid var(--neu-edge)',
+                  shadow: 'var(--neu-shadow-knob)',
                   dot:    termInfo.text,
                 };
               }
               if (isActive) {
                 return {
-                  bg:     'var(--theme-accent)',
-                  border: '2px solid var(--theme-accent)',
+                  bg:     'var(--neu-accent-gradient)',
+                  border: '1px solid var(--neu-edge)',
+                  shadow: 'var(--neu-shadow-knob)',
                   dot:    'var(--theme-accent-fg)',
                 };
               }
               if (isPassed && isTerminalStage && termInfo) {
                 return {
                   bg:     termInfo.bg,
-                  border: `2px solid ${termInfo.border}`,
+                  border: '1px solid var(--neu-edge)',
+                  shadow: 'var(--neu-shadow-chip)',
                   dot:    null,
                 };
               }
               if (isPassed) {
                 return {
                   bg:     'var(--color-success-light)',
-                  border: '2px solid var(--color-success)',
+                  border: '1px solid var(--neu-edge)',
+                  shadow: 'var(--neu-shadow-chip)',
                   dot:    null,
                 };
               }
               return {
                 bg:     'var(--theme-paper)',
-                border: '2px solid var(--theme-paper-border)',
+                border: '2px solid var(--neu-chart-grid)',
+                shadow: 'none',
                 dot:    null,
               };
             })();
@@ -261,6 +238,7 @@ export function LeadJourneyTimeline({ lead, activities }: Props) {
                     justifyContent: 'center',
                     background:     nodeColors.bg,
                     border:         nodeColors.border,
+                    boxShadow:      nodeColors.shadow,
                   }}
                 >
                   {isPassed && isTerminalStage && termInfo?.icon === 'x' ? (
@@ -290,7 +268,7 @@ export function LeadJourneyTimeline({ lead, activities }: Props) {
                     />
                   ) : (
                     <Circle
-                      style={{ width: '12px', height: '12px', color: 'var(--theme-paper-border)', strokeWidth: 1.5 }}
+                      style={{ width: '12px', height: '12px', color: 'var(--theme-text-tertiary)', strokeWidth: 1.5 }}
                     />
                   )}
                 </div>

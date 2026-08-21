@@ -185,6 +185,1902 @@ export (CSV / XLSX for a picked month).
 `src/lib/actions/subscriptions.ts`; `src/components/subscriptions/*` (12 components);
 `src/app/(dashboard)/subscriptions/{page,loading}.tsx`. Edited: `numbers.ts`, `export.ts`,
 `form-errors.ts`, `route-permissions.ts`, `Sidebar.tsx`. Typecheck clean (0 errors).
+## 2026-08-10 — Card header legibility: the wash and its text can't be the same tone
+
+**Why:** the card header strip is painted `--neu-header-wash` (22% accent into the surface) and
+its label was painted `--theme-accent` — the same hue only slightly lighter. Measured across the
+eight themes that label lands at **1.63–1.95:1**, the lowest-contrast text anywhere in Serene.
+`.label-micro` is 10px semibold uppercase, which is WCAG *normal* text (bar 4.5:1), and small
+uppercase letterforms are the hardest shapes on the page — the worst place to spend contrast.
+The accompanying icon failed too, under even the looser 3:1 non-text bar.
+
+**The trap:** swapping the label to the retuned `--theme-accent-muted` does **not** fix it
+(3.92–4.10:1). The tint underneath raises the floor and eats the gain. The header needed its own
+answer, not the palette's.
+
+**What changed — the hue is split across three tiers instead of one doing two jobs:**
+
+- Two new tokens in `serene-neumorphic-tokens.css`, beside `--neu-header-wash` (the same
+  "tune the header here only" contract): **`--neu-header-ink`** = the theme's OWN dark ink
+  (`--theme-accent-fg`) softened 82% into the wash → **5.94–7.78:1**, and
+  **`--neu-header-icon`** = `--theme-accent-muted` → ~4:1, clearing the 3:1 graphic bar while
+  keeping real chroma so the strip never reads monochrome.
+- **The wash is unchanged at 22%** — the header stays unmistakably the theme-coloured zone, and
+  the text is still the theme's colour, just the far end of that hue's lightness range.
+- **Dark mode inverts and gets its own values** (measured, not assumed): the light formula lands
+  at **1.34–1.69:1** on charcoal — the same failure mirrored. Both tones move to the light end
+  instead: ink = `--neu-accent-deep` (5.0–5.4:1), icon = `--neu-accent` (4.2–4.8:1). The wash
+  needs no dark override; it derives from `--neu-accent`/`--neu-surface`.
+- **Adopters:** `leads/CardHeader.tsx` (all 7 dossier cards), `ui/SectionCard.tsx` (title **and**
+  its description, which also sits inside the strip at 1.8:1), `tasks/SubTaskModal.tsx` (two
+  inline header copies: Action Items, Details), and `whatsapp/ConversationPanel.tsx` — whose
+  header failed the same way for a different reason: the phone subtitle was `--theme-text-tertiary`
+  (1.8:1 on the wash) and the back arrow `--theme-text-secondary` (2.8:1, under the graphic bar).
+  The serif contact name stays `--theme-text-primary`, so the hierarchy still reads.
+- No `iconStyle`/`labelStyle` overrides exist at any `CardHeader` call site, so every consumer
+  picks the new defaults up with no per-file work. `LeadWhatsAppCard`'s local `CardHeader` is a
+  separate component on `--theme-paper-subtle`, not the wash — deliberately untouched.
+
+**Found, not fixed (needs a product decision):** `--theme-text-tertiary` measures **2.14:1** and
+`--theme-text-secondary` **3.26:1** on plain paper — both under the 4.5:1 body bar, app-wide and
+independent of any wash. That is a systemic call about how quiet Serene's quiet text is allowed
+to be, affecting hundreds of surfaces, so it is deliberately not bundled into this header fix.
+
+---
+
+## 2026-08-10 — Accent palette contrast retune (all 8 themes, token-only)
+
+**Why:** a measured OKLCH/WCAG audit confirmed the softened accents were too close to the cream
+paper to register. Paper sits at OKLCH lightness 0.92–0.95 while accents sat at 0.74–0.84 —
+candy measured 1.47:1 and lilac 1.48:1 against `#F1EDE6`, so primary buttons nearly matched the
+card behind them (fire, at 2.04:1, was the only theme that read "present"). Worse: every theme's
+"text-safe" `--theme-accent-muted` failed WCAG AA on paper (2.84:1 rose … 4.39:1 fire, bar is
+4.5:1) — these paint eyebrows, sidebar-active labels, and tab pills. The 12% accent washes
+rendered at ~1.05:1 (invisible; the 22% header wash of 2026-07-03 was compensating for this).
+
+**What changed (hex swaps in the two token files only — zero component changes):**
+
+- **Accents** moved one register deeper into a unified OKLCH L 0.70–0.76 band with 25–50% more
+  chroma, hues untouched. Fills now sit 1.85–2.31:1 vs paper. Earth `#D6BC82→#D0AC5A`,
+  air `#97B5D2→#7CA3C8`, water `#8FC3B9→#68B1A5`, fire `#DC9877→#E18C63`,
+  candy `#F0B5D2→#DF8DB7`, rose `#D9A0A5→#D68891`, moss `#A9C4A0→#8DB181`,
+  lilac `#C9C0E4→#A99BCF`.
+- **Deep tones** recalibrated to pass AA (all ≥4.6:1 on paper): earth `#7D6738`, air `#4B6E8B`,
+  water `#407369`, fire `#9D5637`, candy `#9D4E7C`, rose `#915B61`, moss `#56714D`,
+  lilac `#6E6297`.
+- **Washes**: `--neu-accent-wash`, the per-theme `--theme-accent-surface` mixes, and the
+  `.neu-selected` recipe move 12% → 16% so selected states are actually visible. The 22%
+  `--neu-header-wash` stays and automatically reads richer from the stronger source.
+- **Files**: `serene-neumorphic-tokens.css` (§2 softened blocks for earth/air/water/fire/candy,
+  wash, rose-default fallbacks) and `design-tokens.css` (rose/moss/lilac blocks — their finals
+  live there; hovers switched from stale literals to the `color-mix(86%, black)` convention).
+  CLAUDE.md Theme Quick Reference table updated to match.
+- **Untouched by design**: every `--theme-accent-fg` ink (all still pass 4.9–6.9:1 on the new
+  fills), all surfaces, the semantic pastel/chip families, the `--domain-*` chart palette, and
+  both dark blocks — dark mode white-lifts from `--theme-accent`, so deeper bases produce
+  slightly richer dark accents for free.
+- **Deliberate ceiling:** fills stop at ~2:1, not the 3:1 non-text-UI bar — Serene buttons carry
+  a paired shadow, hairline edge, and dark ink text, and pushing fills to 3:1 (L≈0.62) would
+  break the whisper-pastel identity. A shadow-definition garnish (`--neu-dark` → `158 148 130`,
+  raised alphas +0.03) was audited but deferred pending review on the live app.
+
+---
+
+## 2026-08-08 — TimePicker: typed time input above the wheels
+
+**Why:** the time wheels (hours 1–12, minutes 0–59) were scroll-only. On a trackpad, dragging
+through up to 59 minute rows is slow and fiddly. The scroll wheel stays for the premium feel;
+typing becomes the fast path.
+
+**What changed (`src/components/ui/TimePicker.tsx` only — one shared panel serves both surfaces):**
+
+- **`TimeTypeInput`** — a compact mono input mounted at the top of `TimePickerWheelPanel`, so
+  both the standalone `TimePicker` popover **and** the `DatePicker` embedded time panel get it.
+- **`parseTypedTime()`** accepts `9`, `930`, `0930`, `9:30`, `9.30`, `21:30`, and `9:30 pm`
+  (am/pm suffix with or without dots). 24-hour entries (`0`, `13`–`23`) derive their own
+  meridiem; 12-hour entries keep the current AM/PM toggle unless a suffix is typed.
+- Commits on **Enter or blur**; invalid input reverts to the current value with a brief
+  `--color-danger` border. **Escape** cancels the edit without closing the popover
+  (`stopPropagation` keeps it from the panel's window Escape listener). Focus selects all.
+- The input mirrors wheel scrolls and AM/PM taps live while not being edited; committing a
+  typed time snaps the wheels to it through the existing `onChange` path.
+- `PANEL_EST_HEIGHT` 248 → 290 for the flip-up estimate (the post-mount re-measure still
+  corrects the real height).
+
+---
+
+## 2026-08-07 — Leads domain filter opened to agents (additive narrowing)
+
+**Why:** some agents carry leads from two Gia domains. The `/leads` domain filter was gated to
+admin/founder, so a cross-domain agent had no way to narrow their worklist to one domain. Agents
+already see all their leads regardless of domain (scope is `assigned_to`, not domain) — this only
+adds the narrowing control.
+
+**What changed:**
+
+- **`resolveDomainParam` (`lib/utils/domain-scope.ts`)** gained an opt-in
+  `opts.allowAgentParam` flag: an agent now reads the `?domain=` **param only** (never the
+  `serene-domain` cookie — that stays the admin/founder TopBar memory). Only `/leads` opts in;
+  the other six caller pages (dashboard, deals, campaigns, performance, escalations, helpdesk)
+  are byte-identical in behaviour. Managers stay `null` everywhere.
+- **`leads/page.tsx`** — `showDomainFilter` now includes the agent role (the `isPrivileged`
+  flag for `PageControls` stays admin/founder). `LeadsFilters` renders the same Domain dropdown.
+- **`getLeadsByRole` (`leads-service.ts`)** — the `domainSlice` now applies to agents too,
+  composed as an extra `AND domain = X` **on top of** the unconditional `assigned_to = userId`.
+  Additive narrowing only: a crafted `?domain=` can never widen an agent's scope (role
+  constraint + RLS both still win). `getLeadsForExport` mirrors the same predicate so a
+  filtered export matches the filtered list.
+- **Migration `20260807000161_status_counts_agent_domain.sql`** — `get_leads_status_counts` v4:
+  the agent branch now honours `p_domain` as the same additive AND (previously ignored, which
+  would have drifted the status pills / totalCount from the table — the C-1 param-sync rule).
+  Body otherwise identical to 0099; signature unchanged; agent scope still self-derived from
+  `auth.uid()`.
+
+**Performance:** zero new queries — one extra indexed equality predicate on an already
+agent-scoped query. The Redis list key already serialises `filters.domain`, so cache slots
+separate automatically; no invalidation changes.
+
+---
+
+## 2026-08-07 — Obsidian vault retired, its hand-written tooling archived into the repo
+
+**Why:** the vault at `~/Desktop/serene-obsidian` was a rendered view of the graphify graph, not a
+source of truth. It sat outside the repo and outside git, so no coding agent ever read it, and it
+carried 53 copies of `docs/` of which 50 had already drifted. A fifth unmaintained copy of the docs
+is worse than none, because an agent that finds stale docs believes them. The retrieval stack that
+actually gets read is the code, `CLAUDE.md`, `docs/`, and `graphify-out/`.
+
+**What changed:**
+
+- **New `scripts/obsidian-vault/`** holding the only files in the vault that were not generated:
+  `switch-graph.sh` plus its two graph colouring configs, the `serene-dark.css` Obsidian theme
+  (standalone, works in any vault), the hand-written `Home.md`, `fix-vault.sh`, the vault settings,
+  and `graph.canvas`. All ten files verified byte-identical to the originals before the vault was
+  removed. `README.md` in that folder explains what each one is and which are still usable.
+- **`~/Desktop/serene-obsidian` deleted** (20 MB, 4,179 notes). Audited first: 4,124 notes were
+  generated by `graphify export obsidian`, 53 were stale copies of `docs/`, 2 were docs deliberately
+  deleted from the repo in commit `d8100ac` and still recoverable from git history, 1 was empty.
+- **Recorded that `graphify export obsidian` no longer exists** in the installed graphify. Only
+  `export callflow-html` ships now, so `fix-vault.sh` post-processes a command that is gone and the
+  vault cannot be regenerated. `scripts/graph-to-obsidian.py` is dead for the same reason: it targets
+  `~/Desktop/Serene Vault`, which was already deleted.
+
+**No code, no migrations, no dependency changes.** Documentation and local tooling only.
+
+---
+
+## 2026-08-06 — Zoho onboarding-lead import for Amit + onboarding book handover (data-only, no code)
+
+**Why:** Amit's onboarding work lived in Zoho CRM. The business decided his Serene bucket should
+be exactly: all legacy leads plus the ~101 onboarding leads he actively works in Zoho, and
+nothing else. His remaining Serene onboarding book had to leave him so onboarding managers can
+redistribute it.
+
+**What changed (production DB, via SQL + a one-off import script; no code, no migrations):**
+
+- **1,391 of Amit's onboarding leads unassigned** (everything except the CSV-matched ones).
+  Each got a `lead_activities` audit row (`method: 'bulk_migration'`, `reason:
+  'zoho_handover_strip'`, previous owner recorded). Statuses and activity stamps untouched so
+  managers see true staleness while redistributing. He had zero open tasks on them.
+- **The Zoho export (101 leads) imported with merge-not-duplicate semantics**, matched by
+  E.164 phone against live leads:
+  - 51 brand-new leads inserted (domain `onboarding`, owner Amit, original Zoho `created_at`,
+    status `touched`, mapped `source`/`medium`/`utm_campaign` (TG_* only), `city`, `call_count`,
+    `last_call_outcome` from Zoho "Lead Output", full Zoho snapshot in `form_data`,
+    `zoho_record_id` in `attribution` as the idempotency marker, `welcomed_at` stamped so the
+    Elaya customer welcome can never fire at these old contacts; slug via the DB trigger).
+  - 43 existing onboarding leads enriched and moved to Amit (26 reassigned from Samson /
+    Meghana / Kaniisha, 17 already his; `new`/`lost` flipped to `touched`, outcome/call-count/
+    email/city filled only where the Serene row was emptier or staler).
+  - 3 of Amit's legacy leads enriched in place (same people, already in his legacy book).
+  - 4 initially skipped because the phone belongs to live **shop**-domain leads (Katya / Vikram /
+    Savio — one already won). On founder instruction later the same day, all 4 were pulled to
+    Amit: domain moved to `onboarding`, Zoho history imported, the three `new` ones flipped to
+    `touched`. The won lead **keeps status `won`** and Savio's shop retail deal row (own domain +
+    `assigned_to`) is untouched, so shop revenue attribution is unchanged.
+  - History carried over: **403 `lead_notes`** (369 notes + 44 logged calls with outcomes,
+    original IST timestamps converted to UTC, authored by Amit) + matching `note_added` /
+    `call_logged` activity rows, and **10 open Zoho tasks** created through the sanctioned
+    `create_lead_gia_task` RPC (priority high, due dates preserved).
+- Verified end state: Amit = 184 legacy + 94 onboarding, 0 other; 1,391 onboarding leads
+  unassigned; every imported lead has a slug; revival policies (60/90-day silence) are nowhere
+  near the imported activity dates, so no sweep surprises.
+
+**Deliberately not done:** no notifications or SLA timers for bulk moves; Trigger.dev reminders
+not armed for the 10 imported tasks (near-term due dates; the escalation pages read live);
+Redis left to its 30–120s TTLs. Import script + normalized JSON kept in the session scratchpad
+only — the `zoho_record_id` markers in `attribution` make the import re-runnable and auditable
+from the DB itself.
+
+---
+
+## 2026-08-06 — Legacy domain handover to Amit (data-only change, no code)
+
+**Why:** the business decided all legacy-domain leads belong to one owner, Amit Agarwal
+(`amit@indulge.global`). He takes over the existing legacy book and receives every new incoming
+legacy lead. He keeps a fixed set of onboarding leads he already works, but he no longer takes
+part in the onboarding round-robin. The routing architecture already models all of this with
+data (profiles.domain plus agent_routing_config.is_active), so nothing in the codebase changed.
+
+**What changed (production DB, applied directly via SQL):**
+
+- **All 184 legacy leads reassigned to Amit** (previously: Manasvani 160, Karan Bhangay 9,
+  unassigned 15). The update mirrors `assignLeadCore` exactly: `assigned_to`, `assigned_at`,
+  `status_changed_at`, `last_activity_at` all stamped. Each lead got a `lead_activities`
+  `agent_assigned` row with `method: 'bulk_migration'` and `previous_assigned_to` in the
+  details, so the prior ownership is fully recoverable from the activity log.
+- **Amit's `profiles.domain` moved `onboarding` → `legacy`.** This is the sanctioned pool
+  lever: it puts him alone in the legacy round-robin pool and removes him from the onboarding
+  pool in one move. All four Gia domains share the same route set, and agents see leads by
+  `assigned_to`, not domain, so he keeps full access to his onboarding leads.
+- **Manasvani's `agent_routing_config.is_active` set to false** (the standard holiday switch,
+  reversible any time in Settings) so she no longer draws new legacy leads.
+- Verified with a read-only dry run of `get_next_round_robin_agent`: legacy now picks Amit,
+  onboarding picks from Meghana / Kaniisha / Samson only.
+
+**Deliberately not done:** no SLA timers re-armed for the moved leads (a 184-lead breach storm
+would be noise), no assignment notifications fired, Redis left to expire on its own short TTLs
+(30 to 120 seconds). A follow-up will assign a specific CSV list of ~101 onboarding leads to
+Amit through the same bulk-migration pattern.
+
+---
+
+## 2026-07-10 — PWA boot polish: cream icon plate merges the OS splash into the boot screen; progress bar removed
+
+**Why:** opening the installed app on a phone showed two loading moments — first the OS-generated
+splash (manifest background + app icon) with the icon on its legacy pitch-black #0d0c0a plate,
+reading as a separate black screen for a few seconds, then the real `AppBootScreen` draw sequence.
+The OS splash cannot be removed, but it can be made to look like the boot screen itself. Also the
+boot screen carried a progress shimmer bar below the wordmark that the logo draw animation already
+covers.
+
+**What changed:**
+
+- **All app icons re-plated cream.** `scripts/pad-app-icons.mjs` now composites the umber→gold
+  glyph onto a solid #ECE8E1 plate (`NEU_CANVAS_LIGHT`, the boot screen canvas) instead of the
+  legacy Earth black. The OS splash now shows a cream icon on the cream manifest background, so it
+  reads as the boot screen's canvas and the two loading moments merge into one. Rebuilt:
+  `public/icon-1..4.webp` (manifest + apple-touch), and the script now also emits
+  `src/app/apple-icon.png` (180px fallback) and `public/icons/icon-192.png` / `icon-512.png`
+  (push-notification icon + offline shell) from the default icon so every surface matches.
+  The `maskable` manifest entry stays valid — the plate is still solid, corners are cream.
+- **`sw.js` `CACHE_VERSION` bumped to `serene-shell-v2`** so the precached `/icons/icon-192.png`
+  refreshes on installed devices.
+- **Boot screen progress bar removed.** `AppBootScreen` dropped the inset track + accent sweep
+  below the tagline; the mark's draw animation is the progress indicator. The now-orphaned
+  `serene-progress-sweep` keyframe was deleted from `design-tokens.css`.
+
+Note for installed devices: the home-screen icon and splash are baked at install time — existing
+installs keep the black icon until the user re-adds the app to the home screen.
+
+## 2026-07-10 — Polish-layer adoption sprint: every design handoff now 100% wired
+
+**Why:** an audit of the five design handoffs in `designss/` found four (neumorphic, dark mode,
+mobile, logo/loading) fully shipped, but the polish layer had its primitives built and only
+partially adopted — most were wired into one or two of the call sites the spec named. This sprint
+finishes the adoption so no handoff is left half-wired, and fixes one real celebration bug.
+
+**What changed:**
+
+- **Petal-fall now fires on the lead→Won transition (correctness fix).** The gold petal
+  celebration was only stamped on walk-in deal *creation* (`NewDealModal`); marking a lead Won
+  produced no petals. `recordDeal` (both the `deals.ts` core and the `leads.ts` wrapper) now
+  returns the new `dealId`, and `StatusActionPanel.fireDeal` stamps `DEAL_CELEBRATE_STORAGE_KEY`
+  on success so the matching `DealCard` plays the petals once when the user lands on `/deals`.
+- **Button success morph adopted on in-place save forms.** The `useButtonStatus` / `status`
+  grammar (idle → pending → sage "Saved" + check draw) is now wired into `EditProfileForm`,
+  `EditAuthorizationForm`, and `PasswordChangeForm` — the forms that stay mounted through success
+  so the morph is visible. Deliberately skipped for redirect/navigate-away forms and
+  close-on-success modals (the morph would never be seen).
+- **List choreography (`MotionRow`) across the task, notification, and notes lists.** Task lists
+  (`MyTasksCalendarView`, `GroupTasksTab` subtasks, `GroupTaskWorkspace` list view), the
+  `SubTaskModal` Action Items checklist, and `NotificationPanel` now compose the shared
+  `<MotionRow>` inside `<AnimatePresence initial={false}>`; each surface's per-row entrance
+  `motion.div` was removed so nothing double-animates. `NotificationPanel` dropped its bespoke
+  variants + stagger for the shared primitive.
+- **Undo-instead-of-confirm for reversible task deletes.** A single task/subtask delete now
+  removes the row optimistically, shows `toast.undo` (with the accent depletion bar), and only
+  fires `deleteTaskAction` on the toast timeout — Undo cancels it. The commit is owned by the
+  layout-mounted `ToastProvider` timer, so it still fires if the user navigates away. The truly
+  destructive group delete (cascades all subtasks) keeps `ConfirmDialog`.
+- **Tooltip wired into the leads table.** The toolbar Sort-order button (`side="bottom"`,
+  replacing a raw `title=`) and the truncated Campaign cell (`side="top"`, full `utm_campaign`)
+  now use the `Tooltip` primitive. Non-truncating cells and prose notes were left as-is.
+- **AnimatedNumber on the last two KPI heroes + header condense on Budget.** The `ManagerBudgetWidget`
+  budget hero and the `AgentTasksWidget` task count now animate via `AnimatedNumber` (wrapping the
+  already-formatted string). The `/budget` page title row is now `CondensingPageHeader`, matching
+  Leads/Deals/Tasks/Notes.
+- **Branded empty states** (76px mandala composition + serif-italic copy) on My Tasks ("A clear
+  slate — nothing on your plate.", New task action), the three Escalations "all clear" sections,
+  the bare Helpdesk library (Elaya named), and the Notifications panel ("All caught up.").
+
+The four already-complete handoffs need no work. One loose end noted for later cleanup: the
+`--z-veil` token is orphaned (the route veil was intentionally deleted in the 2026-07-03 motion
+calm-down and must never return).
+
+---
+
+## 2026-07-10 — Blueprint batch: 13 correctness + polish fixes
+
+Thirteen self-contained backlog items from the 2026-07-08 planning session, each pre-diagnosed
+in `blueprints/`. Grouped here as one dated block; each is independent unless noted.
+
+**Response time is now business-minutes (09:00–19:00 IST, Mon–Sat) everywhere.**
+New SQL helper `business_minutes_between()` (migration `20260710000161`); the agent KPI, roster,
+team benchmark, Elaya snapshot twin, and campaign first-touch RPCs all use it. Nights and Sundays
+no longer inflate the number (a Fri-evening→Mon-morning lead was reading as ~3,900 min). The
+campaign metric also gains its missing negative-interval guard. Display units unchanged, RPC
+return shapes unchanged (zero TypeScript edits). **Not yet applied — run `supabase db push`.**
+
+**Notification bell: persistent provider + four correctness fixes.**
+Bell state / Realtime subscription hoisted to a layout-mounted `NotificationsProvider` (was
+remounting per navigation via `PageControls`, dropping live INSERTs and flickering the badge).
+Seed is now unread-only via `getMyNotificationsAction` (`getUnreadNotifications` — 50+ recent read
+rows no longer push older unread out of the window). `markAllRead` rollback is snapshot-based
+(captures the unread ids before the optimistic write instead of keying on `read_at === now`, which
+an interleaving Realtime UPDATE could break); Realtime UPDATEs upsert (remove-if-read /
+prepend-if-absent / replace) instead of map-by-id. `useNotifications` reduced to a `useContext`
+read; `NotificationBell` takes no seed prop; `PageControls`/`Sidebar`/`DashboardCanvas` and every
+page stopped passing `notificationsPromise`; `getNotifications` deleted (no callers). Migration
+`20260710000162` syncs the `notifications.type` CHECK with the full `NotificationType` TS union
+(`sla_breach_agent`/`manager`/`founder`, `task_overdue_manager`, `suggestion_resolved` inserts
+were silently failing). **Not yet applied — run `supabase db push`.**
+
+**Managers regain /budget (read) and the budget widget, pinned to their domain's spend.**
+Reverses the 2026-06-25 exclusion. `/budget` is now manager+; a manager sees ONLY their own
+domain's campaign SPEND plane — `BudgetPage` pins `scopeDomain = profile.domain` server-side (never
+a `?domain=` param, so it can't be widened) and threads it into `BudgetAsync`, which filters rows
+via `filterBudgetRowsByDomain`, skips the recharge fetch, and renders the totals strip + campaign
+table only. The recharge ledger, balance, per-account report, and fuel gauge stay admin/founder-only
+(recharges carry no domain — scoping them would misstate finance). The dashboard Campaign Budget
+widget is manager+ too: `BudgetGaugeSummary` gained `scope: 'org' | 'domain'` with the
+recharge-derived fields nullable; managers get `scope:'domain'` (spend total + campaigns + CPL, no
+gauge arc, built by the new pure `buildDomainSpendGaugeSummary`), admin/founder get `scope:'org'`
+unchanged. Upload + Add-Recharge writes remain admin/founder only; agents still redirect.
+
+**Dashboard canvas: proper layout at phone and ultrawide extremes.**
+Below 768px the canvas collapses to a derived, read-only single column built at render time from
+the stored desktop placements (per-widget `mobileH`, `mobileH: 8` on `manager-campaigns`, 12px
+margins); this `xs` layout is never persisted, so a phone visit can't clobber the saved desktop
+layout. Edit mode (drag/resize + the Edit toggle) is disabled below 768px. `.serene-dashboard-grid`
+gets `max-width: 1760px; margin-inline: auto` so 12 fluid columns no longer stretch into absurdly
+wide short cards on very large screens. Breakpoint constant unified onto `GRID_MOBILE_BREAKPOINT`.
+No localStorage version bump (stored shape unchanged).
+
+**Ad-spend upload: month-to-date re-uploads fully override, including zeroed days.**
+`parseMetaSpendFile` now ingests zero-spend days instead of skipping them, so a re-uploaded
+month-to-date export overrides every day it covers — a day that dropped to zero (refund/correction)
+now overwrites the stale non-zero row via the existing upsert. The parser skips only unusable rows
+(missing campaign, negative/NaN spend); the "all rows zero" error is replaced by an empty-result
+guard. `spend` Zod relaxed to `min(0)`; row cap raised 5000→10000. Modal copy states the
+month-to-date workflow. The day-grain whole-file rejection, conflict target, and
+`normalizeCampaignKey` are untouched; no delete-in-range.
+
+**My Tasks calendar: clicking a dotted past day shows that day's overdue tasks.**
+`visibleSections` in `MyTasksCalendarView` now filters the merged overdue bucket by
+`taskLocalKey(t.due_at) === selectedKey` and labels the section "Overdue — <day>", so a day's dot
+and its list agree. All-mode (no day selected) still shows the single merged Overdue section;
+today/future selection unchanged. Date-grain keys stay browser-local (no IST/ISO change).
+
+**/deals drops its in-page Domain dropdown.**
+The global `DomainSelector` is now the single domain control for `/deals` (same `?domain=` param,
+no query changes). The bar reads the param read-only to surface the shop-slice Category dropdown;
+it never writes or counts domain, so the global scope no longer adds to the filter-count badge and
+the bar's Clear (mirroring `LeadsFilters`) never resets it.
+
+**/leads: always-visible filtered total count.**
+The leads toolbar now always shows the filtered total (e.g. "7 leads") via `formatCount` —
+previously the total only appeared in the pagination summary, which renders only above 30 rows.
+`totalCount` (already returned by the query) is threaded from `LeadsTableAsync` into `LeadsTable`
+(and the campaign detail page's lead table).
+
+**Called modal + New Deal modal: clean, jitter-free open (shared `Dialog` primitive).**
+Removed `backdrop-filter: blur(3px)` from the modal overlay (per-frame recompute caused the
+open-animation shimmer, and it violated V-06 — blur is not sanctioned on modal overlays); added a
+re-entrant body scroll lock via `lockBodyScroll()` (stops the scrollbar-shift one-frame page jump).
+`Dialog` now also takes programmatic focus on the panel itself on open with `{ preventScroll: true }`
+(+ `tabIndex={-1}`, `outline: none`) instead of letting the browser drift focus into the first
+input mid scale-in — no accent-ring flash, no scroll jump. Every modal benefits.
+
+**Tab indicator spring softened.**
+The sliding active-tab indicator uses a new gentler `SPRING_TAB` (stiffness 260, damping 32) instead
+of `SPRING_CONFIG` (400/30) — settles without the snap. `SPRING_CONFIG` and its other consumers
+untouched; the new constant lives in `motion.ts` (V-13).
+
+**Lead follow-up task no longer missing from /tasks until hard refresh.**
+`createLeadTaskAction` and `reviveLeadAction` invalidated Redis but never revalidated `/tasks`, so
+client-side navigation served the stale router-cache payload. Both now call
+`revalidatePath("/tasks")`, matching the sibling task creators.
+
+**Lead dossier notes: timeline dot alignment.**
+The per-note timeline dot now centers on the note header's first line (`marginTop` from
+`var(--space-1)` to `calc(var(--space-3) + 2px)`) instead of floating above it.
+
+---
+
+## 2026-07-06 — AI engineering method codified: the serene-engineer skill + Claude Project instructions
+
+**Why:** the repo's law (root `CLAUDE.md`, `The_Rules.md`, the DNA) says WHAT is allowed, but the
+working method that produces senior-level output (search before building, diagnose before fixing,
+plan at the seam, verify by exercising, record in the changelog) lived only in habit. Any Claude
+model working in this repo (Opus included) should follow the same discipline, and a claude.ai
+Project without repo access needs a self-contained version of the same contract.
+
+**What changed:**
+
+- **`.claude/skills/serene-engineer/SKILL.md`** (new) — the in-repo method skill: the quality bar,
+  the 7-step loop (orient → reuse-first search → diagnose → plan at the seam → build in layer
+  order → verify → record), the judgment rules for when the docs are silent, the table of traps
+  that actually bit this codebase (A-16 void sends, P-08 redis races, dual-key lead rows, P-09
+  `unstable_cache`+`cookies()`, the motion namespace, and friends), the output contract, and a
+  definition-of-done checklist. It defers to `CLAUDE.md`/`The_Rules.md` on every point of law;
+  it only encodes process and judgment.
+- **`docs/ai/claude-project-instructions.md`** (new) — the paste-in custom instructions for a
+  claude.ai Project: the same method adapted for a Claude with no repo access ("ask for the exact
+  file, never guess"), a condensed rule digest with rule IDs, the output contract, and the list
+  of knowledge files to upload (root `CLAUDE.md`, `The_Rules.md`, DNA, tokens, vision, the four
+  layer `CLAUDE.md` files).
+
+No code paths touched; docs and tooling only.
+
+---
+
+## 2026-07-06 — StatTile numbers switched from Playfair to the mono number font (app-wide)
+
+**Why:** `StatTile` (both `card` and `cell` variants) rendered its value in `--font-serif`
+(Playfair). Per the number-font rule the value should be a mono number so every labelled stat
+tile reads consistently against the other card boxes. This is the shared component behind the
+deals summary strip, campaign metric cards, and every other labelled stat tile — the change is
+app-wide by design.
+
+**What changed:**
+
+- **`src/components/ui/StatTile.tsx`** — both variants' value font `--font-serif → --font-mono`
+  (still `--text-2xl`, semibold, `tabular-nums`; colours unchanged — `cell` keeps `--neu-accent-deep`,
+  `card` keeps `--theme-text-primary`).
+- **Consumers affected (no per-consumer edit needed):** `DealsSummaryStrip` (deals hero bar),
+  `CampaignMetricsStrip`, `AccountReportSection`, and every other `StatTile` mount.
+
+No behavioural change; typecheck + lint clean.
+
+---
+
+## 2026-07-06 — Number-font rule: inline numeric tokens in modal captions now render in the mono number font
+
+**Why:** the number-font rule mandates two fonts for numbers — `--font-serif` (Playfair) for hero
+stat values, `--font-mono` (Geist Mono) for secondary/technical numbers — both with `tabular-nums`.
+An audit of every modal + drill-modal card found the *standalone* stat values already comply. The
+remaining offenders were numbers embedded **mid-sentence** in tertiary captions and drill-modal
+subtitles (`Aanya · 12 deals`, `showing 12 most recent`, `12 day-grain rows · ₹4,50,000 total spend`),
+which inherited the default `--font-sans` (the "title" font). The surrounding prose must stay sans, so
+the fix wraps only the digits.
+
+**What changed:**
+
+- **New `src/components/ui/Num.tsx`** — `<Num>` — THE inline numeric-token wrapper. Renders its
+  children in `--font-mono` + `tabular-nums`, colour/weight inherited from the sentence around it
+  (never re-tints — it is not a hero value). Display-only (A-06), server-component-safe. Compose this
+  for any number embedded mid-sentence; standalone hero/stat values still set `--font-serif` directly.
+- **`DrillModalShell`** `subtitle` prop widened `string → React.ReactNode` so callers can wrap the
+  inline count.
+- Wrapped the inline count in the five drill-modal subtitles that carry one — `AgentDealsDrillModal`,
+  `AgentLeadsDrillModal`, `DomainDealsDrillModal`, `AgentCallsDrillModal`, `LeadDrillModal` — and the
+  three numeric tokens in the `AdSpendUploadModal` parse-preview panel (row count, total spend, skipped
+  count + the date range), all via `<Num>`.
+
+No behavioural change; typecheck + lint clean.
+
+---
+
+## 2026-07-06 — /settings: filter bar moved above the config link cards
+
+**Why:** the `/settings` hub rendered the two admin/founder config link cards (Follow-up Engine,
+Lead Revival) above `AgentSettingsTable`, so its filter bar sat *below* the cards — breaking the
+list-page contract where the filter bar sits directly under the page title.
+
+**What:** added an optional `beforeList` slot to `AgentSettingsTable`, rendered between its
+`FilterBar` and the roster list. The page now passes the link-cards grid through that slot instead
+of rendering it above the table. Result: title → filter bar → config link cards → roster, matching
+every other list page. No behaviour change to filtering, the roster, or the cards themselves.
+
+- `src/components/settings/AgentSettingsTable.tsx` — new `beforeList?: React.ReactNode` prop
+- `src/app/(dashboard)/settings/page.tsx` — link cards moved into `beforeList` (still admin/founder-gated)
+
+---
+
+## 2026-07-06 — Mobile polish sweep: PWA full-bleed, sticky header rework, filter bars, tasks surfaces, loading standardization
+
+**Why:** first real phone-testing pass on the responsive dashboard shell surfaced a batch of
+mobile defects — the installed app letterboxed below the status bar, the sticky page header
+stuttered and swallowed the drawer trigger, filter bars clipped and jammed, task rows read
+"Call / Call / Call", and the subtask modal opened with seconds of dead air.
+
+- **PWA full-bleed (`src/app/layout.tsx`):** `generateViewport` now emits `viewport-fit=cover` —
+  without it every `env(safe-area-inset-*)` in the codebase evaluated to 0 and the app could never
+  extend under the status bar. iOS `statusBarStyle` follows the appearance cookie: **dark →
+  `black-translucent`** (true edge-to-edge; white status text sits on the charcoal canvas),
+  light/system stays `default` (black-translucent's white text would vanish on cream #ECE8E1).
+  Android already tracks the appearance-aware manifest `theme_color`.
+- **Sticky header rework (`.serene-condense-header`, globals.css):** condensing is now
+  **paint-only** — background + blur + hairline; the padding/font-size/max-height transitions
+  (layout animations, per-frame reflow under a 10px backdrop blur — the scroll jank) are gone. The
+  bar's box is constant-height; the content gap moved from padding-bottom to margin-bottom. Below
+  md the safe-area + rhythm air moved INTO the bar's padding (`main.p-4:has(.serene-condense-header)`
+  drops to `--space-2`), so the stuck bar covers the status-bar strip instead of sliding under the
+  notch. The floating drawer trigger (`.serene-mobile-topbar`) rose from `--z-raised` (10) to
+  `--z-sidebar` (40) — at 10 the condensed bar (30) frosted the Indulge mark AND swallowed its taps
+  ("hamburger not working when scrolled").
+- **FilterBar mobile (`ui/FilterBar.tsx`):** the below-md scroll rail clipped every chip's raised
+  shadow/accent ring top-and-bottom (`overflow-x: auto` forces y-clipping at the 36px child edge) —
+  fixed with vertical padding + compensating negative margins (zero height change). On **/tasks**
+  the bar now takes a full row of the strip below md (`flexBasis: 100%`, tabs + count stay on row 1)
+  — its old `flex-basis: 0` never wrapped, so the tab tray crushed it into an unusable sliver
+  ("filter bar not scrollable").
+- **Tasks page:** `CompletedTasksButton` collapses to icon-only below md (two labelled CTAs plus
+  the bell and the 52px title indent overflowed the header row). `/m/tasks/[agentId]` rows now title
+  **"Call · <Lead Name>"** (name was buried truncated in the 11px sub line — the list read
+  "Call / Call"). New `tasks/[id]/loading.tsx` renders the SAME `WorkspaceSkeleton` the page's
+  Suspense uses — navigation previously painted the tasks LIST skeleton, then the workspace
+  skeleton (the "two skeletons then the page" report).
+- **Subtask modal open latency:** all three call sites (`MyTasksCalendarView`, `GroupTasksTab`,
+  `GroupTaskWorkspace`) warm the `SubTaskModal` chunk post-hydration (still out of the route chunk,
+  G-1) and render the new **`LoadingVeil`** (exported from `ui/LogoSpinner.tsx` — Dialog-scrim +
+  centered LogoSpinner) during the remarks pre-fetch that gates the modal; the tap previously gave
+  zero feedback through fetch + chunk download in series. Below md the modal's Zone A reorders
+  (CSS `order`): Details → metadata → checklist, so the capped scroller spends its height where the
+  user asked ("metadata on top").
+- **Dialog bottom sheet (`ui/Dialog.tsx`):** header/body/footer gutters tighten to `--space-4`
+  below md (the desktop `--space-6` inset ate ~13% of a 360px sheet — the "add task page" spacing).
+- **Mobile loading standard:** `/m` rooms' `PaneLoader` (`mobile/rooms/room-bits.tsx`) swapped its
+  bouncing dots for the centered **`LogoSpinner size="md"`** — the WhatsApp conversation-pane
+  treatment, now THE mobile loading look. It stays gated on `!data`, so it only appears while a
+  pane is genuinely loading, never on a revisit that already has data.
+- **/performance Domains metric toggle (`DomainOverviewPanel`):** the Total Leads / Total Calls /
+  Revenue `TabSelector` tray no longer stretches across the chart panel (block flow made the tray
+  span 100% while the chips hugged left) — `fit-content` on desktop, `fullWidth` even-split below md.
+- **/notes:** removed the Elaya intro paragraph under the title bar.
+
+- **Skeleton watermark removed (`ui/PageSkeletons.tsx` + globals.css):** the faint spinning
+  seed-mandala that `PageHeaderSkeleton` stamped on every loading screen read as clutter behind the
+  shimmer blocks — removed entirely (`SkeletonWatermark` + its `watermark` prop deleted; the
+  `.serene-shell-paper { position: relative }` added to center it reverted). The brand mark now
+  rests ONLY on the empty-state, never on loading skeletons.
+- **Brand empty-state simplified (`ui/EmptyState.tsx`):** the `brand` composition (the `/notes`
+  and `/deals` empties) dropped its crisp 76px foreground mandala and moved the faint 240px
+  watermark from the top-right corner to CENTERED behind the text — the title/description now rest
+  over a single calm centered watermark. Both `brand` consumers inherit it. This is the one place
+  the resting brand mark still appears.
+
+Files: `src/app/layout.tsx`, `src/app/globals.css`, `src/components/ui/{FilterBar,Dialog,LogoSpinner,PageSkeletons,EmptyState}.tsx`,
+`src/components/tasks/{TasksFilters,CompletedTasksButton,MyTasksCalendarView,GroupTasksTab,GroupTaskWorkspace,SubTaskModal,CreatePersonalTaskModal}.tsx`,
+`src/app/(dashboard)/tasks/[id]/loading.tsx` (new), `src/components/mobile/screens/AgentTasksScreen.tsx`,
+`src/components/mobile/rooms/room-bits.tsx`, `src/components/performance/DomainOverviewPanel.tsx`,
+`src/components/notes/NotesManager.tsx`.
+
+---
+
+## 2026-07-06 — Mobile Ops: admin/founder phones auto-open /m
+
+**Why:** the web app sent every logged-in user to `/dashboard` regardless of device, so a founder
+on a phone got the desktop dashboard, not the pocket surface just built. `/m` was reachable only
+by typing the URL.
+
+- **`/dashboard` page** now redirects a mobile-browser **admin/founder** to `/m` (their rooms are
+  fully built). Manager/agent stay on the responsive `/dashboard` until their room sets ship, and
+  every desktop browser is untouched. The redirect is gated on a **bare landing** (no query
+  params) so a shared `/dashboard?…` deep link or an in-dashboard back-nav is never hijacked
+  mid-flow. Placed in the page (not the shared `(dashboard)` layout) so only the dashboard landing
+  is intercepted, not deep links to `/leads`, `/tasks`, etc.
+- **Authorization is unaffected** — this only picks which fully-functional surface loads; role is
+  read from `public.profiles` via `getCurrentProfile()` (Rule 09), never from the User-Agent. The
+  UA test is `src/lib/utils/device.ts` `isMobileUserAgent()` (server-only; phones + small Android
+  tablets match, iPad deliberately does not — a founder on an iPad keeps the desktop dashboard).
+- **Opt-out:** the mobile drawer gains a "View desktop site" row (admin/founder only) that sets the
+  `serene-force-desktop` cookie (`FORCE_DESKTOP_COOKIE`, 1yr) and hard-navigates to `/dashboard`;
+  the redirect honors that cookie. A hard nav guarantees the cookie is on the server request that
+  renders `/dashboard`, so the redirect never re-fires.
+
+Files: `src/app/(dashboard)/dashboard/page.tsx`, `src/lib/utils/device.ts`,
+`src/lib/constants/mobile-rooms.ts` (`FORCE_DESKTOP_COOKIE`), `src/components/mobile/MobileDrawer.tsx`.
+
+---
+
+## 2026-07-06 — Mobile Ops: the /m layer goes functional (phases 0–5 of docs/modules/mobile-ops.md)
+
+**Why:** the `/m` mobile surface was a display-only mockup running on `demo-data.ts`. The founder
+wants the month's most important numbers in the hand — one thumb, fast. This lands the full
+mobile-ops build contract: four real rooms + the Elaya knob on the real brain, all reusing
+existing reads (R-01 — backend genuinely new: one table, one RPC).
+
+**Phase 0 — infrastructure**
+
+- `src/lib/constants/mobile-rooms.ts` — the role-driven room registry (pure data, the
+  dashboard-widgets precedent). `MOBILE_ROOMS_BY_ROLE` is a 4-tuple per role, so a fifth tab is a
+  compile error; the Elaya knob stays hardcoded center. Also `getMobileDomains(role, domain)` (the
+  swipe scope: admin/founder page all four Gia domains, manager is pinned to their own, agent =
+  coming-soon) and `DOMAIN_VERTICALS` (domain → label + `DOMAIN_ICONS` icon + pastel `-deep`
+  token; replaces the demo `DEMO_VERTICALS` as the tile/header vocabulary).
+- `MobileSessionProvider` + `useMobileSession` — `(client)/layout.tsx` already fetched the profile
+  for its gate; it now threads `{ id, role, domain, fullName, email }` into context so the tab
+  bar and screens read identity without re-fetching (A-15 kept — the RSC does the read).
+- `MobileTabBar` is registry-driven off `getMobileRooms(role)`; the drawer shows the real
+  profile (name/email/`getInitials`), navigates the rooms, and its Sign out is wired to
+  `signOutUser`.
+- `DomainSwiper` — THE domain-paging wrapper every room composes: the existing `ui/Carousel`
+  (one swipe engine, never forked) with a new additive `hideControls` prop (desktop consumer
+  untouched) + a neu-token domain header and dot pager.
+- `useDomainRoomData` (`src/hooks/`) — the room data lifecycle: RSC seed for the first domain,
+  swipe → action fetch once per domain, per-domain cache, error + retry state.
+
+**Phase 1 — Dashboard room (`/m`, zero new backend)**
+
+- `src/lib/services/mobile-service.ts` — orchestration only: `getMobileDashboardData` is a
+  `Promise.all` over `getLeadStatusSummary` + `getLeadsByCampaign` + `getDomainHealthMetrics` +
+  `getDomainTargets` + `getBudgetSummary`/`filterBudgetRowsByDomain`; `mobileMonthRange()` (IST
+  month window) + `buildMobileGreeting` (server-computed so hydration agrees).
+- `DashboardRoom` — greeting block + Elaya search pill + per-domain pane: 2×2 metric tiles
+  (new leads / won / deals-vs-target / ad spend), deals-vs-target meter, top agents, top
+  campaigns (names raw, per the campaign rule). **Decision:** the deals-vs-target meter renders
+  the neu `ProgressCard`, not a Recharts `DomainTargetMeter` wrapper — no Recharts in the mobile
+  chunk; the contract doc is updated.
+
+**Phase 2 — Activity stream (the one new table)**
+
+- Migration `20260706000159_activity_events.sql` — append-only `activity_events` cloned from
+  `task_events` (0144): domain-stamped, `(domain, created_at DESC)` + subject indexes, RLS
+  (admin/founder all · manager own domain · agent own actions, InitPlan-hoisted), NO write
+  policies ever (A-11), Realtime publication, 30-day backfill from `lead_activities` +
+  `task_events` + `deals`.
+- `src/lib/services/activity-events.ts` — `emitActivityEvent` (the `emitTaskEvent` posture:
+  admin client, best-effort, never throws) + `emitLeadActivityEvent` (resolves lead domain +
+  display name for id-shaped cores). **Open question 1 decided:** lead/deal writes emit directly
+  from the cores (`addLeadNoteCore`, `addLeadCallNoteCore`, `createLeadTaskCore`,
+  `updateLeadStatusCore`, `assignLeadCore`, `recordDealCore`, `createWalkInDeal`); task rows are
+  DERIVED inside `emitTaskEvent` (created → `task_created`, status→completed → `task_completed`)
+  so task writes are never double-sourced.
+- `src/lib/services/activity-service.ts` — `getActivityFeed(domain, cursor?)`: one keyset
+  (`created_at, id`) reverse-chronological read, page 30, admin client (Q-13; the gated action
+  pins managers).
+- `ActivityRoom` (`/m/activity`) — the live feed: seeded by the RSC, "Earlier" keyset load-more,
+  ONE Realtime channel per active domain (`domain=eq.<x>`, the OversightRail pattern, P-06
+  teardown + `useId` nonce); domain swipe swaps the channel.
+
+**Phase 3 — Tasks room (new aggregation, no schema change)**
+
+- Migration `20260706000160_get_domain_task_summary.sql` — `get_domain_task_summary(p_domain,
+  p_from, p_to)`: per-assignee created/completed (period) + open/overdue (live) buckets; domain
+  derived `COALESCE(task_groups.domain, assignee profiles.domain)` (the resolveTaskDomain rule in
+  SQL). Scope-param RPC → EXECUTE revoked, service_role only (Q-13/0102).
+- `getDomainTaskSummary` in `tasks-service.ts` via `callAdminRpc`; `TasksRoom` (`/m/tasks`) shows
+  the four counts + the per-agent team list; tapping a member opens `/m/tasks/[agentId]` —
+  a light route reusing `getPersonalTasks` (admin client; page gate = manager+ with manager
+  domain check) rendered by the new `AgentTasksScreen`.
+
+**Phase 4 — Budget room (`/m/budget`, zero new backend)**
+
+- `getMobileBudgetData` (reuses budget + health + target reads); `BudgetRoom` shows spend/leads/
+  deals/revenue tiles, deals-vs-target meter, per-campaign spend rows (CPL "—" at zero leads,
+  never ₹0), and the **tech-expense tracker as a Coming Soon placeholder card** (by contract —
+  no table, no service).
+
+**Phase 5 — Elaya knob on the real brain**
+
+- `src/components/elaya/elaya-stream.ts` — THE Elaya SSE transport extracted from
+  `ElayaChatShell` (fetch + `\n\n` frame buffering + meta/delta/tool/done/error dispatch +
+  `TOOL_STATUS_LABELS`); the shell now pumps this shared loop (state handlers unchanged), and the
+  mobile `ElayaChatScreen` consumes the same — never a second transport.
+- `ElayaChatScreen` rewritten onto the real chat: `/m/elaya` RSC resolves the SAME seed as the
+  desktop page (`resolveElayaChatSeed` — one 24h session across channels) and the screen streams
+  with full cap/429/error handling (draft restored on rejected send, cap swaps the composer for
+  the quiet serif note). The neu chrome is unchanged; assistant bubbles render `ChatMarkdown`;
+  starter chips are the real `ELAYA_STARTER_PROMPTS` and prefill-only (never auto-send). The
+  demo composer's decorative mic was dropped (a dead control implying voice input).
+
+**Retired:** `HomeScreen.tsx` and the demo `ActivityScreen.tsx` (replaced by the rooms; git
+history keeps them). The `requests`/`profile` demo routes stay reachable but left the tab bar
+(profile lives in the drawer).
+
+**Migrations 0159 + 0160 applied to prod + verified 2026-07-06** via `supabase db push`
+(table + RLS + Realtime + 1,584 backfilled rows; RPC revoked-tier posture confirmed). The push
+required a one-time `supabase migration repair`: 14 orphan MCP-apply version stamps reverted and
+local versions 0138–0153 marked applied (their DDL was already live via MCP — verified by
+sentinel objects before repairing), so `db push` and the MCP flow are reconciled. Follow-up:
+regenerate `database.ts` to retire the two documented `activity_events` interim casts.
+
+Files: `src/lib/constants/mobile-rooms.ts`, `src/lib/services/{mobile-service,activity-events,activity-service}.ts`,
+`src/lib/actions/mobile.ts`, `src/lib/validations/mobile-schema.ts`, `src/hooks/useDomainRoomData.ts`,
+`src/components/mobile/{MobileSessionProvider,DomainSwiper}.tsx`, `src/components/mobile/rooms/*`,
+`src/components/mobile/screens/{ElayaChatScreen,AgentTasksScreen}.tsx`, `src/components/elaya/{elaya-stream.ts,ElayaChatShell.tsx}`,
+`src/app/(client)/**`, `src/components/ui/Carousel.tsx` (`hideControls`), `src/lib/services/{lead-mutations,task-events,tasks-service}.ts`,
+`src/lib/actions/deals.ts`, `supabase/migrations/2026070600015{9,60}*.sql`.
+
+---
+
+## 2026-07-03 — WhatsApp conversation pane: neumorphic polish pass
+
+**Why:** the chat pane that opens when a conversation is selected still wore the flat pre-neumorphic
+chrome (plain paper header, bare hairline date rules, a fixed sage outbound bubble) and read dull
+next to the rest of the soft-UI surfaces.
+
+- **`ConversationPanel` header** now uses the themed header treatment — `--neu-header-wash`
+  background + `--neu-header-edge` hairline (the CardHeader convention: the header is the
+  theme-coloured zone of the surface).
+- **Date separators** became soft raised pill chips (`--neu-surface` + `--neu-edge` +
+  `--neu-shadow-chip`, `--neu-radius-pill`) floating centred on the well, replacing the flanking
+  hairline rules.
+- **Composer dock** is grounded on `--theme-paper` with a top hairline, bookending the header so
+  the message well reads as the sunken zone between two grounded strips.
+- **Outbound bubbles** moved off the fixed `--neu-chip-sage-bg` onto `--neu-chat-user-bg` — THE
+  chat sender-bubble token (theme-coordinated accent wash, the same contract `ElayaMessageBubble`
+  follows; dark mode inherits its lifted-accent override for free).
+- **Delivery ticks** now distinguish states: sent = single tertiary check, delivered = double
+  tertiary check, read = double `--neu-info-deep` (powder) check — previously delivered and read
+  were identical sage.
+- **Empty thread state** composes `<EmptyState variant="inline">` instead of a hand-rolled italic
+  style object (Never-Do fix); the **conversation-loading spinner** swapped the ad-hoc spinning
+  `MessageCircle` for the mandated `LogoSpinner`.
+- Accent-on-well micro-text (the outbound "Elaya" bot label, the media-chip "View" link) moved to
+  the text-safe `--neu-accent-deep`.
+
+Files: `src/components/whatsapp/ConversationPanel.tsx`, `MessageBubble.tsx`, `WhatsAppShell.tsx`.
+
+---
+
+## 2026-07-03 — Serene Mobile system: the Indulge client-app mobile layer (`/m`, design_handoff_mobile_system)
+
+**Why:** the mobile handoff package (`design_handoff_mobile_system/` — README + `Serene Mobile.dc.html`
+specimen) defines the client-facing Indulge app in the soft-UI language: navigation architecture
+(4-tab floating bar + Elaya knob + logo-drawer), mobile touch scale, the component inventory and
+three reference screens. This lands that layer as a new, self-contained surface in the repo.
+
+- **New route group `src/app/(client)/m/`** — the client app shell, separate from the staff
+  dashboard. Routes: `/m` (Home), `/m/requests` (+ `/m/requests/[ref]` detail), `/m/activity`,
+  `/m/profile`, `/m/elaya` (chat). Customers have no auth yet (Elaya customer persona still
+  stubbed), so the `(client)` layout gates behind a staff session as an internal preview; screens
+  run on specimen demo data (`components/mobile/demo-data.ts` — butler voice, requests never tasks).
+- **New feature folder `src/components/mobile/`** — display-only, consumes `--neu-*` tokens
+  exclusively (zero hex): `IndulgeMark` (the 9-circle stroked mark — THE drawer button, no
+  hamburger anywhere), `MobileTabBar` (EXACTLY four rooms — Home/Requests/Activity/Profile — active
+  = raised 46×46 r16 accent tile; Elaya = 52Ø accent knob riding −20 above the bar, navigation not
+  a tab), `MobileDrawer` (76% panel, r 0 30 30 0, 380ms soft-out, swipe-left + scrim dismiss;
+  profile row · ROOMS · THE HOUSE · Sign out in clay), app bars (home/detail/greeting), floating
+  fields (search pill keeps the cream surface — accent only on glyphs), segmented/chips/toggle
+  (54×32)/stepper/setting rows, request rows with the status-dot language (sage settled ·
+  accent-breathe waiting · clay attention), vertical tiles (Global powder · House sage · Shop
+  butter · Legacy lilac), inset progress, toast pills, placing-request loader (✦ halo), bottom
+  sheet (420ms rise, 44-touch grabber, NEW REQUEST composition) and action sheet (54 rows,
+  destructive in clay never red, cancel as its own raised pill).
+- **New `src/styles/serene-mobile.css`** (imported after the neu tokens in `globals.css`) — only
+  what the base layer lacks: mobile scrim/drawer/sheet shadow tokens (with `data-neu="dark"`
+  overrides), the halo ring keyframe + mobile idle-loop timings (breathe 2.2/2.6s, dots 1.3s/0.18s
+  stagger, halo 3/3.4s), and the `.neu-m-touch(-knob/-quiet)` press recipes (220ms spring
+  transform / 300ms soft-out shadow, press = pressed inset + scale 0.98, knobs 0.94) — all
+  `prefers-reduced-motion` gated.
+- Touch scale enforced by construction: primary 56 · secondary/field 52 · knob 44 floor · list row
+  64 · tab bar 64 · FAB 60; 20px edge padding, 14px card gap, one scroll axis per screen. Drawer +
+  sheets ride framer (`m as motion`, A-17) with the handoff curves; entrances reuse `.neu-reveal`.
+- Verified: `tsc --noEmit` clean, eslint clean, all six routes compile and serve behind the auth
+  gate on the dev server; hex/forbidden-pattern scans clean. Theme re-tint rides `--neu-accent*`
+  end-to-end (active tab tile, Elaya knob, toggles, chips, progress, user bubbles, mark stroke,
+  drawer washes); dark mode inherits via the token layer.
+
+## 2026-07-03 — UI polish batch: suggestions tabs, group-task expand area, leads filter bar → deals config, leads table lifted surface
+
+**Why:** four visual defects reported on review — the suggestions status tabs stretched into a
+full-width empty tray, the group-task accordion's expanded region rendered as a sunken well band,
+the leads filter bar's compact single-row variant read as cramped/misplaced next to the deals bar,
+and the leads table card sat at the same tone as the shell paper beneath it (dull/flat).
+
+- `SuggestionInboxClient.tsx`: the pill `TabSelector` is a child of a column flex, so it stretched
+  to the full row width. Pinned with `alignSelf: flex-start` — the tray is content-sized again.
+- `GroupTasksTab.tsx` (expanded subtasks area): the region's `--theme-paper-subtle` fill (→
+  `--neu-well` under the bridge) is gone — it sits on the card's own material, separated by the
+  existing hairline (the same well-band removal as the 2026-07-03 card-header pass). Interior
+  pieces re-contrasted: the add-subtask input row is now the sunken well tone (input track), the
+  "Add subtask" hover fill is well tone (was paper-on-paper — invisible), and the loading shimmer
+  bars moved off `--theme-paper-border` (now a white hairline) onto the well tone.
+- `LeadsFilters.tsx`: retired the compact single-row scroll configuration — the bar now uses the
+  SAME FilterBar config as `DealsFilters` (default wrap layout + `--space-3` gaps, badge date
+  triggers, sliders count badge, no divider, standard search focus chrome, deals `searchStyle`).
+  `menuPortal` stays on every dropdown (below md the wrap layout still auto-collapses to scroll).
+  Contract updated in `src/components/leads/CLAUDE.md`.
+- `LeadsTable.tsx` (+ `LeadsTableSkeleton`, `leads/loading.tsx`): the table card moved from
+  `--theme-paper` + `--shadow-1` to `--neu-surface-high` + `--neu-shadow-raised` — the sanctioned
+  lifted-surface pairing (dialogs/panels/menus) so the table floats off the shell paper instead of
+  blending into it. Skeletons synced so loading doesn't flash the old flat card.
+
+## 2026-07-03 — Table `previewRows` reveal + /escalations adoption (rule P-03)
+
+**Why:** `/escalations` fed `Table<T>` uncapped breach lists (service reads allow up to
+500 timers / 100 tasks / 100 cold leads) and the SLA-breaches section hit 140 rows,
+tripping the P-03 dev warning ("rendering N rows without virtualisation") and rendering
+the full DOM on every visit.
+
+- `src/components/ui/Table.tsx`: new optional `previewRows` prop — THE built-in P-03
+  "paginated approach". When rows exceed it, only the first N render, followed by a
+  full-width "Show all N" expander row (one-way client reveal, quiet secondary→accent
+  text button). Setting the prop counts as handling P-03, so the dev warn is suppressed;
+  the warn copy now mentions the prop. Default behaviour without the prop is unchanged.
+- `EscalationSections.tsx`: all three sections pass `previewRows={SECTION_PREVIEW_ROWS}`
+  (50). Lists are newest-first, so the preview is the live story; counts stay honest —
+  the header `CountPill` always shows the full total. The `/budget` tables are candidate
+  adopters if their volumes grow.
+- `docs/pages/escalations.md`: the "no per-section pagination" open item resolved; the
+  service read caps still stand.
+
+## 2026-07-03 — Leads filter-bar height alignment + sidebar hover = icon accent fill
+
+**Why:** the leads filter bar read as misaligned — the search input was the only element in the
+row at the `sm` scale (2rem tall, `--text-xs`), while the filter chips, the Range/Dates triggers
+and the Clear button all sit at 2.25rem / `--text-sm`. And the sidebar's hover state still painted
+a background wash behind the row, which fights the clean no-chrome nav look (active state was
+already reduced to the accent icon tile earlier today).
+
+- `LeadsFilters.tsx`: dropped the `searchSize="sm"` override — the search now renders at the
+  default `md` (2.25rem, `--text-sm`, 16px icon), matching every other element in the row and
+  every other filter bar (deals, campaigns, tasks already used `md`).
+- `Sidebar.tsx`: hover no longer sets `--theme-sidebar-hover-bg` anywhere. The hover vocabulary
+  is now **bold icon accent fill**: an inactive `NavLink`'s icon turns `--neu-accent-deep` on
+  hover with a heavier stroke (1.5 → 2.2) — the pastel `--theme-accent` read too faint on the
+  cream rail (tracked via local `hovered` state so the icon tile can react; the §6.3
+  translateX(2px) nudge stays; label colour no longer changes). Same deep-accent treatment on
+  the footer — Send feedback and Sign-out colour their icon on hover (no bg); the profile row
+  keeps just the cursor (avatar, no icon). The active tile (`--neu-accent-gradient` +
+  `--theme-accent-fg`) is untouched.
+  `--theme-sidebar-hover-bg` stays defined in the token files (the auth card lamplight wash
+  still uses it).
+
+## 2026-07-03 — Neumorphic consistency pass: floating paper restored, well-tone card headers flattened, RouteVeil retired, clean sidebar active state
+
+**Why:** the neumorphic restyle introduced a handful of regressions against the intended feel:
+the two-layer shell (canvas gutter + floating paper) was flattened away, every card header strip
+turned into a sunken well band (the bridged `--theme-paper-subtle` now resolves to `--neu-well`,
+and inset marks state only — Rule 4), the full-page route veil put a spinning logo over every
+navigation, and the sidebar's active tab stacked four indicators (wash + border/shadow chip +
+left pill + chevron).
+
+**Shell — the floating paper is back (soft-UI form):**
+
+- `.serene-shell-paper` (globals.css) is again a raised sheet on the canvas gutter:
+  `--neu-surface` + `--neu-radius-card` + `--neu-shadow-raised` + `--neu-edge` hairline.
+  Below `md` it stays full-bleed (border/radius/shadow reset). Cards keep raising themselves
+  a step further via their own shadow pairs.
+
+**Card headers — no more well bands:**
+
+- `leads/CardHeader.tsx` (THE dossier header strip — Lead Information, Form Responses and all
+  seven dossier cards) now sits on the card's own material (`transparent`), keeping only the
+  hairline bottom border. Same fix applied to the `SubTaskModal` **Action Items** and **Details**
+  card headers, the `LeadsTable` toolbar strip + `<thead>` row, and the two table skeletons
+  (`leads/loading.tsx`, `LeadsTableSkeleton`).
+- Radius consistency: `DynamicFormResponses`, the `LeadsTable` card and both table skeletons
+  moved to `--neu-radius-card` (32 — the Marshmallow card role) matching `LeadInfoCard`/
+  `SectionCard`; the table card also gained its missing explicit `--theme-paper` background.
+
+**Motion calm-down:**
+
+- **`RouteVeil` deleted** (component + layout mount) — the full-page cream veil with the spinning
+  seed mandala on every route change. Navigation feedback is each route's `loading.tsx` skeleton
+  again; never reintroduce a route-change overlay. (`AppBootScreen` — once per hard load — stays.)
+- **`.neu-reveal` removed from consumers** — all dossier cards (`LeadInfoCard`,
+  `PersonalDetailsCard`, `StatusActionPanel`, `ServiceInterestCard`, `LeadWhatsAppCard`,
+  `LeadNotesSection`, `LeadJourneyTimeline`, `LeadActivityLog`) and the shared `SectionCard`,
+  so cards no longer rise/replay on every navigation. The keyframes stay defined in
+  `serene-neumorphic-tokens.css` (spec reference, currently unconsumed).
+
+**Card headers are the THEMED zone (follow-up, same day):**
+
+- Every dossier/task card header was theme-blind: the strip's fill and its micro-label/icon all
+  used theme-INVARIANT tokens (`--theme-paper-subtle` well fill, `--theme-text-tertiary` grey
+  text) — only the Notes (Add Note) card followed the theme, because it alone overrode all three
+  `CardHeader` slots with the `--theme-accent*` family (the ONE family that re-tints per theme).
+- Fix: the Notes treatment is now `CardHeader`'s DEFAULT — themed accent-wash background,
+  accent-tinted hairline border-bottom, accent icon, and an accent `.label-micro` label
+  (`style`/`iconStyle`/`labelStyle` escape hatches unchanged). Adopted verbatim by the
+  `SubTaskModal` **Action Items**/**Details** headers and `SectionCard`'s header strip
+  (Gia Tasks, /profile, admin detail cards). `LeadNotesInput` dropped its now-redundant
+  overrides (and its card radius joined `--neu-radius-card`); `PersonalDetailsCard` dropped its
+  rest-state grey icon override.
+- Wash strength: the first cut used `--theme-accent-surface` (12% accent over transparent) and
+  read washed-out — 12% of an already-softened pastel over cream is nearly invisible. New
+  dedicated tokens in `serene-neumorphic-tokens.css`: **`--neu-header-wash`** (22% accent mixed
+  into `--neu-surface`, opaque) + **`--neu-header-edge`** (32% accent hairline); all three header
+  sites read them, so header intensity is tuned in ONE place. Dark mode adapts automatically (the
+  mix resolves from the dark `--neu-accent`/`--neu-surface` at use time). A full
+  `--neu-accent-gradient` fill variant was tried and rolled back the same day — too heavy.
+  Rule going forward: the header strip is the theme-coloured zone of a card —
+  `--neu-header-wash` + accent label, never paper-subtle/tertiary grey.
+
+**Sidebar — one active indicator:**
+
+- The active nav item keeps ONLY the accent-gradient icon tile (+ active label colour/medium
+  weight). The `--theme-sidebar-active-bg` wash, hairline+chip shadow, the travelling left pill
+  (`layoutId="sidebar-active-pill"`), and the trailing chevron are removed; the dead
+  `.serene-nav-chevron` class was dropped from globals.css. Hover behaviour unchanged.
+
+Verified with `pnpm lint` + `tsc --noEmit` (both clean).
+
+---
+
+## 2026-07-03 — Dark mode — warm charcoal (`data-neu="dark"`), three-state appearance preference, dark token deltas
+
+**Why:** the design department shipped `design_handoff_dark_mode/` — the dark variant of the
+neumorphic system ("candlelight, not moonlight"). The `[data-neu="dark"]` token block already
+existed in `serene-neumorphic-tokens.css`; this change is (a) the mode-switch wiring, (b) the
+handoff's dark-specific token deltas, and (c) the audit that every surface resolves through
+tokens so ONE attribute flip re-skins the app. Reference specimen: `Serene Dark.dc.html`.
+
+**Mode switch (the wiring):**
+
+- **`lib/constants/appearance.ts`** — THE appearance vocabulary (`light`/`dark`/`system` via
+  `defineEnum`; `system` follows `prefers-color-scheme`, UI label "Auto"), `APPEARANCE_COOKIE`
+  `serene-appearance` + `persistAppearanceCookie()` (the `serene-theme` pattern),
+  `NEU_CANVAS_LIGHT` `#ECE8E1` / `NEU_CANVAS_DARK` `#28241C` (the sanctioned meta/manifest hex
+  mirrors of `--neu-canvas`), and `applyAppearanceToDom()` — the ONLY place `data-neu` flips
+  (sets/removes the attribute + rewrites `<meta name="theme-color">`; `system` writes two
+  media-scoped metas so the chrome tracks the OS without JS).
+- **Migration 0158** (`profiles.appearance`, CHECK `light`/`dark`/`system`, default `light`) —
+  mirrors `profiles.theme` end-to-end; rides the existing `updateProfile` action (schema +
+  action + `updateProfileFields` extended; hand-written `Profile` type carries the union until
+  the next `database.ts` regen). **Applied to prod via MCP + verified.**
+- **Root layout** — stamps `data-neu="dark"` server-side from the cookie (zero flash); `system`
+  renders a tiny inline pre-paint script (matchMedia cannot run on the server). `viewport` became
+  `generateViewport()` reading the cookie (`#ECE8E1` ↔ `#28241C`; `system` → both media-scoped).
+- **`ThemeInitializer`** — corrective appearance sync beside the theme sync (DB truth vs stale
+  cookie) + owns the live `prefers-color-scheme` listener while `system` is active.
+- **`manifest.ts` + `/api/manifest`** — `buildManifest(icon, appearance)` now sets
+  `background_color`/`theme_color` per mode. The stale `EARTH_CANVAS #0d0c0a` export (the retired
+  pre-neumorphic canvas) is gone.
+- **Profile ▸ Appearance** — new **`AppearanceSelector`** (segmented Light · Dark · Auto via
+  `TabSelector variant="connected"`) above the `ThemeSelector` swatches; instant DOM apply with
+  the same `serene-theme-transition` cross-dissolve, cookie mirror, background DB persist.
+
+**Dark token deltas (all in `serene-neumorphic-tokens.css`; light values in `:root`, dark
+overrides in the `[data-neu="dark"]` block — components read roles, never `isDark` branches):**
+
+- **Tooltip inverts** — `--neu-tooltip-bg/text/shadow/kbd-bg`: charcoal-on-cream in light, cream
+  pill `#ECE8E1` / ink `#38332B` / `4px 4px 14px rgba(0,0,0,0.5)` in dark. `Tooltip.tsx` re-pointed.
+- **Undo/action toast** — `--neu-toast-action-*` + `--neu-toast-undo-*`: charcoal in light;
+  `--neu-surface-high` + raised-lg + `--neu-edge-strong` hairline + `rgba(255,240,214,0.06)` undo
+  pill in dark (charcoal-on-charcoal would vanish). `UndoToastItem` re-pointed (+ gained the
+  border). The standard toast was already token-clean (`--neu-surface-high`).
+- **Command palette** — `--neu-palette-bg/shadow` (surface/floating → surface-high/modal in
+  dark) plus `--neu-palette-scrim` deepening to `rgba(12,10,7,0.5)`. `CommandPalette.tsx`
+  re-pointed; its icon tiles/kbd chips already inset on `--neu-well` (auto-flip).
+- **Chat** — `--neu-chat-user-bg`: the sender bubble wash (12% accent on surface in light,
+  `--neu-accent-wash` = 14% lifted accent in dark). `ElayaMessageBubble` re-pointed; incoming
+  bubbles were already `--neu-surface-high` (matches the specimen `#332E24`), WhatsApp outbound
+  stays the semantic sage chip mix.
+- **Accent-fill hairline** — `--neu-accent-btn-edge` (`rgba(255,255,255,0.25)` → candle
+  `rgba(255,240,214,0.09)`): `.neu-btn-primary`, `.serene-btn-primary`, `TabSelector` accent chip.
+- **Accents auto-lift for legacy consumers** — dark re-points `--theme-accent-muted` (→
+  `--neu-accent-deep`, the 66%-white lift), `--theme-accent-hover` (lifts lighter instead of
+  darker), `--theme-accent-surface` (→ `--neu-accent-wash`) so on-cream "text-safe" tones stay
+  legible on charcoal; `--theme-accent` itself and `--theme-accent-fg` (dark ink) are untouched.
+- **Charcoal-family shadows** go black-based in dark; `--overlay-bg`/`--overlay-scrim` deepen to
+  `rgba(12,10,7,…)` in a small post-bridge block (source order beats the bridge's
+  equal-specificity `[data-theme]` selector — comment in the file explains).
+- Skeleton shimmer, toggle/tab tracks, chart grid (`rgba(255,240,214,0.10)`), scrims, chips, and
+  status pills were already token-driven — they flip with zero component edits.
+
+**SeedMandala dark variants (brand-fixed, never theme-tinted):** gradient stops now resolve
+through `--neu-mandala-from/to` (+ the `-disc-` pair) via `style={{ stopColor }}` (CSS vars don't
+resolve in SVG presentation attributes) — light keeps `#2B1D10→#C08A4E` (disc `#E8CFA0→#C08A4E`),
+dark lifts to `#5A4426→#D6AF6E` (disc `#7A5C30→#E8CFA0` on the `#221E17` glyph disc, which the
+existing dark block already deepens). `--neu-watermark-opacity` 0.08 → 0.10 (`EmptyState`
+watermark) and `--neu-boot-glow` (accent 28% mix → brand gold `rgba(214,175,110,0.18)`;
+`AppBootScreen`). One component, both modes.
+
+**Charts re-tint:** `useChartTokens` and both `resolveColorMap` observers (`BarChart`,
+`ManagerLeadVolumeWidget`) now watch `data-neu` alongside `data-theme`, so grid/axis/tooltip/series
+re-resolve on a mode flip without a remount.
+
+**Audit:** repo-wide sweep for the handoff's light literals (`#ECE8E1`, `#F1EDE6`, `#F3EFE8`,
+`#E9E4DB`, `#38332B`, `#8A8274`, `#ABA396`, `rgba(166,156,140`, `rgba(255,255,255`) — components were already clean except
+the `TabSelector` accent-chip border (fixed via `--neu-accent-btn-edge`); the `useChartTokens`
+pre-resolve FALLBACK constants stay by design. `pnpm check:tokens` ✓, `tsc --noEmit` ✓,
+`pnpm lint` ✓ (the design-handoff bundles' generated `support.js` runtimes joined the eslint
+ignore list beside the existing neumorphic one).
+
+**Semantic scope unchanged:** status chips and the `--domain-*` chart palette never theme-tint in
+dark either; `--theme-accent-fg` stays the theme's dark ink on every accent fill.
+
+## 2026-07-03 — Polish layer — ⌘K palette, list choreography, success moments, living numbers, tooltips, undo, header condense, brand empty states
+
+**Why:** the design department shipped `design_handoff_polish_layer/` — eight refinement
+patterns that move the app from "nice neumorphic CRM" to expensive-feeling product. Builds
+on the neumorphic FINAL system and the logo/loading handoff (SeedMandala, `--neu-*` tokens).
+All timings/easings are fixed per the handoff's global rules (named constants in
+`lib/constants/motion.ts`); everything honors `prefers-reduced-motion`.
+
+**Tokens & keyframes:**
+
+- `serene-neumorphic-tokens.css` — the charcoal family (`--neu-charcoal` `#2D2920`,
+  `--neu-charcoal-text`, two charcoal shadows, `--neu-palette-scrim`,
+  `--neu-shadow-floating`) + BRAND/SEMANTIC-FIXED celebration values that never
+  theme-tint: `--neu-success-gradient` (save-morph sage) + `--neu-success-ink`,
+  `--neu-petal-gradient` (won gold — the SeedMandala darkDisc stops).
+- `design-tokens.css` — `--z-tooltip: 75`; keyframes + classes `serene-check-draw`
+  (400ms), `serene-ring-pulse` (700ms accent halo, once), `serene-petal-fall`
+  (transform/opacity only); all three rest at done / skip under reduced motion.
+- `motion.ts` — `PALETTE_DURATION` 320ms, `ROW_DURATION` 380ms, `TOOLTIP_DURATION` 180ms
+  with `TOOLTIP_INTENT_MS` 500, `CONDENSE_DURATION` 300ms, `COUNT_UP_MS` 1.4s,
+  `UNDO_WINDOW_MS` 5s, and `ROW_VARIANTS` (the §02 row choreography — Framer's measured
+  height:auto tween is the handoff-sanctioned exception to the height-animation ban).
+
+**New primitives (`src/components/ui/`):**
+
+- **`Tooltip.tsx`** — THE charcoal hover pill (§05): 500ms hover intent, instant reshow
+  between adjacent triggers, 180ms fade + 5px directional slide, focus-visible support,
+  NEVER on coarse pointers (`MQ.finePointer`, new in `useMediaQuery`). Deliberately not
+  `usePortalAnchor` (hover-driven, side-placed, pointer-events none) — shares only the
+  body portal. Wired: collapsed sidebar rail items (right; disabled outside rail mode,
+  replacing the native `title`), PageControls bell (bottom). Truncated table cells are the
+  documented next call sites.
+- **`AnimatedNumber.tsx`** — living numbers (§04): rAF count-up, 1.4s ease-out-cubic,
+  tabular-nums; takes the ALREADY-FORMATTED string (numbers.ts stays the only formatter),
+  animates the numeric run, settles on the original string verbatim; animates from the
+  previous value on change. Adopted: `StatTile` (both variants), `StatAtom`,
+  `CoreFourGrid` MetricCard, `DomainTargetMeter` centre label, `SnapshotCountWidget`.
+- **`CheckTile.tsx`** — THE completion tile (§03): inset well ↔ accent-gradient flip +
+  check draw + ONE ring pulse (user toggles only). Adopted in the SubTaskModal checklist;
+  `TaskCompletionCircle` (task rows) keeps its radio identity but gains the ring pulse.
+- **`PetalFall.tsx`** — the deal-won celebration (§03): ~14 brand-gold petals, randomized
+  1.6–2.7s, overflow-hidden pointer-events-none layer, DOM removed after 3.2s. RESERVED
+  exclusively for Won. `DealCard` fires it once via a sessionStorage handshake
+  (`DEAL_CELEBRATE_STORAGE_KEY`) that `NewDealModal` stamps on success — surviving the
+  RSC `router.refresh()`.
+- **`RowMotion.tsx`** — `<MotionRow>`, THE list-row choreography wrapper (§02): enter
+  height 0→auto + y −8→0 (380ms spring-out), exit collapse + x +24 drift. Caller owns
+  `<AnimatePresence initial={false}>`. Row motion WINS inside lists — never stack
+  `.neu-reveal` on individual rows. Adopted: `/notes` list.
+- **`CommandPalette.tsx` + `layout/CommandPaletteProvider.tsx`** — ⌘K/Ctrl-K global
+  palette (§01), mounted once in the dashboard layout; panel chunk loads on first open
+  (G-1). 640px `--neu-surface` panel, `--neu-shadow-floating`, 320ms spring rise over the
+  charcoal scrim with blur(3px) — a SANCTIONED backdrop-blur surface. Groups: Actions ·
+  live leads/deals/tasks (new `paletteSearchAction` in `lib/actions/search.ts` — Zod
+  `PaletteSearchSchema` → `requireProfile` → the EXISTING `getLeadsByRole` /
+  `getDealsByRole` / `getPersonalTasks` reads, R-01; each group best-effort) · Go to
+  (pages filtered via `canAccessRoute` + role gates). ↑↓/↵/esc; accent color-mix wash on
+  the active row; serif-italic "Nothing matches — Elaya can look wider." Actions ROUTE to
+  their page in v1 (cross-page modal-open wiring is the documented follow-up).
+- **`layout/CondensingPageHeader.tsx`** — sticky page header that condenses past ~24px
+  scroll (§07): title → 17px, subtitle folds, canvas-tinted blur(10px) backdrop + bottom
+  hairline (`.serene-condense-header` in globals.css — a handoff-sanctioned blur surface).
+  IntersectionObserver sentinel rooted on `.serene-shell-paper` with re-armed rootMargin
+  hysteresis (24px in / 4px out). Adopted: Leads, Deals, Tasks, Notes ( `/whatsapp` is the
+  documented full-bleed exception; Budget/Helpdesk/Escalations roll out next).
+
+**Extended components:**
+
+- **`Button.tsx`** — `status: 'idle' | 'pending' | 'success'` + `successLabel` (§03 save
+  morph): pending = the existing mandala treatment; success re-tints to the SEMANTIC sage
+  gradient + draws the check (400ms) + "Saved", `loading` maps onto pending. New
+  `useButtonStatus()` hook (pending → success → 1.8s → idle; ActionResult-aware).
+  Reference migration: `ProfileDetailsForm` (form folds back to read view after the sage
+  hold).
+- **Toast system** — new `undo` type (§06): `toast.undo(title, { action, onTimeout })` —
+  charcoal toast, accent Undo pill, 2.5px accent depletion bar (scaleX, 5s linear — the
+  bar IS the countdown, so no hover-pause and no X; timeout runs the deferred commit).
+  `/notes` delete converted to optimistic-remove + undo (ConfirmDialog dropped there);
+  task deletes stay on ConfirmDialog for now (multi-call-site surgery — documented
+  follow-up). ConfirmDialog remains THE surface for irreversible admin operations.
+- **`EmptyState.tsx`** — `brand` prop (§08): 76px gradient SeedMandala + 240px corner
+  watermark (opacity .08, 120s/rev, class-driven spin so reduced-motion rests it) +
+  the existing Playfair-italic voice + exactly one primary action. Adopted with
+  per-module copy: `/notes` first-note empty (+ Add-a-note action, Elaya named),
+  `/deals` no-deals empty.
+
+**Notes:** `pnpm check:tokens` ✓ (zero stray hex — celebration values live in the token
+sheets; the SeedMandala stops remain the only sanctioned component hex). `tsc` + `eslint
+src` clean. The specimen (`Serene Polish.dc.html`) remains the visual reference for QA.
+
+---
+
+## 2026-07-03 — Logo, loading & boot motion system — SeedMandala, LogoSpinner, boot screen, route veil
+
+**Why:** the design department shipped `design_handoff_logo_loading_motion/` — the app's
+whole waiting layer rebuilt around the company logo (the seed mandala). One boot sequence
+(draw → breathe → turn → glow) is the source of truth; every other waiting state is a
+smaller quotation of it. Supersedes the generic arc `Spinner` and any earlier lotus render.
+
+**What:**
+
+- **`SeedMandala` (`src/components/ui/SeedMandala.tsx`)** — THE procedural brand mark.
+  8 stroked circles, r=46, centers on a ring of radius exactly 46 around (100,100) at 45°
+  steps from −90° (offset === r → every circle passes through the exact center; the
+  crossings form the 8-petal seed flower — verified pixel-side-by-side against
+  `assets/serene-seed-mandala-1254.webp`). Variants: `gradient` (one linearGradient across
+  the whole mark, umber `#2B1D10` → gold `#C08A4E`, stroke 2.2), `currentColor` (stroke 7,
+  tiny in-control sizes), `darkDisc` (`#E8CFA0 → #C08A4E`, stroke 4, charcoal/scrim
+  grounds). `draw` (pathLength=1 trace, 1.15s `cubic-bezier(0.22,1,0.36,1)`, 90ms stagger)
+  and `spin` (s/rev) props. The three gradient stops are the ONLY sanctioned component hex
+  (brand-fixed, never theme-tinted). Spin/draw are class-driven (`.serene-logo-spin` /
+  `.serene-logo-draw` + `serene-logo-trace` keyframe in `design-tokens.css` §15) so
+  `prefers-reduced-motion` kills them — the mark rests finished and still.
+- **`AppBootScreen` (`components/layout/`, mounted in the dashboard layout)** — full-viewport
+  boot on `--neu-canvas`: 190px mark draws then breathes (scale 1→1.035, 4s, from 2.6s)
+  wrapping a 90s/rev turn (two nested wrappers so transforms compose); 420px accent glow
+  pulsing .25→.6 in phase with the breath; "SERENE" Playfair 600 26px with letter-spacing
+  opening .1em→.42em (1.4s, delay 1.5s); tagline fade-up at 2.1s; 220×8 inset progress
+  track (`--neu-well` + `--neu-shadow-inset`) with a 35% accent sweep from 2.4s. SSRs with
+  the shell (visible from first paint), plays once per hard load, fades out at ~3.4s
+  (~0.5s under reduced motion). Soft navigations never replay it (the layout persists).
+  New tokens: `--z-boot: 95`, `--z-veil: 90`.
+- **`LogoSpinner` (`src/components/ui/LogoSpinner.tsx`) replaces the arc `Spinner` —
+  `Spinner.tsx` is DELETED, never recreate it.** Mark at a fixed calm 3.5s/rev; sizes
+  `lg` 38-in-56 / `md` 27-in-40 inset cream wells (`--neu-surface` + `--neu-shadow-inset`),
+  `sm` 24 bare. All 22 call-site files swapped: centered loading regions (5 performance
+  drill modals, CompletedTasksModal, AdCreativeFormModal, TrainingAssetFormModal) →
+  `LogoSpinner md`; text-adjacent pending rows (WonDealModal, NewDealModal,
+  MyTasksCalendarView) → `LogoSpinner sm`; tiny in-control indicators (MessageBar send,
+  DictationButton, LeadInfoCard save states, PersonalDetailsCard, LeadNotesInput,
+  ElayaTrainingManager/NotesManager/AdCreativesManager delete buttons) → inline 14–16px
+  `currentColor` SeedMandala at 3.5s; ProfileAvatarSection's dark upload scrim → 27px
+  `darkDisc`.
+- **Button pending state** — 18px `currentColor` mark spinning 3.5s replaces the iconLeft
+  slot; `cursor: wait` (pointer events stay on so it shows; the disabled attribute still
+  swallows clicks); primary drops to opacity 0.85; new optional `loadingLabel` prop for
+  the progressive verb ("Saving…").
+- **Elaya thinking** — `ElayaGlyphDisc` gains `thinking`: the disc's static logo image
+  swaps for a spinning `darkDisc` mark at 8s/rev (30/44 of the disc). Wired to
+  `ElayaChatShell`'s in-transcript status row (28px, on the message-glyph rail) —
+  replaces the small static compass glyph while she thinks / runs tools.
+- **PageSkeleton shimmer** — the `.skeleton` opacity pulse is gone: the neu layer now
+  paints a left→right sheen (`--neu-well` 25% / `--neu-surface-high` 50% / `--neu-well`
+  75%, 200% background sweep, 1.8s linear, `serene-shimmer-sweep`), reduced-motion falls
+  back to the flat well tone. `skeletonStagger` now steps 150ms (capped 600ms).
+  New `SkeletonWatermark` — 150px mark top-right at opacity .10 turning 40s/rev — mounted
+  structurally by `PageHeaderSkeleton` (opt-out `watermark={false}`), so every composing
+  `loading.tsx` gets it for free.
+- **`RouteVeil` (`components/layout/`, mounted in the dashboard layout)** — full-page
+  route transitions: a cream gradient veil (`--neu-surface → --neu-well`) rises over the
+  outgoing page with a 56px mark spinning 3.5s, holds while the route resolves, lifts off
+  the top (2.6s choreography split rise 1.17s / hold ≥260ms / lift 1.17s on
+  `cubic-bezier(0.65,0,0.35,1)` — the hold stretches to real navigation time). Intent =
+  capture-phase click on same-origin links whose **pathname** differs (search-param-only
+  pushes — filter bars — never veil); arrival = `usePathname()` commit; 8s safety lift.
+  Skipped entirely under reduced motion.
+- **Spin speeds are law:** boot 90s · spinners/buttons/veil 3.5s · Elaya 8s · watermark
+  40s — never faster than 3.5s/rev. Every loop honors `prefers-reduced-motion: reduce`
+  (finished static mark, no loops).
+- The auth-layout mandala mask (`.serene-auth-mandala`) already used the correct
+  offset===r construction and stays as background atmosphere.
+- Registry updated in `src/components/CLAUDE.md` (SeedMandala + LogoSpinner rows; the
+  "every loading indicator" rule now points at LogoSpinner).
+
+---
+
+## 2026-07-03 — Neumorphic FINAL revision — Whisper/Marshmallow, 8-theme lineup, motion layer, logo glyph
+
+**Why:** the design department shipped the FINAL revision of the neumorphic handoff
+(`design_handoff_neumorphic_system/`), superseding the same-day first drop. Where the
+old values conflict, this package wins.
+
+**What:**
+
+- **Token layer superseded** (`src/styles/serene-neumorphic-tokens.css` rewritten):
+  the FINAL feel is **Whisper shadows** (raised `3px/8px .26/.70`, raised-sm `2px/6px`,
+  raised-lg `6px/16px`, hover `5px/12px`, pressed `2px/4px`) + **Marshmallow radii**
+  (`--neu-radius-card` 32 / panel 28 / field 22 / tile 18 / chip 14 / pill 999) — the
+  previous "Reference" depth (6/14px, .38/.42 alphas) and 24px card radii are obsolete;
+  exactly ONE depth and ONE radius scale exist. The legacy radius scale is bridged
+  (`--radius-md`→14, `--radius-lg`→22, `--radius-xl`→32) and card/panel shells were
+  re-pointed at the explicit `--neu-radius-card/-panel` roles (SectionCard, stat tiles,
+  domain cards, FloatingPanel, dropdown menus, NotificationPanel, toasts).
+- **Softened theme accents (design-approved):** the stock accents read too heavy on the
+  cream material. The neu layer now overrides each theme's `--theme-accent*` family —
+  earth honey gold `#D6BC82`, air powder sky `#97B5D2`, water seafoam `#8FC3B9`, fire
+  terracotta peach `#DC9877`, candy soft pink `#F0B5D2` — all with dark-ink `accent-fg`
+  (pastels never hold white). Stock values stay in `design-tokens.css` for the revert path.
+- **Eight-theme lineup; martini retired.** New full `[data-theme]` blocks in
+  `design-tokens.css`: **rose** (`#D9A0A5` — the system's reference accent), **moss**
+  (matcha sage `#A9C4A0`), **lilac** (`#C9C0E4` — the single purple). `themes.ts`
+  THEME_KEYS updated (ThemeSelector renders from it automatically); martini's blocks
+  removed; **migration 0157** moves `profiles.theme='martini'` → `'lilac'` and narrows
+  the CHECK to the eight keys; the hand-written `Profile.theme` union updated.
+  Theme scope rule: accent-role elements re-tint; surfaces/shadows/text, semantic
+  status chips, and `--domain-*` chart palettes never do.
+- **Dark mode:** `data-neu="dark"` accents now auto-lift lighter via `color-mix` so
+  they hold on charcoal.
+- **Motion layer (README appendix, shipped in the tokens file):** `.neu-reveal`
+  scroll-driven card entrance (`animation-timeline: view()`, `@supports` one-shot
+  fallback, ends at `transform: none`; adopted on SectionCard + dossier/helpdesk card
+  shells — never on react-grid-layout items), `.neu-draw`/`.neu-grow`/`.neu-sweep`
+  chart recipes, `.neu-interactive` springy transitions (also folded into the bridged
+  `--transition-interactive` so every Button consumer inherits the 220ms spring +
+  300ms shadow bloom), idle loops (breathe 3s, typing dots 1.2s/150ms, marquee 30s,
+  halo 2.6s, ✦ twinkle 5s) — all reduced-motion-gated.
+- **Elaya glyph = the company logo.** `public/elaya-glyph-192.png` (gold lotus mandala
+  on near-black); `ElayaGlyphDisc` now renders it as a circular image filling the
+  charcoal disc with the 3s breathe — chat assistant avatar, chat header, identity
+  card, and the floating widget FAB all inherit; tiny inline mentions (< 24px) keep
+  the ✦/compass mark via `ElayaGlyph`.
+- **Stray-value audit:** grepped components for old putty alphas (.38/.42), 14px
+  offsets, literal 24px card radii, and hardcoded `#D9A0A5` — none survived (the
+  first drop was token-disciplined); the only hit is `useChartTokens`' documented SSR
+  fallback, which matches the final grid spec.
+- Root `CLAUDE.md` Theme Quick Reference + `lib/CLAUDE.md` themes row updated to the
+  eight-theme lineup.
+
+---
+
+## 2026-07-03 — Neumorphic (Soft UI) restyle — token layer, global ground, full component sweep
+
+**Why:** the design department handed off a complete neumorphic design system
+(`design_handoff_neumorphic_system/` — README, token file, two high-fidelity HTML
+specimens covering the entire component inventory). The brief: recreate the look inside
+the existing React/Tailwind/CSS-variable conventions, keeping all six theme accents live.
+
+**What:**
+
+- **New token layer** `src/styles/serene-neumorphic-tokens.css`, imported after
+  `design-tokens.css` in `globals.css`. Ships the cream material (`--neu-canvas` #ECE8E1,
+  `--neu-surface`, `--neu-well`), the paired-shadow recipes (`--neu-shadow-raised-sm/
+  raised/raised-lg/hover/inset/pressed/chip/knob/input/track/tab-active/modal`), the 1px
+  white hairline `--neu-edge`, the floating-input recipe (`--neu-input-bg` gradient
+  sheen plus inner top highlight), the pastel support family (sage/powder/butter/lilac/
+  peach/teal plus danger, each with a text-safe `-deep`), exact specimen chip pairs
+  (`--neu-chip-*-bg/-fg`), the Elaya charcoal disc tokens, and the warm-charcoal
+  `data-neu="dark"` variant. **Departure from the handoff, by request:** the English-rose
+  accent is not hardcoded — `--neu-accent*` derives from the active theme's
+  `--theme-accent*` family (gradient via `color-mix`), so Earth/Air/Water/Fire/Martini/
+  Candy accents all work on the neumorphic material.
+- **Legacy token bridge** (same file): re-points `--theme-canvas/paper/paper-subtle/
+  paper-border`, all text tokens, the sidebar family, `--shadow-1/2/3/4/inset/focus/
+  accent-*`, overlays, the semantic `--color-*` family, and the `--status-*` family
+  (pastel fills + deep labels; solids → pastel bases for charts) at the neu system —
+  converting every token-compliant component in one move. Also restyles the
+  `.serene-btn-*` variants (rose-gradient primary, raised secondary, soft-pastel
+  danger/success), `.status-pill` (chip shadow + hairline), `.skeleton` (flat pulse on
+  the well), section labels (`.type-eyebrow`/`.label-micro` → accent-deep), scrollbars
+  (warm putty thumbs), and adds the reference keyframes (`serene-neu-dot` typing dots,
+  `serene-neu-halo` 2.6s MotionButton halo, `serene-neu-listening`), all
+  reduced-motion-gated.
+- **Global ground** (`globals.css`): `color-scheme` light (dark under `data-neu="dark"`),
+  the dark-canvas + floating-paper shell split retires (`.serene-shell-paper` becomes the
+  cream ground, no radius/shadow), `.serene-input`/`.serene-input-auth` become floating
+  fields (Rule 3), the auth card becomes a raised-lg cream panel, the auth grain is
+  removed, mobile trigger + Elaya FAB become raised soft tiles with hover lift.
+- **Sidebar** becomes the cream raised rail: floating card on the canvas (md+ margins +
+  radius, drawer rounds its right edge), active nav item = accent wash + chip lift +
+  accent-gradient icon tile (selection grammar — never inset), dark-ink logo variant.
+- **Core primitives** restyled to the specimen grammar: Toggle (inset well track, accent
+  gradient knob), TabSelector (satin inset tray, active tab floats as a gradient pill),
+  SearchBar (floating pill with sheen), FilterDropdown (applied = accent wash + float;
+  selected options wash + chip shadow; gradient check tiles), FloatingPanel +
+  dropdown menus (surface-high, hairline, raised-lg), Dialog/ConfirmDialog (warm
+  `--neu-scrim` + 3px blur — the sanctioned scrim treatment for this system — and
+  raised modal panels), plus a parallel sweep across the remaining `ui/` primitives,
+  dashboard/performance widgets, leads/deals/campaigns/intelligence components,
+  whatsapp/elaya/notifications/settings/admin surfaces, and the auth screens.
+- **Charts:** `useChartTokens` series → theme accent + pastel family, warm putty dashed
+  gridlines (`--neu-chart-grid`), tooltip on surface-high + hairline; `ChartFrame`
+  becomes the raised gradient chart panel (never a well); bar corner radius 6.
+- **Elaya:** new `ElayaGlyphDisc` export (`ui/elaya-glyph.tsx`) — the breathing glyph on
+  the charcoal disc, the one dark-first surface that survives (`--neu-glyph-disc`).
+- **Grammar polish batch (chat + settings + auth):** WhatsApp `MessageBubble` — outbound
+  bubbles = soft sage fill (`--neu-chip-sage-bg`), inbound = surface-high, both with
+  hairline + chip shadow + 20px/6px-tail radius, delivery double-ticks in
+  `--neu-sage-deep`, media chip fill moves off the (now-hairline) border token to
+  `--neu-well`; `ConversationRow` active = accent-wash float (chip shadow + hairline,
+  `--neu-accent-deep` label); `ElayaMessageBubble` (assistant surface-high / user accent
+  wash, same chip chrome) and the glyph mounts in the chat header, identity card, and
+  bubble rail move onto `ElayaGlyphDisc`; `NotificationPanel` → surface-high raised-lg
+  panel (18px), `NotificationItem` hover = faint accent wash (never the well tone);
+  selected-state grammar (wash + chip shadow + hairline, never a coloured border) applied
+  to `ThemeSelector`/`IconSelector` swatches (accent ring kept), `AgentSettingsTable`
+  work-day picker, `ElayaPersonaSettings` chips, `SuggestionComposerModal` type chips
+  (also drops its one hardcoded `#fff`); `SettingsLinkCard` hover lift →
+  `--neu-shadow-hover`; `PasswordChangeForm` focus/blur handlers stop sinking the field
+  (accent ring over `--neu-shadow-input`); `SubTaskModal` backdrop → `--neu-scrim` +
+  3px blur (the old canvas-72% formula no longer dims); `ProfileAvatarSection` camera
+  overlay icon → `--neu-on-accent-soft` (canvas-text is now a dark ink); auth brand
+  serif titles → `--neu-text-primary` explicitly.
+
+**Contracts kept:** component APIs, data flow, copy, `m as motion`, transform/opacity
+animation rule, reduced-motion gates, hover gated to fine pointers, the z-scale, and all
+six themes. The old theme-token *values* in `design-tokens.css` are untouched — removing
+the one `@import` line reverts the entire restyle.
+
+---
+
+## 2026-07-03 — Docs: `docs/design/design.md` — design-department handoff file (docs-only)
+
+**Why:** the design team needs one file that maps the entire UI (vision, tokens, all
+primitives, modals, cards, feature surfaces, guardrails) and gives them a structured place
+to log enhancement proposals without destabilising production.
+
+**What:** new `docs/design/design.md`. It is a guided tour plus an enhancement workflow,
+not a new authority: it points at `DESIGN-DNA.md`, `design-tokens.css`,
+`src/components/CLAUDE.md`, and `The_Rules.md` as the law (Section 19 authority map).
+Contents: the five-point vision, the surface contract, the six themes, the full token
+system (type, spacing, radius, elevation, z, motion), the motion rules and vocabulary,
+layout anatomy, the 12 core components with the complete `ui/` primitive inventory, the
+modal/toast/chart systems, the ten micro-details, a screen-by-screen feature-surface
+inventory (leads, dashboard, tasks, whatsapp, elaya, and the rest), the Elaya design
+language, data-display and loading rules, the design-edition never-do list, deferred
+design targets, and Sections 20 to 22: the enhancement proposal template, the backlog,
+and the shipped log.
+
+---
+
+## 2026-07-02 — Docs: full-tree audit, restructure, and rewrite (docs-only)
+
+**Why:** the docs tree had drifted 19 migrations behind the code (last verified 2026-06-20
+against 0137; the code is at 0156). Theme lists, Elaya tool counts, page specs, and the
+migration index were all stale, and several plan/proposal docs had shipped and outlived
+their purpose.
+
+**What:** every file in `docs/` was audited against the live code and either verified,
+patched, rewritten, or deleted.
+
+- **Deleted (shipped or duplicate):** `_archive/` (15 pre-restructure originals),
+  `_restructure-proposal.md`, `the-next-phase.md`, `plans/completed-tasks-view.md`,
+  `architecture/elaya-jarvis-architecture.md` (every phase shipped; its Golden Rule, parity
+  rule, and four-concern model now live in `modules/elaya.md`, and the code comments that
+  cited it were repointed), `modules/call-intelligence-content-worksheet.md` (one-time
+  worksheet, work done), `modules/budget.md` (merged into `pages/budget.md`; one home per
+  topic). `docs/oversight.md` moved to `docs/pages/oversight.md`.
+- **New specs:** `pages/notes.md` and `pages/elaya-training.md` (both routes were live with
+  no spec).
+- **Major rewrites:** `01-vision.md` (six themes, 12+12 Elaya tools, Oversight row, corrupted
+  duplicate Elaya row removed), `design/design-system.md` (Six Themes chapter, 2026-07-02
+  component purge applied), `design/DESIGN-DNA.md` (PageControls, deferred-design markers),
+  `pages/dashboard.md`, `pages/performance.md`, `pages/whatsapp.md` (customer Elaya channel
+  replaces the "chatbot not built" thesis), `pages/settings.md` (three-route layout),
+  `pages/elaya.md`, `modules/elaya.md` (the single as-built Elaya home),
+  `modules/customer-welcome-blast.md` (design doc converted to as-built record),
+  `integrations/whatsapp-gupshup.md`.
+- **Patched (stale claims fixed, `Last verified` bumped to 2026-07-02):** `README.md` (tree +
+  lookup table match disk again), `00-for-the-board.md`, `TODO.md`, all six
+  `architecture/` files (tables 0150-0156 added; the `.sql` dump got a provenance header),
+  `design/decision-log.md` (theme-retirement entry added), `rules/The_Rules.md` (nine factual
+  fixes + repeat-offender rows), 15 more `pages/` specs, `modules/gia.md`,
+  `call-intelligence.md`, `voice-dictation.md`, `web-push.md`, all four `integrations/`,
+  and three `operations/` files. `claude-project/0-README.md` got a STALE banner (regenerate
+  before the next upload).
+- **Untouched by design:** `changelog.md` (append-only), `audits/` (dated records),
+  `Indulge-Global.md`, and the specs that verified clean (`helpdesk.md`, `usage.md`,
+  `error-log.md`, `modules/revival.md`, `modules/sia.md`, `operations/pwa-install-guide.md`).
+
+Every claim written in this pass was verified against the code first; anything unverifiable
+is marked `TODO: verify` in place. Root `CLAUDE.md`'s Deepgram note was corrected to what the
+code runs (`nova-2` + `hi-Latn`; it claimed "Nova-3 multilingual").
+
+---
+
+## 2026-07-02 — Retire the Cosmos, Coffee, and Macha themes
+
+**Why:** Theme roster trimmed on request the same day Coffee + the pastel trio shipped. Final
+vocabulary: **Earth (default), Air, Water, Fire, Martini, Candy.**
+
+**What:** `cosmos`/`coffee`/`macha` removed from the `themes.ts` vocabulary (ThemeSelector,
+SSR cookie, chart re-resolution all follow automatically); their `[data-theme]` blocks +
+semantic overrides deleted from `design-tokens.css` (Martini/Candy renumbered to sections
+6/6B); `Profile.theme` union narrowed in `types/database.ts`; DESIGN-DNA Cosmos/Coffee/Macha
+sections removed and Martini/Candy renumbered to Themes 05/06 (every "violet on Cosmos" prose
+example re-pointed at Martini); Theme Quick Reference + "What Serene Is" updated in
+`CLAUDE.md` / `.cursorrules`.
+
+**Migration `0156_profiles_theme_retire_cosmos_coffee_macha.sql`** (**not yet applied — apply
+0154 → 0155 → 0156 in sequence**): moves any profile on a retired theme to `earth` FIRST, then
+re-adds the narrowed `profiles.theme` CHECK (order is load-bearing — live `cosmos` rows exist;
+0154/0155 are kept on disk unedited per A-14 since the sequence net-applies cleanly). App side
+is safe either way: a retired value in a stale cookie or DB row fails `isThemeKey()` and falls
+back to `DEFAULT_THEME`.
+
+---
+
+## 2026-07-02 — Dossier "Why we're perfect." card: cap + internal scroll
+
+**Why:** The Call Intelligence interest card (`ServiceInterestCard`) grew unbounded with its
+curated cases + talking points — with a full set of matches it dominated the dossier's right
+column, unlike its sibling cards which cap their body height.
+
+**What:** Wrapped the card's content region (search results / curated cases + hooks) in a
+`maxHeight: 300px` + `overflowY: auto` scroll container — the same anatomy as the sibling
+dossier cards (`LeadWhatsAppCard` message list 300px, `LeadTasksCard` list 220px). The header,
+search bar, and "Browse the full library" footer link stay pinned; only the case list scrolls.
+Short content is unaffected (max-height, not fixed height).
+
+---
+
+## 2026-07-02 — Pastel trio: Macha, Martini, Candy themes (themes 07–09)
+
+**Why:** Three more workspace themes were requested around user-supplied pastel palettes —
+Macha (green pastel nature summer: `#84b179 #a2cb8b #c7eabb #e8f5bd`), Martini (periwinkle /
+mint / sky: `#9fa1ff #b5baff #aee2ff #d9f9df`), Candy (pink / blue / green / lemon pastel
+rainbow: `#f9b2d7 #cfecf3 #daf9de #f6ffdc`).
+
+**What:** Three new `[data-theme]` blocks + per-theme semantic overrides in
+`src/styles/design-tokens.css`; `macha`/`martini`/`candy` added to the `themes.ts` vocabulary
+(ThemeSelector previews, SSR cookie stamp, and chart token re-resolution pick them up with zero
+component changes — the 0154 Coffee path exactly); `Profile.theme` union widened in
+`types/database.ts`; migration `0155_profiles_theme_pastel_trio.sql` extends the
+`profiles.theme` CHECK (**not yet applied — apply together with 0154**); Themes 07–09 sections
+added to `DESIGN-DNA.md`; Theme Quick Reference updated in `CLAUDE.md` / `.cursorrules`.
+
+**Design decisions (documented in the DESIGN-DNA Theme 07–09 usage notes):**
+
+- **Revised same day (user feedback):** the first cut mapped the pastel palettes onto the
+  paper surfaces themselves (lime/mint/lemon papers) — too loud. Final design follows the
+  **Earth → Air delta**: paper stays near-white with only a hue whisper (`#f8fbf0` /
+  `#f8f8fe` / `#fdf9fb`), canvas + sidebar stay dark, and the palette does its work in the
+  ENHANCEMENT layer — the accent family (buttons, card headers via paper-subtle, active
+  pills, focus rings) and the semantic `-light` chips.
+- Each anchor pastel ships exactly as `--theme-accent` (Macha `#84b179`, Martini `#9fa1ff`,
+  Candy `#f9b2d7`); the lighter palette hexes tint the chips: Martini's mint → success,
+  sky → info; Candy's rainbow → mint success / powder-blue info / lemon warning; Macha's
+  pale leaf → success. Martini's `#b5baff` is the sidebar active label, exact.
+- **All three accents are pastels and carry dark-ink `--theme-accent-fg`** (Macha `#182410`,
+  Martini `#191a38`, Candy `#2b1420`) — the Earth-gold precedent; white text fails contrast on
+  every one of them. Accent-coloured TEXT on paper uses the deepened `--theme-accent-muted`.
+- Canvases are hue-matched darks (green-black / evening indigo / dark plum) with flat washes
+  (the H-02 `none` rule — washes can be designed later like Earth/Coffee).
+
+---
+
+## 2026-07-02 — Lead dossier: drop the 1280px width cap (full-width like sibling detail pages)
+
+**Why:** The dossier `<main>` carried a `maxWidth: 1280px` with no `margin: auto` — on wide
+viewports (or browser zoom-out) the content stayed pinned to the left with a dead strip on the
+right, so the page looked lopsided next to every other page. It also matched neither layout
+family: the back-button detail pages (`campaigns/[id]`, `tasks/[id]`) are uncapped full-width,
+while the capped identity pages (`/profile`, `/admin/users/[id]`, `/admin/users/new`) pair
+their cap with `paddingBottom: var(--space-16)` — the dossier had the cap without the rest.
+
+**What:** Removed the `maxWidth` inline style from `leads/[id]/page.tsx` and its mirror
+`leads/[id]/loading.tsx` — the dossier `<main>` is now the plain
+`flex-1 p-4 sm:p-6 lg:p-8`, identical to the other detail pages and every list page. (An
+interim same-day fix centred the cap with `marginInline: auto`; superseded by removing it.)
+The capped `/profile` + admin-user pages are deliberately untouched.
+
+---
+
+## 2026-07-02 — Coffee theme (theme 06)
+
+**Why:** A sixth workspace theme was requested around a vintage fall palette — coffee bronze
+`#8a7650`, sage `#8e977d`, cream `#ece7d1`, vintage tan `#dbcea5`.
+
+**What:** New `[data-theme="coffee"]` block + Coffee semantic overrides in
+`src/styles/design-tokens.css`; `coffee` added to the `themes.ts` vocabulary (ThemeSelector,
+SSR cookie stamp, chart re-resolution all pick it up with zero component changes); `Profile.theme`
+union widened in `types/database.ts`; migration `0154_profiles_theme_coffee.sql` extends the
+`profiles.theme` CHECK (**not yet applied**); Theme 06 section added to `DESIGN-DNA.md`; Theme
+Quick Reference updated in `CLAUDE.md` / `.cursorrules`.
+
+**Design decisions (documented in DESIGN-DNA Theme 06 usage notes):**
+
+- All four requested hexes ship exactly: `#ece7d1` → `--theme-paper`, `#dbcea5` →
+  `--theme-paper-border`, `#8a7650` → `--theme-accent`, `#8e977d` → the sidebar active pill.
+- Canvas is dark-roast espresso `#0e0a06` with Coffee's own radial washes (bronze top-left,
+  sage bottom-right) — the Earth precedent; the other four themes stay flat.
+- The cream paper is the deepest paper of all six themes, so every semantic `-light` chip gets a
+  cream-tinted override (the near-white defaults would glow brighter than the paper). Success
+  family is sage-shifted, danger is rust, info is vintage denim.
+- `--theme-accent-fg` is `#faf6ea` (warm milk-foam), a deliberate deviation from the
+  white-on-accent pattern — stark white reads clinical against the vintage bronze.
+- Coffee is the one theme whose sidebar active state is not the accent family: the brown × sage
+  pairing is the theme's identity and the nav is its highest-visibility home.
+
+---
+
+## 2026-07-02 — database.ts regenerated from the live schema; ~105 interim `as any` casts retired
+
+**Why:** `src/lib/types/database.ts` predated most recent migrations, so every service touching
+a newer table or RPC carried a documented interim `(client as any)` cast "until database.ts
+regen". The regen finally happened; the casts came out.
+
+**What:**
+
+- `supabase gen types typescript --linked` against the linked Serene project, generated to a
+  temp file, sanity-checked (all new tables present: whatsapp_*, elaya_*, revival_*, usage_*,
+  suggestions, elaya_notes, notification_preferences, plus every RPC), then spliced ABOVE the
+  hand-written "Derived type aliases" appendix (the file documents this seam; the appendix,
+  which the whole app imports as `Profile`/`Lead`/`Task` etc., is preserved byte-identical).
+  2,681 lines became 3,088. The whole codebase typechecked against the new schema unchanged.
+- Interim-cast retirement across ~35 files, types-only (zero runtime edits, verified with
+  per-file `tsc` runs): all `(supabase/admin as any).from(...)` and `.rpc(...)` casts removed
+  along with their paired eslint-disable lines and stale "pending regen" comments. Typed
+  clients now check every insert/update payload on the previously-untyped tables.
+- Deliberate keeps, all documented in place: `rpc-helpers.ts callAdminRpc` (generic by design,
+  the rpc name is a runtime string), the sanctioned null-vs-undefined RPC-arg bridges in
+  `leads-service.ts` (`get_leads_status_counts`) and `deals-service.ts` (`get_deals_summary`)
+  (generated Args type SQL-DEFAULT params as `string | undefined`; the code passes an explicit
+  `null` for "no filter"), and four component-level UI shape casts (a different class).
+  Final census: 8 `as any` in all of src, each one explained, down from ~113.
+- The hand-declared type files (types/elaya.ts, revival.ts, usage.ts, oversight.ts) stay as
+  the app-level shapes; folding them onto the generated Rows is an open refactor, noted in
+  their registry rows. lib/CLAUDE.md's RPC-pattern bullet now prescribes regen-first (the
+  interim cast is only for the migration-to-regen window).
+
+**Verified:** `npx tsc --noEmit` zero output, `pnpm lint` exit 0, `pnpm build` green.
+(Process note: the first retirement agent was lost to a process exit mid-run; its completed
+files all typechecked, and a second scoped agent finished the tail.)
+
+---
+
+## 2026-07-02 — ESLint added (flat config, correctness-only) and the codebase linted to zero
+
+**Why:** The project had no linter. TypeScript strict mode and check-tokens guard types and
+design tokens, but nothing watched React hooks correctness (the class of bug behind the silent
+notification chime) or enforced the CLAUDE.md Never-Do rules by machine. The code already
+carried 154 eslint-disable comments written for a linter that was never installed.
+
+**What:**
+
+- New `eslint.config.mjs` (ESLint 9 flat config + `eslint-config-next@16`, imported as
+  flat-native presets). Philosophy stated in the file: correctness as errors, style stays off.
+  Lint runs in the editor and via `pnpm lint` / `pnpm lint:fix` only. It is deliberately NOT
+  wired into `pnpm build`, so build time is unchanged.
+- House rules from the Never-Do list are now machine-enforced errors: bare
+  `import { motion } from 'framer-motion'` (A-17), `window.confirm`/`alert`, importing
+  `@supabase/*` outside `src/lib/supabase/` (Rule 05, type-only imports allowed), and
+  importing `@anthropic-ai/sdk` outside the Anthropic adapter.
+- The react-hooks v7 React-Compiler-preparation rules (`set-state-in-effect`, `refs`,
+  `preserve-manual-memoization`, `static-components`, `purity`, `immutability`,
+  `incompatible-library`) are OFF with a documented rationale: they flag deliberate Serene
+  patterns (usePortalAnchor render reads, the localStorage post-mount hydration convention)
+  and this codebase does not use the React Compiler. Revisit the block on compiler adoption.
+  `@typescript-eslint/no-explicit-any` starts as warn (the sanctioned interim casts carry
+  their disables); tighten after the next `supabase gen types` regen.
+- First run: 138 findings. After calibration, 33 real ones fixed across 17 files, notably:
+  10 unused imports/vars/params removed (two were fallout the dead-code purge left:
+  the `runs` import in task-reminders, `ScheduleLeadSlasPayload` in lead-sla); the dead local
+  `StatusChip` component in GroupTasksTab deleted; `TasksShell`'s complex dependency
+  expression hoisted; `AgentActivityWidget`'s `leads` memoised so the marquee-measure effect
+  stops re-running every render; stale eslint-disable directives auto-removed (one of them
+  confirmed the usage-service cast fix); two file-header comments reworded because their
+  prose literally began with "eslint-disable-next-line" and parsed as a broken directive.
+- Two knowing keeps: `getGroupSubtasks`' unused `userId` became `_userId` with a comment
+  (React `cache()` keys its memo on ALL args, so the param prevents cross-user memo bleed);
+  the orphaned `STATE_CHANGING` set in the Elaya write registry was converted to a
+  documentation comment (the propose-only tier is enforced structurally by each tool's
+  `run()` shape, and the set's only consumer was deleted as dead code).
+
+**Verified:** `pnpm lint` exit 0 (zero errors, zero warnings), `pnpm tsc --noEmit` clean,
+full `pnpm build` green.
+
+Also this session: the machine's disk hit 100% full mid-run; the 12GB `.next` build cache
+was deleted (regenerates) and `pnpm store prune` freed another 1.5GB. The disk remains
+nearly full at the OS level and deserves a personal cleanup pass.
+
+---
+
+## 2026-07-02 — All five date/timezone stragglers now go through formatDate (IST)
+
+**Why:** Five places formatted dates on their own with `toLocaleString`-style calls, which
+render in whatever timezone the machine runs in. Three were real bugs and two were style
+drift. The app's rule is one date language, pinned to IST, through `formatDate`.
+
+**The three bugs fixed:**
+
+- Dashboard chart labels (`dashboard-service.ts formatBucketLabel`) rendered on the server,
+  which is UTC on Vercel. A lead arriving at 2 AM IST was labelled under the previous day.
+  Labels are now true IST days/hours ("4:30 PM", "2 Sep", "Sep 26").
+- My Tasks section headings (`MyTasksCalendarView sectionLabel`) mixed a browser-local
+  weekday with an IST date, so the two halves could disagree for anyone outside IST. Both
+  halves now render the same instant through `formatDate`.
+- WhatsApp chat date separators (`ConversationPanel`) used browser-local, US-ordered labels.
+  Now `formatDate(d, "d MMM yyyy")`. The Today/Yesterday shortcuts are unchanged.
+
+**The two style fixes:**
+
+- SLA timestamps (`actions/sla.ts formatSlaTimestamp`): "02 Sept, 04:30 pm" becomes
+  "2 Sep, 4:30 PM", matching the rest of the app.
+- The task-due time inside the outbound WhatsApp template (`whatsapp-api.ts`): the code
+  comment always promised "26 Jun, 4:00 PM" but the en-US call actually sent "Jun 26,
+  4:00 PM". It now sends exactly what the comment promised. Note this changes text staff
+  receive on their phones.
+
+Verified: `pnpm tsc --noEmit` clean, full `pnpm build` green.
+
+---
+
+## 2026-07-02 — Dialog is now portaled to document.body
+
+**Why:** `ui/Dialog.tsx` was the last overlay primitive that did not portal itself. Its fixed
+overlay and panel only worked because no current call site sits under a CSS transform. Any
+Framer entrance animation on an ancestor would re-anchor the popup and trap its z-index
+(the known transform + position:fixed quirk). ConfirmDialog, FloatingPanel and
+NotificationPanel already protect themselves with a body portal; Dialog now does too.
+
+**What:** `Dialog.tsx` returns `createPortal(<AnimatePresence>...</AnimatePresence>,
+document.body)` with the same `typeof document` SSR guard ConfirmDialog uses. The guard sits
+after the hooks so hook order stays stable. No z-index token changed; the exit animation still
+lives inside the component, so `useMountOnFirstOpen` call sites are unaffected. Every modal in
+the app (all `modal.tsx` and direct Dialog consumers) inherits transform safety with zero
+call-site edits. Verified: `pnpm tsc --noEmit` clean, full `pnpm build` green, and no CSS
+selector depends on Dialog's old DOM position. Registry row updated in
+`src/components/CLAUDE.md`.
+
+Worth a quick manual eyeball on the next dev session: Add Lead, the deals modal, the Elaya
+widget dialog, and one nested flow (SubTaskModal then AssigneePickerModal) to confirm stacking
+looks unchanged.
+
+---
+
+## 2026-07-02 — Q-04 error-copy sweep + audit report retired (remediation fully executed)
+
+**Why:** The last open code item from the 2026-06-20 audit (Tier 2, A4–A6): hardcoded
+non-registry error strings still reached the UI from four action files. With that closed, every
+actionable item across both audits is executed — the 2026-07-02 audit report is retired.
+
+**Q-04 sweep (23 sites, 4 files):**
+
+- `actions/performance.ts` — 14 × `'Invalid parameters.'` → `formErrors.generic`.
+- `actions/dashboard.ts` — 5 × (`'Invalid parameters.'` / `'Invalid domain or date range.'` /
+  `'Invalid date range.'`) → `formErrors.generic`.
+- `actions/whatsapp.ts` — 3 × raw-Zod-`?? "Invalid input"` → `parseActionInput` (the schemas'
+  human messages still surface; only the non-registry fallback changes to `formErrors.generic`).
+- `actions/notifications.ts` — `markNotificationReadAction` → `parseActionInput` (+
+  `markReadSchema` onto `uuidField`, C1); `markAllReadAction`'s `"Invalid input."` →
+  `formErrors.generic`.
+
+Verified: `pnpm tsc --noEmit` clean + full `pnpm build` green.
+
+**Audit report retired:** `docs/audits/2026-07-02-dry-dead-code-performance-audit.md` DELETED —
+every tier executed (see the four remediation entries below); the report's surviving follow-ups
+are recorded in those entries (the `ui/Dialog.tsx` no-portal architecture decision; the three
+latent TZ-label display bugs + two formatter-normalization choices; the deliberately-deferred
+WhatsApp conversation cache; the `as any` casts pending `supabase gen types` regen). Git history
+keeps the full report.
+
+---
+
+## 2026-07-02 — Audit remediation Tier 4 (final): motion constants, portal audit, oversight actions removed
+
+**Why:** Closes out the remediation plan of
+`docs/audits/2026-07-02-dry-dead-code-performance-audit.md` (Tier 4 polish) and resolves the
+audit's two open human decisions. Verified: `pnpm tsc --noEmit` clean + full `pnpm build` green.
+
+**V-13 motion sweep:** 39 inline Framer durations across 27 files replaced with the exact-value
+`motion.ts` constants (0.15→`FAST_DURATION`, 0.2→`BASE_DURATION`, 0.25→`EXIT_DURATION`,
+0.35→`SLOW_DURATION`) — value-identical swaps only. The ONE visual delta:
+`AgentActivityWidget`'s inline spring (420/34) normalized to `SPRING_CONFIG` (400/30), the
+documented V-13 fix. Residue deliberately left (no matching constant): 0.08/0.18/0.22/0.28/0.3
+sites + the two duration-based `whileTap` springs in notifications — candidates for future named
+constants, not silent re-timings.
+
+**U2 portal audit — ALL SIX sites false positives, zero changes:** every flagged
+`position: fixed` surface (LeadInfoCard InlineSelectField menu, LeadColumnPicker,
+NotificationPanel, DrillModalShell, GroupTasksTab ⋯ menu, AssigneePickerModal at all three call
+sites) was verified ALREADY portaled to `document.body`. The original UI sweep pattern-matched on
+`position: fixed` without checking for `createPortal`. One genuine follow-up flagged, not
+changed: `ui/Dialog.tsx` itself renders its fixed overlay WITHOUT a portal and relies on call
+sites being transform-free — portaling it is an app-wide stacking-semantics decision.
+
+**C2 types:** `SubTaskModal.assignee` now uses the canonical `AssigneeSlim`
+(tasks-service) instead of an inline `Pick<Profile,…>`. CreateGroupTaskModal /
+GroupTaskWorkspace / AssigneePickerModal were already canonical (stale audit entries);
+`AddLeadModal`'s 2-field local `Agent` type is deliberately narrower — kept.
+
+**C3/C4 formatter sites — all six LEFT, with node-verified proof:** none of the stray
+`toLocaleDateString/ toLocaleString` sites produce output identical to the IST-pinned
+`formatDate`/`formatCount`. Three are latent TZ-label bugs (browser-local or Vercel-UTC labels
+for an IST business: MyTasksCalendarView weekday, ConversationPanel date groups,
+dashboard-service bucket labels); two are IST-correct but ordering/abbreviation-different
+("Sept" vs "Sep", month-first vs day-first — one is an outbound WhatsApp template param);
+one is locale-grouping-sensitive (lakh vs thousands). Fixing any of these CHANGES display —
+recorded as a product decision, not a refactor.
+
+**Open decisions resolved:**
+
+- **`lib/actions/oversight.ts` DELETED** (146 lines, the Tier-1 needs-human-check item).
+  Evidence: single "week 1" commit, zero callers ever; the oversight RSC pages carry their own
+  complete role gates (`getCurrentProfile` → agent/guest redirect → manager clamp) and call
+  `oversight-service` directly — the actions were scaffolding for a client-refresh path that
+  never shipped. `oversight/CLAUDE.md` re-written: the security spine is now correctly described
+  as two layers (page trust boundary + RPC clamp), with a history note for recreating the
+  actions if client-side refresh ever lands.
+- **The ~35 zero-ref vocabulary constants KEPT deliberately** — most are `defineEnum`
+  companions or documented registry vocabulary (`THEME_KEYS`-class exports) whose value is
+  completeness, not call sites; several (e.g. `WIDGET_HEIGHT_BY_SIZE`) are used in-file and
+  were mis-flagged. Inert data lines; revisit only if a vocabulary itself retires.
+
+**Doc syncs:** `oversight/CLAUDE.md` (security spine + file map), `app/CLAUDE.md` (notes-route
+row: Elaya reads notes via `getNotesForElaya`, not the removed `retrieveMemoryContext`).
+
+---
+
+## 2026-07-02 — Audit remediation Tier 2 + 3: DRY extractions + performance fixes
+
+**Why:** Executes the DRY-consolidation and performance tiers of
+`docs/audits/2026-07-02-dry-dead-code-performance-audit.md` plus the still-open 2026-06-20
+Tier-3 extractions (D1–D8). Byte-identical behaviour intended throughout (the two sanctioned
+deltas are noted). Verified: `pnpm tsc --noEmit` clean + full `pnpm build` green.
+
+**New canonical helpers (all in the root CLAUDE.md registry):**
+
+- `services/cache-helpers.ts` — `withRedisCache(key, ttl, fetchFn, normalize?)` (D1): the Redis
+  cache-aside envelope. All 5 dashboard-service cache-aside blocks route through it (the
+  role-scoped key shapes from Tier 0 preserved; `normalizeLeadStatusSummary` rides `normalize`).
+- `services/rpc-helpers.ts` — `callAdminRpc(rpc, params, mapRow, logCtx)` (D2): the revoked-tier
+  admin-client RPC boundary. `getDomainHealthMetrics` switched (gains its previously-missing
+  error log — the documented intent). **Two candidates deliberately NOT switched:**
+  `getAgentRosterPerformance` uses the SESSION client (its RPC scopes via `auth.uid()` in SQL —
+  the admin helper would change security scoping) and `classifyFirstTouchPairs` returns `null`
+  on error (distinct from empty — short-circuits a follow-up DB call).
+- `actions/_validation.ts` — `parseActionInput(schema, input)` (S2): the Zod-parse +
+  first-issue→`formErrors.generic` mapper. 11 sites in 7 action files switched; quieter
+  generic-only contracts and custom code→copy mappers (profiles/recharge/transcription/auth)
+  deliberately left — no user-visible string changed.
+- `validations/fields.ts` — `uuidField(msg)`/`emailField(msg)` (C1): message-parameterised Zod
+  fragments; ~45 inline `z.string().uuid/email(...)` sites across 12 schema files switched with
+  their exact message strings. Phone fields untouched (per-schema normalizeToE164 transforms).
+- `constants` ↔ schema enums (D7): `CALL_OUTCOME_ENUM` + `LEAD_STATUS_ENUM` exported and
+  `lead-schema.ts`'s hand-copied arrays replaced (member-list equality verified before the swap).
+- `services/profiles-service.ts getDomainDecisionMakers(domain, roles?, select?)` (S3): the
+  domain+roles+is_active fan-out read. Switched: `notifyDealCreated` (actions/deals.ts), the
+  lead-won fan-out in `updateLeadStatusCore`, and `sla-service.getManagersByDomain` (body now
+  delegates; export/signature kept). whatsapp-api's founder query skipped — deliberately
+  org-wide, no domain filter.
+- `lib/elaya/access.ts` (D6+D15): `canAccessLead` — the per-lead SECURITY predicate previously
+  duplicated verbatim in both tool registries (read vs write authority could silently diverge) —
+  plus `leadDisplayName`/`statusLabel`. Both registries now import the one implementation.
+- `lib/trigger/cancel-runs.ts` — `cancelRunsByTag(tag)` (D8): the DELAYED/QUEUED list →
+  settle-cancel loop; `cancelTaskReminder` + `cancelLeadSlasByLeadTask` both delegate.
+- `components/leads/CardHeader.tsx` (D3): the dossier card-header strip (icon + micro-label +
+  right slot on paper-subtle). All 7 dossier cards compose it — per-card before/after JSX
+  audited property-identical (accent variant + active-icon tint via style escape hatches).
+
+**UI consolidation (V-09 + D4 + D5):**
+
+- 17 hand-rolled italic empty states across 12 files replaced with `<EmptyState>` (copy, container
+  frames, and placement byte-identical; canonical styling normalises a few token-level deltas —
+  hero titles to `--theme-text-primary`, error-log description size). `AccountReportSection`'s
+  italic block turned out to be a finance footnote, not an empty state — skipped.
+- `EscalationSections`' local `SectionCardShell` fork deleted → composes `ui/SectionCard`
+  (count pill moves to the canonical `headerRight` slot).
+- Sidebar footer avatar now composes `ui/Avatar` — the initials fallback gains the 6-colour
+  semantic hash (the documented D5 intent; the sanctioned visual delta).
+
+**Performance (Tier 3):**
+
+- WhatsApp inbound ingestion (P2′): conversation resolve and the media download+re-upload
+  pipeline now run in one `Promise.all` — on media messages the conversation round trips ride
+  under the download; failure surface unchanged (the media path is non-throwing).
+- **Three perf-audit findings closed as false positives on verification:** the `/performance`
+  page "waterfall" (already one `Promise.all`; `getPeriodDateRange` is sync IST math), the
+  `UsagePresence` "unconditional heartbeat" (already visibility- AND idle-gated — the gate is
+  documented as the feature), and the `AgentTasksWidget` interval deps (already correct).
+  The WhatsApp conversation-list Redis cache was deliberately DEFERRED: Realtime keeps the
+  panel live and the staleness risk on unread state outweighs one indexed read.
+- Q-18 residue: `usage-service.ts getAgentUsage` now declares `RawUsageTodayRow`/
+  `RawUsageHistoryRow` — per-field `as` casts gone.
+
+**Doc syncs:** root CLAUDE.md File Locations (+8 registry rows), `src/lib/CLAUDE.md`
+(profiles-service row), `src/components/CLAUDE.md` (CardHeader row),
+`src/components/layout/CLAUDE.md` (bell channel now carries the P-06 `useId()` nonce),
+`src/lib/elaya/CLAUDE.md` (memory.ts row post-removal + access.ts row).
+
+---
+
+## 2026-07-02 — Audit remediation Tier 0 + Tier 1: correctness fixes + dead-code purge
+
+**Why:** Executes Tiers 0–1 of `docs/audits/2026-07-02-dry-dead-code-performance-audit.md`
+(and the three still-open Tier-1 items from FULL-AUDIT-2026-06-20). Zero functional changes —
+every edit is a correctness fix, a deletion of verified-dead code, or a doc/registry sync.
+Verified: `pnpm tsc --noEmit` clean + full `pnpm build` green after every batch.
+
+**Tier 0 — security + correctness:**
+
+- `dotfiles.zip` (992 KB personal archive containing `secrets/` + a `.env`) moved OUT of the
+  repo root to `~/dotfiles.zip` — was untracked; must never be committed.
+- `actions/suggestions.ts` (A2/A-16): `resolveSuggestionAction`'s `void createNotification()`
+  → `after(createNotification(...).catch(log))`. The notify carries a Web Push send; the bare
+  void orphaned it when the Vercel lambda froze on return.
+- `hooks/useNotifications.ts` (A3/P-06): channel name now carries a `useId()` mount nonce
+  (Strict Mode double-mount safety); dead `channelRef` deleted. **Bonus latent bug fixed:** the
+  effect captured the pre-hydration `play` closure (where `enabled` was still `null`), so the
+  Realtime notification chime NEVER played — now routed through a latest-ref (`playRef`), so the
+  chime works without re-subscribing the channel on sound-pref changes.
+- Q-16 cache keys (2026-06-20 P1): `dashboardLeadStatus` + `dashboardCampaigns` keys now include
+  the RPC role (`dashboard:lead-status:{role}:{domain}:{from}:{to}`), matching the RPC's `p_role`
+  scope — a manager and an admin/founder on the same domain+range no longer share a slot. New
+  `DASHBOARD_PIPELINE_ROLES` export in `redis-keys.ts`; `invalidateLeadCaches`' dashboard scope
+  dels all role variants (6 keys). Old-format keys expire by TTL (60/120s) — no migration needed.
+- AgentTasksWidget polling-deps finding from the audit: **verified false positive** — `refetch`
+  is already in the deps and `useWidgetData` reads the fetcher through a ref. No change.
+
+**Tier 1 — dead-code purge (~1,600 lines):** all removals grep-verified zero-reference
+(word-boundary, incl. dynamic imports + trigger.config) before deletion; git history preserves everything.
+
+- **11 dead files deleted:** `leads/LeadDossierTasksAsync.tsx`, `performance/DomainHealthGrid.tsx`,
+  the 5-file dead chart-wrapper layer (`ui/charts/AreaChart|LineChart|PieChart|DonutChart|ButterflyChart.tsx`
+  — live consumers import raw Recharts + `CartesianChartFrame` directly; `BarChart` survives),
+  and the dead `ui/Checklist.tsx` + `ui/ChecklistItem.tsx` + `ui/ProgressBar.tsx` + `ui/RadioGroup.tsx`
+  cluster (SubTaskModal's checklist is inline + the `ChecklistItem` DB type — never these components).
+- **10 dead server actions removed** (each a callable POST endpoint — attack-surface shrink):
+  `signOut`, `getBudgetSummaryWidgetAction` (+ its orphaned `BudgetScopeSchema`),
+  `upsertConversationHookAction`, `searchLeadsAction` (+ its whole orphaned chain:
+  `searchLeadsForTask`/`LeadSearchResult` in leads-service, `SearchLeadsSchema` in lead-schema —
+  the CreateGiaTaskModal it served was deleted with the Gia tab), `getAgentActivityForManagerAction`,
+  `fireSlaBreachAction` (the trigger dynamic-imports `fireSlaBreachHandler` directly; payload is
+  Zod-validated at schedule time), `updateTaskTagsAction`, `getTaskGroupByIdAction`,
+  `suppressTaskRemarkAction` (contract note preserved in `src/lib/CLAUDE.md`),
+  `getConversationByLeadIdAction`.
+- **~30 dead service/util exports removed:** leads-service `getLeadsForAgent`/`getLeadsForDomain`/
+  `getAllLeads`/`getLeadActivities`/`getLeadNotes`/`getLeadBySlugForElaya`/`getNextLeadTask`;
+  whatsapp-api's dormant Meta-shaped trio `sendTemplateMessage`/`sendMediaMessage`/`uploadMedia`
+  plus `BUSINESS_ACCOUNT_ID`/`PHONE_NUMBER_ID`; profiles-service `getProfilesByDomain`/
+  `getProfilesByRole`/`getActiveAgentsByDomain`; agent-routing `getRoutingConfigsByDomain`/
+  `getActiveRoutingConfigs`; elaya `memory.ts retrieveMemoryContext`+`RetrievedMemory` (superseded —
+  the brain reads `getUserPersona`/`getNotesForElaya` directly); performance-service
+  `getDomainsWithLeads`; sla-service `getSlaTimersForLead`; tasks-service `getTaskById`+`TaskWithMessages`;
+  notifications-service `getUnreadNotifications`; ad-creatives `getAdCreativesForCampaigns`;
+  write-registry `isStateChangingWriteTool`; roster-display `getFirstAgentInPerformanceRosterList`;
+  task-client-filters `countVisiblePersonalTasks`/`TASK_TYPE_FILTER_ITEMS`; whatsapp-schema
+  `MetaWebhookPayloadSchema`/`MetaStatusUpdateSchema`/`SendMessageSchema` (+ inferred types).
+- **~20 internally-used symbols un-exported** (API-surface shrink, bodies untouched):
+  `buildCSV`, `maskString`, `isWithinBusinessHours`, `getOrCreateConversation`/`insertInboundMessage`,
+  `mediaExtFromMime`/`WHATSAPP_MEDIA_BUCKET`/`WHATSAPP_MEDIA_SIGNED_URL_TTL_SECONDS`,
+  `MAX_VOICE_NOTE_BYTES`, `normalizeLeadStatusSummary`, `adaptMeta`/`adaptGoogle`/`adaptWebsite`,
+  `PERFORMANCE_ROSTER_DOMAIN_ORDER`, `summarizeLearnedMemory`/`MEMORY_SUMMARY_EVERY_N`,
+  `ELAYA_MODEL_CONTEXT_MESSAGES`/`ELAYA_UI_MESSAGES`, elaya-service `getConversationMessages`/
+  `getUserContext` (kept un-exported — live internal callers).
+- **Deps + misc:** `dotenv` devDep dropped (zero imports; scripts use `--env-file`); `server-only`
+  now properly declared in dependencies (was resolving via Next's internal alias only); orphaned
+  `.serene-paper-surface` CSS removed from globals.css (never wired; spec stays in DESIGN-DNA §6.6);
+  stale comments fixed (`types/index.ts` DomainHealthGrid ref, tasks-service join-direction note,
+  memory.ts header).
+- **Registry docs synced:** root `CLAUDE.md` (export.ts row), `src/components/CLAUDE.md` (deleted
+  component/chart rows + Cartesian-frame rule note), `src/lib/CLAUDE.md` (leads/tasks/sla/agent-routing/
+  elaya/whatsapp-api service rows + whatsapp/leads/performance/tasks action rows + the suppression
+  contract note).
+
+**Deliberately NOT removed (human decision needed):** `actions/oversight.ts` (146 lines, zero
+callers — but `oversight/CLAUDE.md` documents it as the live trust boundary; docs and code
+disagree), the ~35 zero-ref constants "vocabulary companions" (keep-or-kill per cluster),
+`@trigger.dev/build` devDep, `csv-parse` (one-off import scripts). Tier 2+ (empty-state
+consolidation, Zod fragments, waterfalls, heartbeat gating) remains open in the audit's plan.
+
+---
+
+## 2026-07-02 — DRY / dead-code / performance audit (docs-only)
+
+**Why:** Pre-hardening pass — verify the codebase actually follows the Reuse First constitution
+(no duplication, no dead code, no over-engineering) before the production-safety/perf enhancement
+phase. No functionality changes; analysis + report only.
+
+**What:** New report `docs/audits/2026-07-02-dry-dead-code-performance-audit.md` — 5 parallel
+deep-read sweeps (UI components, data layer, shared code, dead code via knip + manual grep
+re-verification, performance), consolidated with cross-agent contradictions resolved by hand.
+Headlines: the canonical-helper system audited **clean across the board** (zero A-16/P-08 drift,
+A-18 everywhere, mutation cores intact, no over-engineering). Debt concentrated in: **~1,350 lines
+of verified dead code** (11 dead files incl. the 5-file chart-wrapper layer and all of
+`actions/oversight.ts`; ~70 dead exports, 10 of them server actions), **19 hand-rolled empty
+states** (V-09, ~221 lines) + 7 unportaled `position:fixed` panels, 2 fetch waterfalls + the
+unconditional `UsagePresence` 60s heartbeat, and a secrets-bearing untracked `dotfiles.zip` at the
+repo root (flagged for immediate removal). Also verified the **2026-06-20 FULL-AUDIT backlog**: A1
+fixed; A2/A3/P1 still open; DRY tiers D1–D19 never executed (still-valid backlog). Report ends with
+a 5-tier remediation plan (Tier 0 security/correctness → Tier 4 polish).
+
+---
+
+## 2026-07-02 — DPDP Act 2023 / DPDP Rules 2025 compliance audit (docs-only)
+
+**Why:** The DPDP Rules, 2025 were gazetted 14 Nov 2025; the substantive obligations for private
+Data Fiduciaries (Rules 3, 5–16, 22, 23 — notice, security safeguards, breach intimation, retention,
+rights, cross-border) come into force **~14 May 2027**. Audited the whole codebase against the Act +
+Rules to know where Serene stands before that deadline.
+
+**What:** New report `docs/audits/2026-07-02-dpdp-compliance-audit.md` — 4 parallel deep-reader
+sweeps (data inventory/ingestion, external processors, Rule-6 security, retention/erasure/rights),
+consolidated into a rule-by-rule scorecard, an 11-item gap register (G-01…G-11) and a 4-phase
+roadmap. Headlines: security architecture largely satisfies Rule 6 (RLS everywhere, `requireProfile`,
+timing-safe webhook secrets, append-only write audits, `maskPii` before the LLM, in-memory-only
+audio); the statutory machinery is missing — **no consent/lawful-basis records at any ingestion
+point, no WhatsApp STOP/opt-out, no breach-notification workflow (72h Board clock), erasure
+structurally impossible** (no lead delete path; 10 append-only tables hold PII immutably incl.
+`lead_raw_payloads` forever), no DSR/grievance/nomination flow, no read-access logging (Rule 6(c)),
+no processor/DPA registry, hosting regions still `TODO: verify`. Third-Schedule erasure clocks,
+Consent-Manager registration and SDF duties confirmed **not applicable** at current scale.
+
+No code changes — analysis + report only. Next planned step (Phase 2 of the roadmap): consent/
+lawful-basis + `do_not_contact` migration on `leads`, STOP-keyword handling in the WhatsApp webhook,
+and the anonymisation/erasure core.
 
 ---
 

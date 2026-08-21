@@ -4,10 +4,11 @@ import { useState, useEffect, useMemo, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/modal';
-import { Spinner } from '@/components/ui/Spinner';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { FilterDropdown } from '@/components/ui/FilterDropdown';
 import { createWalkInDeal, listAgentsForDealDomain } from '@/lib/actions/deals';
+import { DEAL_CELEBRATE_STORAGE_KEY } from '@/components/deals/DealCard';
 import { GIA_DOMAINS, DOMAIN_LABELS, isGiaDomain, type GiaDomain } from '@/lib/constants/domains';
 import {
   DEAL_TYPE_LABELS,
@@ -183,6 +184,16 @@ export function NewDealModal({
         return;
       }
 
+      // Stamp the new deal for the one-shot Won petal fall — the freshly
+      // rendered DealCard claims it after router.refresh() (polish §03).
+      if (result.data?.dealId) {
+        try {
+          sessionStorage.setItem(DEAL_CELEBRATE_STORAGE_KEY, result.data.dealId);
+        } catch {
+          // decorative only — never block the save on storage
+        }
+      }
+
       // Close first, THEN refresh. router.refresh() refetches the current
       // route's RSC payload; if it is fired right before handleClose()
       // unmounts the modal inside the SAME transition, the refetch is
@@ -223,18 +234,21 @@ export function NewDealModal({
     marginBottom:  'var(--space-2)',
   };
 
+  /* Inputs FLOAT (neumorphic Rule 3): gradient sheen + paired input shadow. */
   const inputStyle: React.CSSProperties = {
     width:        '100%',
     height:       '2.5rem',
     padding:      '0 var(--space-3)',
-    border:       '1px solid var(--theme-paper-border)',
-    borderRadius: 'var(--radius-sm)',
-    background:   'var(--theme-paper)',
+    border:       '1px solid var(--neu-input-edge)',
+    borderRadius: 'var(--radius-lg)',
+    background:   'var(--neu-input-bg)',
+    boxShadow:    'var(--neu-shadow-input)',
     fontFamily:   'var(--font-sans)',
     fontSize:     'var(--text-sm)',
     color:        'var(--theme-text-primary)',
     outline:      'none',
     boxSizing:    'border-box',
+    transition:   'box-shadow var(--duration-fast) var(--ease-in-out)',
     opacity:      isPending ? 0.6 : 1,
   };
 
@@ -306,8 +320,8 @@ export function NewDealModal({
               onChange={(e) => { setContactName(e.target.value); setError(null); }}
               placeholder="Full name"
               style={inputStyle}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--theme-accent)'; }}
-              onBlur={(e)  => { e.currentTarget.style.borderColor = 'var(--theme-paper-border)'; }}
+              onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)'; }}
+              onBlur={(e)  => { e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)'; }}
             />
           </div>
 
@@ -322,8 +336,8 @@ export function NewDealModal({
               onChange={(e) => { setContactPhone(e.target.value); setError(null); }}
               placeholder="+91 98765 43210"
               style={inputStyle}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--theme-accent)'; }}
-              onBlur={(e)  => { e.currentTarget.style.borderColor = 'var(--theme-paper-border)'; }}
+              onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)'; }}
+              onBlur={(e)  => { e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)'; }}
             />
           </div>
 
@@ -336,8 +350,8 @@ export function NewDealModal({
               onChange={(e) => { setContactEmail(e.target.value); setError(null); }}
               placeholder="optional"
               style={inputStyle}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--theme-accent)'; }}
-              onBlur={(e)  => { e.currentTarget.style.borderColor = 'var(--theme-paper-border)'; }}
+              onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)'; }}
+              onBlur={(e)  => { e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)'; }}
             />
           </div>
 
@@ -365,7 +379,7 @@ export function NewDealModal({
               <label style={labelStyle}>Assign to</label>
               {loadingAgents ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', height: '2.5rem' }}>
-                  <Spinner size="sm" />
+                  <LogoSpinner size="sm" />
                   <span style={{ fontSize: 'var(--text-xs)', color: 'var(--theme-text-tertiary)' }}>
                     Loading agents…
                   </span>
@@ -491,15 +505,16 @@ export function NewDealModal({
                     style={{
                       flex:         1,
                       height:       '2.5rem',
-                      border:       `1.5px solid ${duration === d ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
+                      border:       '1px solid var(--neu-edge)',
                       borderRadius: 'var(--radius-sm)',
-                      background:   duration === d ? 'var(--theme-accent-surface)' : 'var(--theme-paper)',
+                      background:   duration === d ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))' : 'var(--theme-paper)',
+                      boxShadow:    duration === d ? 'var(--neu-shadow-chip)' : 'none',
                       fontFamily:   'var(--font-sans)',
                       fontSize:     'var(--text-sm)',
                       fontWeight:   duration === d ? 'var(--weight-semibold)' : 'var(--weight-normal)',
-                      color:        duration === d ? 'var(--theme-accent)' : 'var(--theme-text-primary)',
+                      color:        duration === d ? 'var(--neu-accent-deep)' : 'var(--theme-text-primary)',
                       cursor:       'pointer',
-                      transition:   'border-color 0.15s ease, background 0.15s ease',
+                      transition:   'box-shadow 0.15s ease, background 0.15s ease',
                       whiteSpace:   'nowrap',
                     }}
                   >
@@ -575,8 +590,8 @@ export function NewDealModal({
                   ...inputStyle,
                   paddingLeft: 'calc(var(--space-3) + 1.25rem)',
                 }}
-                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--theme-accent)'; }}
-                onBlur={(e)  => { e.currentTarget.style.borderColor = 'var(--theme-paper-border)'; }}
+                onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)'; }}
+                onBlur={(e)  => { e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)'; }}
               />
             </div>
           </div>
@@ -589,7 +604,7 @@ export function NewDealModal({
 
           {isPending && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <Spinner size="sm" />
+              <LogoSpinner size="sm" />
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--theme-text-tertiary)' }}>
                 Recording deal…
               </span>

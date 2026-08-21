@@ -22,18 +22,20 @@ export function ExportModal({ open, onClose, onExport, loading }: ExportModalPro
     fontSize:     'var(--text-sm)',
     fontWeight:   'var(--weight-medium)',
     cursor:       'pointer',
-    border:       '1px solid var(--theme-paper-border)',
-    transition:   'background var(--duration-fast) var(--ease-in-out), border-color var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)',
+    border:       '1px solid var(--neu-edge)',
+    transition:   'background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)',
   };
 
+  /* Selected floats on an accent wash (neumorphic Rule 4) — never a coloured border */
   const pillActive: React.CSSProperties = {
-    background:  'var(--theme-accent-surface)',
-    borderColor: 'var(--theme-accent)',
-    color:       'var(--theme-accent)',
+    background: 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))',
+    boxShadow:  'var(--neu-shadow-chip)',
+    color:      'var(--neu-accent-deep)',
   };
 
   const pillInactive: React.CSSProperties = {
     background: 'transparent',
+    boxShadow:  'none',
     color:      'var(--theme-text-secondary)',
   };
 

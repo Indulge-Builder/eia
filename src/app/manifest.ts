@@ -7,14 +7,22 @@ import {
   isIconKey,
   type IconKey,
 } from "@/lib/constants/app-icons";
+import {
+  APPEARANCE_COOKIE,
+  DEFAULT_APPEARANCE,
+  NEU_CANVAS_DARK,
+  NEU_CANVAS_LIGHT,
+  isAppearanceKey,
+  type AppearanceKey,
+} from "@/lib/constants/appearance";
 
-// Hardcoded hex is sanctioned here only: a manifest is static JSON and cannot
-// read CSS variables. Values mirror the Earth (default) theme tokens in
-// src/styles/design-tokens.css — --theme-canvas: #0d0c0a. If the Earth canvas
-// token ever changes, update these in the same PR.
-// Exported so app/api/manifest/route.ts (the per-icon dynamic manifest) builds
-// the SAME envelope — never re-inline the colour or the icon array shape.
-export const EARTH_CANVAS = "#0d0c0a";
+// Manifest colours mirror the two --neu-canvas values (a manifest is static
+// JSON and cannot read CSS variables) — NEU_CANVAS_LIGHT/DARK live in
+// lib/constants/appearance.ts beside the meta theme-color mirror. 'system'
+// resolves LIGHT here: a manifest cannot media-query; the browser chrome
+// follows the media-scoped meta theme-color at runtime regardless. (The old
+// EARTH_CANVAS #0d0c0a export mirrored the retired pre-neumorphic dark canvas
+// — retired with the dark-mode handoff 2026-07-03.)
 
 // THE single manifest envelope builder. The static export below uses the
 // DEFAULT_ICON; /api/manifest?icon=<key> calls this with the user's validated
@@ -22,24 +30,31 @@ export const EARTH_CANVAS = "#0d0c0a";
 // square source covers the 192/512 slots (the browser downscales `sizes:"any"`);
 // the same file backs apple-touch-icon in the layout.
 //
-// The icon art is the seed-of-life glyph composited onto a SOLID #0d0c0a (Earth
-// canvas) plate — built by scripts/pad-app-icons.mjs from the transparent
-// sources, mirroring the original public/icons/icon-512.png look. Because the
-// fill is solid (no transparency) the `maskable` entry is valid: Android crops
-// it into a circle/squircle and the glyph sits inside the safe zone (GLYPH_RATIO
-// 0.82 in the build script), so the petals are never clipped and corners are
-// dark, not transparent. NEVER re-add maskable if the art reverts to a
+// The icon art is the umber→gold seed-of-life glyph composited onto a SOLID
+// #ECE8E1 (NEU_CANVAS_LIGHT — the boot screen canvas) plate — built by
+// scripts/pad-app-icons.mjs from the transparent sources. The cream plate
+// makes the OS-generated splash (background_color + this icon) read as the
+// AppBootScreen's own canvas instead of a separate black card (the previous
+// #0d0c0a plate — retired 2026-07-10). Because the fill is solid (no
+// transparency) the `maskable` entry is valid: Android crops it into a
+// circle/squircle and the glyph sits inside the safe zone (GLYPH_RATIO 0.82
+// in the build script), so the petals are never clipped and corners are
+// cream, not transparent. NEVER re-add maskable if the art reverts to a
 // transparent background — see the script comment.
-export function buildManifest(icon: IconKey): MetadataRoute.Manifest {
+export function buildManifest(
+  icon: IconKey,
+  appearance: AppearanceKey = DEFAULT_APPEARANCE,
+): MetadataRoute.Manifest {
   const src = iconSrc(icon); // validated key → /icon-N.webp (never raw input)
+  const canvas = appearance === "dark" ? NEU_CANVAS_DARK : NEU_CANVAS_LIGHT;
   return {
     name: "Serene",
     short_name: "Serene",
     description: "Internal operating system for Indulge team members.",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: EARTH_CANVAS,
-    theme_color: EARTH_CANVAS,
+    background_color: canvas,
+    theme_color: canvas,
     icons: [
       { src, sizes: "192x192", type: "image/webp" },
       { src, sizes: "512x512", type: "image/webp" },
@@ -54,13 +69,19 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   // `generateMetadata().manifest` value in the root layout — Next emits
   // <link rel="manifest" href="/manifest.webmanifest"> from this file regardless
   // of the metadata override. So this route — not /api/manifest — is what most
-  // browsers install from. It MUST therefore carry the user's saved icon, not a
-  // hardcoded default; reading the serene-app-icon cookie (the SSR mirror of
-  // profiles.app_icon, the same cookie the layout reads) makes the installed
-  // shortcut match the user's pick. Reading cookies() makes this route dynamic,
-  // which is correct — the manifest is per-user. Falls back to DEFAULT_ICON for
-  // a signed-out / cookieless request.
-  const cookieIcon = (await cookies()).get(APP_ICON_COOKIE)?.value;
+  // browsers install from. It MUST therefore carry the user's saved icon +
+  // appearance, not hardcoded defaults; reading the serene-app-icon /
+  // serene-appearance cookies (the SSR mirrors of profiles.app_icon /
+  // profiles.appearance, the same cookies the layout reads) makes the installed
+  // shortcut match the user's picks. Reading cookies() makes this route dynamic,
+  // which is correct — the manifest is per-user. Falls back to DEFAULT_ICON /
+  // DEFAULT_APPEARANCE for a signed-out / cookieless request.
+  const cookieStore = await cookies();
+  const cookieIcon = cookieStore.get(APP_ICON_COOKIE)?.value;
   const icon = isIconKey(cookieIcon) ? cookieIcon : DEFAULT_ICON;
-  return buildManifest(icon);
+  const cookieAppearance = cookieStore.get(APPEARANCE_COOKIE)?.value;
+  const appearance = isAppearanceKey(cookieAppearance)
+    ? cookieAppearance
+    : DEFAULT_APPEARANCE;
+  return buildManifest(icon, appearance);
 }

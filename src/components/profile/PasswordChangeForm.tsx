@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, Check, Lock, Settings2, X } from "lucide-react";
 import { m as motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/Button";
+import { Button, useButtonStatus } from "@/components/ui/Button";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { InfoRow } from "@/components/ui/InfoRow";
 import { PasswordStrengthBar } from "@/components/ui/PasswordStrengthBar";
@@ -15,7 +15,6 @@ import { FAST_DURATION, EASE_OUT_EXPO } from "@/lib/constants/motion";
 
 type FormStatus =
   | { status: "idle" }
-  | { status: "pending" }
   | { status: "error"; message: string };
 
 interface Requirement {
@@ -42,7 +41,10 @@ export function PasswordChangeForm() {
   // Only show confirm mismatch after user has typed something in the confirm field
   const [confirmTouched, setConfirmTouched] = useState(false);
 
-  const isPending = formState.status === "pending";
+  // Save morph (polish §03): the button confirms — pending → sage "Saved" (1.8s)
+  // → then the card folds back to read view (matches ProfileDetailsForm timing).
+  const save = useButtonStatus();
+  const isPending = save.status === "pending";
 
   const allRequirementsMet = REQUIREMENTS.every((r) => r.met(next));
   const confirmMatches     = confirm === next;
@@ -71,36 +73,42 @@ export function PasswordChangeForm() {
       return;
     }
 
-    setFormState({ status: "pending" });
+    setFormState({ status: "idle" });
 
-    const supabase = createClient();
+    await save.run(async () => {
+      const supabase = createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user?.email) {
-      setFormState({ status: "error", message: formErrors.passwordSessionExpired });
-      return;
-    }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) {
+        setFormState({ status: "error", message: formErrors.passwordSessionExpired });
+        return { success: false };
+      }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email:    user.email,
-      password: current,
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email:    user.email,
+        password: current,
+      });
+
+      if (signInError) {
+        setFormState({ status: "error", message: formErrors.passwordCurrentIncorrect });
+        return { success: false };
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({ password: next });
+
+      if (updateError) {
+        setFormState({ status: "error", message: formErrors.generic });
+        return { success: false };
+      }
+
+      toast.success("Password updated");
+      // Let the sage "Saved" morph hold, then fold back to the read view.
+      setTimeout(() => {
+        resetFields();
+        setEditing(false);
+      }, 1800);
+      return { success: true };
     });
-
-    if (signInError) {
-      setFormState({ status: "error", message: formErrors.passwordCurrentIncorrect });
-      return;
-    }
-
-    const { error: updateError } = await supabase.auth.updateUser({ password: next });
-
-    if (updateError) {
-      setFormState({ status: "error", message: formErrors.generic });
-      return;
-    }
-
-    resetFields();
-    setEditing(false);
-    toast.success("Password updated");
   }
 
   const confirmError =
@@ -272,10 +280,12 @@ export function PasswordChangeForm() {
                 variant="primary"
                 type="submit"
                 disabled={!canSubmit}
-                loading={isPending}
-                style={{ boxShadow: canSubmit && !isPending ? "var(--shadow-accent-glow)" : "none" }}
+                status={save.status}
+                loadingLabel="Updating…"
+                successLabel="Saved"
+                style={{ boxShadow: canSubmit && save.status === "idle" ? "var(--shadow-accent-glow)" : "none" }}
               >
-                {isPending ? "Updating…" : "Update Password"}
+                Update Password
               </Button>
             </div>
           </div>
@@ -339,15 +349,15 @@ function PasswordField({
               : matchSuccess
               ? "var(--color-success)"
               : "var(--theme-accent)";
+            // Inputs float (soft-UI Rule 3) — focus adds the accent ring over
+            // the paired input shadow; never a flat glow, never a sunken fill.
             e.currentTarget.style.boxShadow = error
-              ? "0 0 0 3px var(--color-danger-light)"
-              : "var(--shadow-focus)";
-            e.currentTarget.style.background = "var(--theme-paper)";
+              ? "0 0 0 1px var(--color-danger), var(--neu-shadow-input)"
+              : "0 0 0 1px var(--theme-accent), var(--neu-shadow-input)";
           }}
           onBlur={(e) => {
             e.currentTarget.style.borderColor = borderColor;
-            e.currentTarget.style.boxShadow   = "none";
-            e.currentTarget.style.background   = "var(--theme-paper-subtle)";
+            e.currentTarget.style.boxShadow   = "var(--neu-shadow-input)";
           }}
         />
         <button

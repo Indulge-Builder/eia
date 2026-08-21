@@ -1,3 +1,9 @@
+-- ─────────────────────────────────────────────────────────────────────────────
+-- POINT-IN-TIME SNAPSHOT - dumped 2026-06-12 (PostgreSQL 17.6, pg_dump 17.10).
+-- Reflects the schema state BEFORE migration 0108 onward. For anything newer,
+-- supabase/migrations/ is the source of truth. Regenerate with `supabase db dump`.
+-- ─────────────────────────────────────────────────────────────────────────────
+
 --
 -- PostgreSQL database dump
 --
@@ -1075,6 +1081,42 @@ $$;
 ALTER FUNCTION public.add_task_remark_with_status(p_task_id uuid, p_author_id uuid, p_content text, p_status_change text) OWNER TO postgres;
 
 --
+-- Name: business_minutes_between(timestamp with time zone, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.business_minutes_between(p_from timestamp with time zone, p_to timestamp with time zone) RETURNS numeric
+    LANGUAGE plpgsql STABLE
+    AS $$
+declare
+  s timestamp := p_from at time zone 'Asia/Kolkata';
+  e timestamp := p_to   at time zone 'Asia/Kolkata';
+  d date;
+  total numeric := 0;
+  seg_start timestamp;
+  seg_end   timestamp;
+begin
+  if p_from is null or p_to is null or e <= s then
+    return 0;
+  end if;
+  d := s::date;
+  while d <= e::date loop
+    if extract(isodow from d) <> 7 then  -- 7 = Sunday
+      seg_start := greatest(s, d + time '09:00');
+      seg_end   := least(e, d + time '19:00');
+      if seg_end > seg_start then
+        total := total + extract(epoch from (seg_end - seg_start)) / 60.0;
+      end if;
+    end if;
+    d := d + 1;
+  end loop;
+  return total;
+end;
+$$;
+
+
+ALTER FUNCTION public.business_minutes_between(p_from timestamp with time zone, p_to timestamp with time zone) OWNER TO postgres;
+
+--
 -- Name: can_access_wa_conversation(uuid); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -1347,7 +1389,7 @@ CREATE FUNCTION public.get_campaign_detail_metrics(p_campaign text, p_date_from 
     COUNT(*) FILTER (WHERE l.last_call_outcome = 'switched_off')        AS outcome_switched_off,
     COUNT(*) FILTER (WHERE l.last_call_outcome = 'converted')           AS outcome_converted,
     AVG(
-      EXTRACT(EPOCH FROM (ft.first_touched_at - l.created_at)) / 3600.0
+      public.business_minutes_between(l.created_at, ft.first_touched_at) / 60.0
     )                                                                    AS avg_hours_to_first_touch
   FROM leads l
   LEFT JOIN LATERAL (
@@ -1356,6 +1398,7 @@ CREATE FUNCTION public.get_campaign_detail_metrics(p_campaign text, p_date_from 
     WHERE la.lead_id = l.id
       AND la.action_type = 'status_changed'
       AND la.details->>'new_status' = 'touched'
+      AND la.created_at >= l.created_at
   ) ft ON true
   WHERE l.archived_at IS NULL
     AND l.utm_campaign = p_campaign
@@ -5478,7 +5521,7 @@ CREATE TABLE public.notifications (
     read_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT notifications_action_url_check CHECK (((action_url IS NULL) OR (action_url !~~ 'http%'::text))),
-    CONSTRAINT notifications_type_check CHECK ((type = ANY (ARRAY['lead_assigned'::text, 'lead_won'::text, 'task_due'::text, 'task_assigned'::text, 'mention'::text, 'system'::text, 'sla_breach_agent'::text, 'sla_breach_manager'::text])))
+    CONSTRAINT notifications_type_check CHECK ((type = ANY (ARRAY['lead_assigned'::text, 'lead_won'::text, 'task_due'::text, 'task_assigned'::text, 'mention'::text, 'system'::text, 'sla_breach_agent'::text, 'sla_breach_manager'::text, 'sla_breach_founder'::text, 'task_overdue_manager'::text, 'suggestion_resolved'::text])))
 );
 
 

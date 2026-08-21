@@ -83,21 +83,18 @@ export function LeadsFilters({
   }));
 
   return (
+    // Same FilterBar configuration as DealsFilters (2026-07-03) — the compact
+    // single-row scroll variant read as misplaced/cramped next to the other
+    // list pages. Below md the wrap layout still auto-collapses to scroll.
     <FilterBar
-      layout="scroll"
       searchValue={url.searchInput}
       onSearchChange={url.setSearchInput}
       searchPlaceholder="Search name, phone, email…"
-      searchSize="sm"
-      suppressSearchFocusAccent
-      searchStyle={{ flex: "1 1 180px", maxWidth: "280px" }}
-      dividerAfterSearch
+      searchAriaLabel="Search leads"
+      searchStyle={{ flex: "1 1 220px", minWidth: "180px" }}
       activeCount={activeCount}
-      showCountBadge={false}
-      clearLabel="Clear"
       onClearAll={url.clearAll}
       dateRange={{
-        trigger:      "chevron",
         panelKey:     "leads-range-panel",
         from:         dateFrom,
         to:           dateTo,
@@ -110,9 +107,6 @@ export function LeadsFilters({
       {/* Status — multi-select */}
       <FilterDropdown
         menuPortal
-        hideCountBadge
-        accentBorderOnOpen={false}
-        style={{ flexShrink: 0 }}
         label="Status"
         items={STATUS_ITEMS}
         selected={status}
@@ -123,9 +117,6 @@ export function LeadsFilters({
       {/* Outcome — multi-select */}
       <FilterDropdown
         menuPortal
-        hideCountBadge
-        accentBorderOnOpen={false}
-        style={{ flexShrink: 0 }}
         label="Outcome"
         items={OUTCOME_ITEMS}
         selected={outcome}
@@ -136,9 +127,6 @@ export function LeadsFilters({
       {/* Source — single select */}
       <FilterDropdown
         menuPortal
-        hideCountBadge
-        accentBorderOnOpen={false}
-        style={{ flexShrink: 0 }}
         label="Source"
         items={SOURCE_ITEMS}
         selected={source ? [source] : []}
@@ -149,9 +137,6 @@ export function LeadsFilters({
       {campaignItems.length > 0 && (
         <FilterDropdown
           menuPortal
-          hideCountBadge
-          accentBorderOnOpen={false}
-          style={{ flexShrink: 0 }}
           label="Campaign"
           items={campaignItems}
           selected={campaign ? [campaign] : []}
@@ -163,9 +148,6 @@ export function LeadsFilters({
       {showAgentFilter && agentItems.length > 0 && (
         <FilterDropdown
           menuPortal
-          hideCountBadge
-          accentBorderOnOpen={false}
-          style={{ flexShrink: 0 }}
           label="Agent"
           items={agentItems}
           selected={agentId ? [agentId] : []}
@@ -173,14 +155,13 @@ export function LeadsFilters({
         />
       )}
 
-      {/* Domain — single select, admin/founder only.
+      {/* Domain — single select, admin/founder + agent (2026-08-07: a cross-domain
+          agent narrows their own list; the service composes it on top of
+          assigned_to, never widening scope).
           Domain change atomically clears agent_id + campaign (same push). */}
       {showDomainFilter && (
         <FilterDropdown
           menuPortal
-          hideCountBadge
-          accentBorderOnOpen={false}
-          style={{ flexShrink: 0 }}
           label="Domain"
           items={GIA_DOMAIN_FILTER_ITEMS}
           selected={domain ? [domain] : []}

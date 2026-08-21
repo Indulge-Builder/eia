@@ -1,18 +1,18 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { m as motion } from "framer-motion";
+import { useMemo, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import { Plus, Pencil, Trash2, SlidersHorizontal, NotebookPen } from "lucide-react";
 import { MotionButton, MOTION_BUTTON_DEFAULTS } from "@/components/ui/MotionButton";
+import { Button } from "@/components/ui/Button";
+import { CondensingPageHeader } from "@/components/layout/CondensingPageHeader";
 import { SearchBar } from "@/components/ui/SearchBar";
-import { Spinner } from "@/components/ui/Spinner";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MotionRow } from "@/components/ui/RowMotion";
 import { NoteFormModal } from "./NoteFormModal";
 import { deleteNote } from "@/lib/actions/elaya-notes";
 import { useToast } from "@/hooks/useToast";
 import { formatRelativeTime } from "@/lib/utils/dates";
-import { EASE_OUT_EXPO } from "@/lib/constants/motion";
 import { ELAYA_NOTES_MAX_PER_USER } from "@/lib/constants/elaya-notes";
 import type { ElayaNoteRow } from "@/lib/types/elaya-notes";
 
@@ -37,9 +37,6 @@ export function NotesManager({ initialNotes }: NotesManagerProps) {
   const [search, setSearch]         = useState("");
   const [modalOpen, setModalOpen]   = useState(false);
   const [editing, setEditing]       = useState<ElayaNoteRow | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmTarget, setConfirmTarget] = useState<ElayaNoteRow | null>(null);
-  const [isPending, startTransition] = useTransition();
 
   const atCap = notes.length >= ELAYA_NOTES_MAX_PER_USER;
 
@@ -72,30 +69,34 @@ export function NotesManager({ initialNotes }: NotesManagerProps) {
     );
   }
 
+  // Undo-instead-of-confirm (polish §06): the row exits immediately (row
+  // choreography), a charcoal undo toast counts down 5s, and the server
+  // delete commits ONLY when the window expires. Undo re-enters the row.
   function handleDelete(row: ElayaNoteRow) {
-    setDeletingId(row.id);
-    startTransition(async () => {
-      const fd = new FormData();
-      fd.append("id", row.id);
-      const result = await deleteNote(fd);
-      if (result.error) {
-        toast.danger(result.error);
-      } else {
-        setNotes((prev) => prev.filter((n) => n.id !== row.id));
-        toast.success("Note deleted.");
-      }
-      setDeletingId(null);
-      setConfirmTarget(null);
+    setNotes((prev) => prev.filter((n) => n.id !== row.id));
+    const restore = () =>
+      setNotes((prev) =>
+        prev.some((n) => n.id === row.id) ? prev : [row, ...prev],
+      );
+    toast.undo("Note deleted", {
+      action: { label: "Undo", onClick: restore },
+      onTimeout: () => {
+        const fd = new FormData();
+        fd.append("id", row.id);
+        void deleteNote(fd).then((result) => {
+          if (result.error) {
+            restore();
+            toast.danger(result.error);
+          }
+        });
+      },
     });
   }
 
   return (
     <>
-      {/* Row 1 — page header */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <h1 className="type-page-title m-0">
-          Notes<span className="page-title-dot">.</span>
-        </h1>
+      {/* Row 1 — page header (sticky, condenses on scroll — polish §07) */}
+      <CondensingPageHeader title="Notes">
         <MotionButton
           {...MOTION_BUTTON_DEFAULTS}
           variant="primary"
@@ -109,17 +110,7 @@ export function NotesManager({ initialNotes }: NotesManagerProps) {
           <Plus style={{ width: 14, height: 14, strokeWidth: 1.5 }} />
           New Note
         </MotionButton>
-      </div>
-
-      {/* Intro line — what these notes are for */}
-      <p
-        className="mb-4"
-        style={{ fontSize: "var(--text-sm)", color: "var(--theme-text-secondary)", maxWidth: "60ch" }}
-      >
-        Write what you&rsquo;d like Elaya to keep in mind about your work — accounts you own,
-        how you like things done, anything worth remembering. She reads your notes when she
-        helps you. Only you can see them.
-      </p>
+      </CondensingPageHeader>
 
       {/* Row 2 — filter bar */}
       <div className="px-5 py-4 mb-4 rounded-md border border-(--theme-paper-border) bg-(--theme-paper) shadow-(--shadow-1)">
@@ -154,27 +145,41 @@ export function NotesManager({ initialNotes }: NotesManagerProps) {
 
       {/* Row 3 — note cards */}
       {filtered.length === 0 ? (
-        <EmptyState
-          icon={NotebookPen}
-          title={notes.length === 0 ? "No notes yet." : "Nothing matches your search."}
-          description={
-            notes.length === 0
-              ? "Write your first note so Elaya knows how you like to work."
-              : "Try a different word."
-          }
-        />
+        notes.length === 0 ? (
+          // §08 brand empty — one poetic line, one primary action, Elaya named.
+          <EmptyState
+            brand
+            title="Nothing here yet — beautifully so."
+            description="Notes you write will appear here, and Elaya will keep them in mind whenever she helps you."
+            minHeight="340px"
+            action={
+              <Button variant="primary" iconLeft={Plus} onClick={openCreate} disabled={atCap}>
+                Add a note
+              </Button>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={NotebookPen}
+            title="Nothing matches your search."
+            description="Try a different word."
+          />
+        )
       ) : (
-        <div className="flex flex-col gap-2">
-          {filtered.map((row, i) => (
-            <NoteCard
-              key={row.id}
-              row={row}
-              index={i}
-              isDeleting={isPending && deletingId === row.id}
-              onEdit={() => openEdit(row)}
-              onDelete={() => setConfirmTarget(row)}
-            />
-          ))}
+        <div className="flex flex-col">
+          {/* Row choreography (polish §02) — deletes lift out, undo re-enters.
+              initial={false}: the first page render never cascades. */}
+          <AnimatePresence initial={false}>
+            {filtered.map((row) => (
+              <MotionRow key={row.id} style={{ paddingBottom: "var(--space-2)" }}>
+                <NoteCard
+                  row={row}
+                  onEdit={() => openEdit(row)}
+                  onDelete={() => handleDelete(row)}
+                />
+              </MotionRow>
+            ))}
+          </AnimatePresence>
         </div>
       )}
 
@@ -184,51 +189,25 @@ export function NotesManager({ initialNotes }: NotesManagerProps) {
         editing={editing}
         onSaved={handleSaved}
       />
-
-      <ConfirmDialog
-        open={confirmTarget !== null}
-        dialogKey="delete-note"
-        title="Delete note?"
-        body={
-          confirmTarget ? (
-            <>
-              <strong style={{ color: "var(--theme-text-primary)" }}>
-                {confirmTarget.title || "This note"}
-              </strong>{" "}
-              will be permanently deleted. This cannot be undone.
-            </>
-          ) : null
-        }
-        confirmLabel="Delete"
-        pendingLabel="Deleting…"
-        danger
-        pending={isPending && deletingId !== null}
-        onConfirm={() => confirmTarget && handleDelete(confirmTarget)}
-        onCancel={() => setConfirmTarget(null)}
-      />
     </>
   );
 }
 
 // ─── A single note card ───
+// Plain div — MotionRow owns enter/exit (row motion wins inside lists; never
+// stack a second entrance animation on the card itself).
 function NoteCard({
-  row, index, isDeleting, onEdit, onDelete,
+  row, onEdit, onDelete,
 }: {
   row: ElayaNoteRow;
-  index: number;
-  isDeleting: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const staggerDelay = Math.min(index * 80, 320);
   const title = row.title.trim();
   const body = row.body.trim();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: staggerDelay / 1000, ease: EASE_OUT_EXPO }}
+    <div
       style={{
         display: "flex", alignItems: "flex-start", gap: "var(--space-4)",
         padding: "var(--space-4) var(--space-5)", background: "var(--theme-paper)",
@@ -282,16 +261,15 @@ function NoteCard({
         <button
           type="button"
           onClick={onDelete}
-          disabled={isDeleting}
           aria-label="Delete note"
           style={actionBtnStyle}
-          onMouseEnter={(e) => { if (isDeleting) return; e.currentTarget.style.borderColor = "var(--color-danger)"; e.currentTarget.style.color = "var(--color-danger-text)"; }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-danger)"; e.currentTarget.style.color = "var(--color-danger-text)"; }}
           onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--theme-paper-border)"; e.currentTarget.style.color = "var(--theme-text-secondary)"; }}
         >
-          {isDeleting ? <Spinner size="sm" /> : (<><Trash2 style={{ width: 12, height: 12, strokeWidth: 1.5 }} />Delete</>)}
+          <Trash2 style={{ width: 12, height: 12, strokeWidth: 1.5 }} />Delete
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

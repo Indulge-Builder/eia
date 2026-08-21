@@ -169,10 +169,10 @@ export function FilterDropdown({
         top:            menuPos.top,
         left:           menuPos.left,
         minWidth:       menuPos.minWidth,
-        background:     'var(--theme-paper)',
-        border:         '1px solid var(--theme-paper-border)',
-        borderRadius:   'var(--radius-md)',
-        boxShadow:      'var(--shadow-3)',
+        background:     'var(--neu-surface-high)',
+        border:         '1px solid var(--neu-edge)',
+        borderRadius:   'var(--neu-radius-panel)',
+        boxShadow:      'var(--neu-shadow-raised-lg)',
         zIndex:         'var(--z-modal-nested)' as React.CSSProperties['zIndex'],
         overflow:       'hidden',
         display:        'flex',
@@ -183,10 +183,10 @@ export function FilterDropdown({
         top:            'calc(100% + var(--space-1))',
         left:           0,
         minWidth:       180,
-        background:     'var(--theme-paper)',
-        border:         '1px solid var(--theme-paper-border)',
-        borderRadius:   'var(--radius-md)',
-        boxShadow:      'var(--shadow-3)',
+        background:     'var(--neu-surface-high)',
+        border:         '1px solid var(--neu-edge)',
+        borderRadius:   'var(--neu-radius-panel)',
+        boxShadow:      'var(--neu-shadow-raised-lg)',
         zIndex:         'var(--z-dropdown)' as React.CSSProperties['zIndex'],
         overflow:       'hidden',
         display:        'flex',
@@ -203,24 +203,32 @@ export function FilterDropdown({
             role="option"
             aria-selected={isSelected}
             onClick={() => toggleItem(item.id)}
+            // Selected options FLOAT on an accent wash with a small raised
+            // pair — never inset (neumorphic Rule 4).
             style={{
               display:     'flex',
               alignItems:  'center',
               gap:         'var(--space-2)',
-              width:       '100%',
-              padding:     'var(--space-2) var(--space-3)',
-              background:  isSelected ? 'var(--theme-accent-surface)' : 'transparent',
+              width:       'calc(100% - var(--space-2))',
+              margin:      '0 var(--space-1)',
+              padding:     'var(--space-2) var(--space-2)',
+              background:  isSelected
+                ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
+                : 'transparent',
               border:      'none',
+              borderRadius:'var(--radius-sm)',
+              boxShadow:   isSelected ? 'var(--neu-shadow-chip)' : 'none',
               fontSize:    'var(--text-sm)',
               fontFamily:  'var(--font-sans)',
-              color:       isSelected ? 'var(--theme-accent)' : 'var(--theme-text-primary)',
+              color:       isSelected ? 'var(--neu-accent-deep)' : 'var(--theme-text-primary)',
               cursor:      'pointer',
               textAlign:   'left',
               transition:  'var(--transition-hover)',
             }}
             onMouseEnter={(e) => {
               if (!isSelected) {
-                (e.currentTarget as HTMLButtonElement).style.background = 'var(--theme-paper-subtle)';
+                (e.currentTarget as HTMLButtonElement).style.background =
+                  'color-mix(in srgb, var(--theme-accent) 6%, transparent)';
               }
             }}
             onMouseLeave={(e) => {
@@ -237,9 +245,10 @@ export function FilterDropdown({
                   justifyContent: 'center',
                   width:          16,
                   height:         16,
-                  border:         `1px solid ${isSelected ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
+                  border:         `1px solid ${isSelected ? 'transparent' : 'var(--neu-edge-strong)'}`,
                   borderRadius:   'var(--radius-xs)',
-                  background:     isSelected ? 'var(--theme-accent)' : 'var(--theme-paper)',
+                  background:     isSelected ? 'var(--neu-accent-gradient)' : 'var(--neu-surface)',
+                  boxShadow:      isSelected ? 'var(--neu-shadow-chip)' : 'var(--neu-shadow-raised-sm)',
                   flexShrink:     0,
                 }}
               >
@@ -379,13 +388,18 @@ export function FilterDropdown({
           height:         '2.25rem',
           width:          iconOnly ? '2.25rem' : (fullWidth ? '100%' : undefined),
           padding:        iconOnly ? 0 : 'var(--space-1) var(--space-3)',
-          background:     activeCount > 0 ? 'var(--theme-accent-surface)' : 'var(--theme-paper-subtle)',
-          border:         `1px solid ${triggerAccentBorder ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
+          // Applied filter = accent wash + float; at rest a raised soft chip
+          // (neumorphic Rule 4 — selection never sinks).
+          background:     activeCount > 0
+            ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
+            : 'var(--neu-surface)',
+          border:         `1px solid ${triggerAccentBorder ? 'var(--theme-accent)' : 'var(--neu-edge)'}`,
           borderRadius:   'var(--radius-md)',
+          boxShadow:      'var(--neu-shadow-chip)',
           fontSize:       'var(--text-sm)',
           fontFamily:     'var(--font-sans)',
           fontWeight:     'var(--weight-medium)',
-          color:          activeCount > 0 ? 'var(--theme-accent)' : 'var(--theme-text-secondary)',
+          color:          activeCount > 0 ? 'var(--neu-accent-deep)' : 'var(--theme-text-secondary)',
           cursor:         'pointer',
           transition:     'var(--transition-hover), border-color var(--duration-fast) var(--ease-in-out)',
           whiteSpace:     'nowrap',

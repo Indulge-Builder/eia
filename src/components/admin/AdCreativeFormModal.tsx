@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { UploadCloud, Film, ChevronDown } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/Button";
-import { Spinner } from "@/components/ui/Spinner";
+import { LogoSpinner } from "@/components/ui/LogoSpinner";
 import { createClient } from "@/lib/supabase/client";
 import { upsertAdCreative } from "@/lib/actions/ad-creatives";
 import { useToast } from "@/hooks/useToast";
@@ -333,7 +333,7 @@ export function AdCreativeFormModal({
             >
               {uploading ? (
                 <>
-                  <Spinner size="md" />
+                  <LogoSpinner size="md" />
                   <span style={{ fontSize: "var(--text-sm)" }}>Uploading…</span>
                 </>
               ) : (

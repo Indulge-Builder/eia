@@ -2,14 +2,24 @@ import { defineEnum } from "./define-enum";
 
 // THE canonical theme vocabulary — <html data-theme> values, the
 // profiles.theme column, and the SSR theme cookie all resolve against
-// this list. Never re-inline the five keys anywhere else.
+// this list. Never re-inline the theme keys anywhere else.
+// Adding a theme = one line here + a [data-theme] block in
+// design-tokens.css + a CHECK-extending migration (0154/0155 precedent).
 const DEF = defineEnum([
-  { id: "earth",  label: "Earth"  },
-  { id: "air",    label: "Air"    },
-  { id: "water",  label: "Water"  },
-  { id: "fire",   label: "Fire"   },
-  { id: "cosmos", label: "Cosmos" },
+  { id: "earth", label: "Earth" },
+  { id: "air",   label: "Air"   },
+  { id: "water", label: "Water" },
+  { id: "fire",  label: "Fire"  },
+  { id: "candy", label: "Candy" },
+  { id: "rose",  label: "Rose"  },
+  { id: "moss",  label: "Moss"  },
+  { id: "lilac", label: "Lilac" },
 ]);
+// cosmos / coffee / macha were retired 2026-07-02 (migration 0156 moved any
+// profiles on them back to earth); martini was retired 2026-07-03 (migration
+// 0157 moved its profiles to lilac — the closest tone in the final lineup).
+// A stale cookie/DB value fails isThemeKey and falls back to DEFAULT_THEME —
+// never re-add a key without a migration.
 
 export const THEME_KEYS    = DEF.values;
 export const THEME_OPTIONS = DEF.options;

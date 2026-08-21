@@ -65,36 +65,37 @@ function toTagSlug(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9_-]/g, '');
 }
 
+/* Inputs FLOAT (neumorphic Rule 3): gradient sheen + paired input shadow —
+   never a flat paper fill. Focus adds a 1px accent ring on top of the same
+   shadow; error swaps the ring to danger. */
 const fieldChrome: React.CSSProperties = {
   width:        '100%',
   boxSizing:    'border-box',
-  borderRadius: 'var(--radius-sm)',
-  background:   'var(--theme-paper)',
+  borderRadius: 'var(--radius-lg)',
+  background:   'var(--neu-input-bg)',
   padding:      'var(--space-2) var(--space-3)',
   fontFamily:   'var(--font-sans)',
   fontSize:     'var(--text-sm)',
   color:        'var(--theme-text-primary)',
   caretColor:   'var(--theme-accent)',
   outline:      'none',
-  transition:   'border-color var(--duration-fast) var(--ease-in-out)',
+  transition:   'box-shadow var(--duration-fast) var(--ease-in-out)',
 };
 
 function borderFor(hasError: boolean): React.CSSProperties {
   return hasError
-    ? { border: '1px solid var(--color-danger)', boxShadow: '0 0 0 3px var(--color-danger-light)' }
-    : { border: '1px solid var(--theme-paper-border)' };
+    ? { border: '1px solid var(--color-danger)', boxShadow: '0 0 0 1px var(--color-danger), var(--neu-shadow-input)' }
+    : { border: '1px solid var(--neu-input-edge)', boxShadow: 'var(--neu-shadow-input)' };
 }
 
 function focusField(e: React.FocusEvent<HTMLElement>, hasError: boolean) {
   if (hasError) return;
-  e.currentTarget.style.borderColor = 'var(--theme-accent)';
-  e.currentTarget.style.boxShadow = '0 0 0 3px color-mix(in srgb, var(--theme-accent) 10%, transparent)';
+  e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)';
 }
 
 function blurField(e: React.FocusEvent<HTMLElement>, hasError: boolean) {
   if (hasError) return;
-  e.currentTarget.style.borderColor = 'var(--theme-paper-border)';
-  e.currentTarget.style.boxShadow = '';
+  e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)';
 }
 
 export function AddSuggestionModal({ open, onClose, initialDomain, serviceCase }: AddSuggestionModalProps) {
@@ -371,8 +372,8 @@ export function AddSuggestionModal({ open, onClose, initialDomain, serviceCase }
             alignItems:   'center',
             gap:          'var(--space-1)',
             ...borderFor(!!errors.tags),
-            borderRadius: 'var(--radius-sm)',
-            background:   'var(--theme-paper)',
+            borderRadius: 'var(--radius-lg)',
+            background:   'var(--neu-input-bg)',
             padding:      'var(--space-1) var(--space-2)',
             minHeight:    36,
             cursor:       'text',

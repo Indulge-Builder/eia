@@ -2,8 +2,8 @@
 
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { MessageCircle } from "lucide-react";
 import { ConversationList } from "@/components/whatsapp/ConversationList";
+import { LogoSpinner } from "@/components/ui/LogoSpinner";
 import { ConversationPanel } from "@/components/whatsapp/ConversationPanel";
 import { EmptyConversationState } from "@/components/whatsapp/EmptyConversationState";
 import { createClient } from "@/lib/supabase/client";
@@ -337,15 +337,7 @@ export function WhatsAppShell({
                 minHeight: 0,
               }}
             >
-              <MessageCircle
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  strokeWidth: 1.5,
-                  color: "var(--theme-text-tertiary)",
-                  animation: "serene-spin 1s linear infinite",
-                }}
-              />
+              <LogoSpinner size="md" />
             </div>
           ) : (
             <ConversationPanel

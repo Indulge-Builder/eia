@@ -50,8 +50,12 @@ export function DateRangePresetList({ from, to, onSelect }: DateRangePresetListP
               padding:        'var(--space-2) var(--space-3)',
               border:         'none',
               borderRadius:   'var(--radius-sm)',
-              background:     selected ? 'var(--theme-accent-surface)' : 'transparent',
-              color:          selected ? 'var(--theme-accent)' : 'var(--theme-text-primary)',
+              // Active preset FLOATS on the accent wash + chip shadow (never inset).
+              background:     selected
+                ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
+                : 'transparent',
+              boxShadow:      selected ? 'var(--neu-shadow-chip)' : 'none',
+              color:          selected ? 'var(--neu-accent-deep)' : 'var(--theme-text-primary)',
               fontSize:       'var(--text-sm)',
               fontFamily:     'var(--font-sans)',
               fontWeight:     selected ? 'var(--weight-medium)' : 'var(--weight-normal)',
@@ -61,7 +65,7 @@ export function DateRangePresetList({ from, to, onSelect }: DateRangePresetListP
               transition:     'var(--transition-hover)',
             }}
             onMouseEnter={(e) => {
-              if (!selected) (e.currentTarget as HTMLElement).style.background = 'var(--theme-paper-subtle)';
+              if (!selected) (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--theme-accent) 6%, transparent)';
             }}
             onMouseLeave={(e) => {
               if (!selected) (e.currentTarget as HTMLElement).style.background = 'transparent';

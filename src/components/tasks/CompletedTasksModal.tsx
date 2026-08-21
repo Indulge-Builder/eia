@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/Button';
-import { Spinner } from '@/components/ui/Spinner';
+import { LogoSpinner } from '@/components/ui/LogoSpinner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { FilterDropdown } from '@/components/ui/FilterDropdown';
 import { TaskStatusIcon } from './TaskStatusIcon';
@@ -177,7 +177,7 @@ export function CompletedTasksModal({ open, onClose, currentUser }: CompletedTas
                 padding: 'var(--space-8)',
               }}
             >
-              <Spinner size="md" />
+              <LogoSpinner size="md" />
             </div>
           ) : rows.length === 0 ? (
             <EmptyState

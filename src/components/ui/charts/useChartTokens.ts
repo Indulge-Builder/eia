@@ -11,13 +11,13 @@ export interface ChartTokens {
   tooltipBorder: string;
 }
 
-/** Default fallback (Earth theme) — resolved before paint if possible, prevents flash. */
+/** Default fallback (cream neumorphic, Earth accent) — resolved before paint if possible, prevents flash. */
 const FALLBACK: ChartTokens = {
-  series:       ['#c9a553', '#2860a0', '#3a7d52', '#b87a10', '#b83a28', '#665739'],
-  grid:         '#e7e2d4',
-  axisLabel:    '#b5a99a',
-  tooltipBg:    '#fcfbf6',
-  tooltipBorder:'#e7e2d4',
+  series:       ['#c9a553', '#A3BFD6', '#A9C4A0', '#E3CB96', '#D98E85', '#B3A9D4'],
+  grid:         'rgba(166, 156, 140, 0.22)',
+  axisLabel:    '#ABA396',
+  tooltipBg:    '#F3EFE8',
+  tooltipBorder:'rgba(255, 255, 255, 0.55)',
 };
 
 function resolveVar(name: string): string {
@@ -27,18 +27,20 @@ function resolveVar(name: string): string {
 
 function resolveTokens(): ChartTokens {
   return {
+    // Neumorphic series: theme accent leads, the pastel support family follows
+    // (README §Charts — accent + pastel series, max 3 colours per chart).
     series: [
-      resolveVar('--theme-accent')        || FALLBACK.series[0],
-      resolveVar('--color-info')          || FALLBACK.series[1],
-      resolveVar('--color-success')       || FALLBACK.series[2],
-      resolveVar('--color-warning')       || FALLBACK.series[3],
-      resolveVar('--color-danger')        || FALLBACK.series[4],
-      resolveVar('--theme-accent-muted')  || FALLBACK.series[5],
+      resolveVar('--theme-accent')  || FALLBACK.series[0],
+      resolveVar('--neu-powder')    || FALLBACK.series[1],
+      resolveVar('--neu-sage')      || FALLBACK.series[2],
+      resolveVar('--neu-butter')    || FALLBACK.series[3],
+      resolveVar('--neu-danger')    || FALLBACK.series[4],
+      resolveVar('--neu-lilac')     || FALLBACK.series[5],
     ],
-    grid:         resolveVar('--theme-paper-border')  || FALLBACK.grid,
-    axisLabel:    resolveVar('--theme-text-tertiary') || FALLBACK.axisLabel,
-    tooltipBg:    resolveVar('--theme-paper')         || FALLBACK.tooltipBg,
-    tooltipBorder:resolveVar('--theme-paper-border')  || FALLBACK.tooltipBorder,
+    grid:         resolveVar('--neu-chart-grid')       || FALLBACK.grid,
+    axisLabel:    resolveVar('--theme-text-tertiary')  || FALLBACK.axisLabel,
+    tooltipBg:    resolveVar('--neu-surface-high')     || FALLBACK.tooltipBg,
+    tooltipBorder:resolveVar('--neu-edge')             || FALLBACK.tooltipBorder,
   };
 }
 
@@ -93,7 +95,8 @@ export function useChartTokens(themeKey?: string): ChartTokens {
       for (const mutation of mutations) {
         if (
           mutation.type === 'attributes' &&
-          mutation.attributeName === 'data-theme'
+          (mutation.attributeName === 'data-theme' ||
+            mutation.attributeName === 'data-neu')
         ) {
           setTokens(resolveTokens());
           break;
@@ -101,15 +104,18 @@ export function useChartTokens(themeKey?: string): ChartTokens {
       }
     });
 
+    // data-neu = the dark-mode switch (AppearanceSelector / ThemeInitializer)
+    // — grid/axis/tooltip and the pastel series all flip in the dark block,
+    // so charts must re-resolve on it exactly like a theme change.
     observer.observe(document.documentElement, {
       attributes:      true,
-      attributeFilter: ['data-theme'],
+      attributeFilter: ['data-theme', 'data-neu'],
     });
 
     return () => observer.disconnect();
   // themeKey kept as dep for SSR/test overrides; MutationObserver handles the
   // runtime case so production callers don't need to pass it.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [themeKey]);
 
   return tokens;

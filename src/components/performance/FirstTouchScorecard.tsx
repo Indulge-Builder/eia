@@ -34,7 +34,7 @@ function CardShell({ children, delay = 0 }: { children: React.ReactNode; delay?:
       style={{
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--neu-radius-card)',
         padding:      'var(--space-5)',
         boxShadow:    'var(--shadow-1)',
       }}
@@ -131,7 +131,8 @@ export function FirstTouchScorecard({
                   position:     'relative',
                   height:       '8px',
                   borderRadius: 'var(--radius-full)',
-                  background:   'var(--theme-paper-subtle)',
+                  background:   'var(--neu-well)',
+                  boxShadow:    'var(--neu-shadow-inset)',
                   border:       '1px solid var(--theme-paper-border)',
                   overflow:     'hidden',
                 }}
@@ -145,7 +146,7 @@ export function FirstTouchScorecard({
                     inset:        0,
                     right:        'auto',
                     borderRadius: 'var(--radius-full)',
-                    background:   b.color,
+                    background:   `linear-gradient(180deg, color-mix(in srgb, ${b.color} 72%, white), ${b.color})`,
                     opacity:      0.92,
                   }}
                 />

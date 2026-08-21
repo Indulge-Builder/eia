@@ -6,7 +6,7 @@ import React, {
   useState,
 } from 'react';
 import { m as motion, AnimatePresence } from 'framer-motion';
-import { SPRING_CONFIG, FAST_DURATION, EASE_OUT_EXPO } from '@/lib/constants/motion';
+import { SPRING_TAB, FAST_DURATION, EASE_OUT_EXPO } from '@/lib/constants/motion';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -135,29 +135,29 @@ export function TabsList({ children, className, style }: TabsListProps) {
     overflowX: 'auto',
     scrollbarWidth: 'none',
     WebkitOverflowScrolling: 'touch',
-    // ✓ spec — pill tray: paper-subtle bg + paper-border. Radius is --radius-xl
-    // (intentional drift from --radius-md spec — current dark-canvas chip pattern
-    // reads better with a more rounded tray; documented in components/CLAUDE.md).
+    // Neumorphic Rule 4: every tray is the satin inset track; the active tab
+    // floats above it as a gradient pill (see the trigger chips below).
     ...(variant === 'pill' && {
-      background: 'var(--theme-paper-subtle)',
-      border: '1px solid var(--theme-paper-border)',
-      borderRadius: 'var(--radius-xl)',
+      background: 'var(--neu-track-bg)',
+      border: 'none',
+      boxShadow: 'var(--neu-shadow-track)',
+      borderRadius: 'var(--radius-full)',
       padding: 'var(--space-1)',
       gap: 'var(--space-1)',
     }),
-    // ✓ spec — connected tray: paper-subtle bg + paper-border + --radius-md.
-    // Padding is --space-1 (4px) vs spec p-[2px] — token-system fidelity preferred.
     ...(variant === 'connected' && {
-      background: 'var(--theme-paper-subtle)',
-      border: '1px solid var(--theme-paper-border)',
+      background: 'var(--neu-track-bg)',
+      border: 'none',
+      boxShadow: 'var(--neu-shadow-track)',
       borderRadius: 'var(--radius-md)',
       padding: 'var(--space-1)',
       gap: 0,
     }),
-    // Accent tray — for filter bars on --theme-paper; active tab is full accent fill.
+    // Accent tray — for filter bars; active tab is the accent-gradient fill.
     ...(variant === 'accent' && {
-      background: 'var(--theme-paper-subtle)',
-      border: '1px solid var(--theme-paper-border)',
+      background: 'var(--neu-track-bg)',
+      border: 'none',
+      boxShadow: 'var(--neu-shadow-track)',
       borderRadius: 'var(--radius-md)',
       padding: 'var(--space-1)',
       gap: 'var(--space-1)',
@@ -197,8 +197,9 @@ export function TabsTrigger({
   // Pill variant: soft pastel chip on paper (--theme-tab-pill-active-*).
   const isPill = variant === 'pill';
   const usesInnerLabelSpan = isPill || isAccent;
+  // Specimen: the floating active pill carries primary ink, semibold.
   const activeTextColor = isPill
-    ? 'var(--theme-tab-pill-active-text)'
+    ? 'var(--neu-text-primary)'
     : isAccent
       ? 'var(--theme-accent-fg)'
       : (isConnected ? 'var(--theme-text-primary)' : 'var(--theme-accent)');
@@ -252,36 +253,38 @@ export function TabsTrigger({
         e.currentTarget.removeAttribute('data-focus-visible');
       }}
     >
-      {/* Pill active chip — soft pastel on paper (--theme-tab-pill-active-*). */}
+      {/* Pill active chip — floats out of the satin track as a gradient pill
+          with hairline edge + raised-sm pair (neumorphic Rule 4). */}
       {isPill && isActive && (
         <motion.span
           layoutId={layoutId}
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'var(--theme-tab-pill-active-bg)',
-            borderRadius: 'var(--radius-lg)',
-            border: '1px solid var(--theme-tab-pill-active-border)',
-            boxShadow: 'var(--shadow-1)',
+            background: 'var(--neu-tab-active-bg)',
+            borderRadius: 'var(--radius-full)',
+            border: '1px solid var(--neu-edge-strong)',
+            boxShadow: 'var(--neu-shadow-tab-active)',
             zIndex: -1,
           }}
-          transition={SPRING_CONFIG}
+          transition={SPRING_TAB}
         />
       )}
 
-      {/* ✓ spec — connected active chip: --theme-paper bg + --shadow-1. SPRING_CONFIG. */}
+      {/* Connected active chip — same floating gradient pill, square radius. */}
       {isConnected && isActive && (
         <motion.span
           layoutId={`${layoutId}-connected`}
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'var(--theme-paper)',
+            background: 'var(--neu-tab-active-bg)',
             borderRadius: 'var(--radius-sm)',
-            boxShadow: 'var(--shadow-1)',
+            border: '1px solid var(--neu-edge-strong)',
+            boxShadow: 'var(--neu-shadow-tab-active)',
             zIndex: -1,
           }}
-          transition={SPRING_CONFIG}
+          transition={SPRING_TAB}
         />
       )}
 
@@ -291,12 +294,13 @@ export function TabsTrigger({
           style={{
             position:     'absolute',
             inset:        0,
-            background:   'var(--theme-accent)',
+            background:   'var(--neu-accent-gradient)',
             borderRadius: 'var(--radius-sm)',
-            boxShadow:    'var(--shadow-accent-glow)',
+            border:       '1px solid var(--neu-accent-btn-edge)',
+            boxShadow:    'var(--neu-shadow-raised-sm)',
             zIndex:       -1,
           }}
-          transition={SPRING_CONFIG}
+          transition={SPRING_TAB}
         />
       )}
 
@@ -314,7 +318,7 @@ export function TabsTrigger({
             alignItems: 'center',
             gap: 'var(--space-1)',
             color: isActive
-              ? (isAccent ? 'var(--theme-accent-fg)' : 'var(--theme-tab-pill-active-text)')
+              ? (isAccent ? 'var(--theme-accent-fg)' : 'var(--neu-text-primary)')
               : 'var(--theme-text-secondary)',
             transition: `color var(--duration-fast) var(--ease-in-out)`,
           }}

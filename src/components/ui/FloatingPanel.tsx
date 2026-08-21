@@ -62,10 +62,12 @@ export function FloatingPanel({
             top:          position.top,
             left:         position.left,
             zIndex:       'var(--z-dropdown)' as React.CSSProperties['zIndex'],
-            background:   'var(--theme-paper)',
-            border:       '1px solid var(--theme-paper-border)',
-            borderRadius: 'var(--radius-md)',
-            boxShadow:    'var(--shadow-3)',
+            // Floating panels ride the raised-lg pair on the high surface
+            // with the 1px white hairline (neumorphic Rule 2).
+            background:   'var(--neu-surface-high)',
+            border:       '1px solid var(--neu-edge)',
+            borderRadius: 'var(--neu-radius-panel)',
+            boxShadow:    'var(--neu-shadow-raised-lg)',
             padding:      'var(--space-4)',
             ...style,
           }}

@@ -2,13 +2,14 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { Responsive, WidthProvider, type Layout } from 'react-grid-layout';
-import { GripVertical, LayoutDashboard, RotateCcw, Settings } from 'lucide-react';
+import { GripVertical, LayoutDashboard, RotateCcw } from 'lucide-react';
 import { useDashboardLayout, type WidgetPlacement } from '@/hooks/useDashboardLayout';
 import { useMediaQuery, MQ } from '@/hooks/useMediaQuery';
 import {
   GRID_COLS,
   GRID_ROW_HEIGHT,
   GRID_MARGIN,
+  GRID_MOBILE_BREAKPOINT,
   WIDGET_MAP,
 } from '@/lib/constants/dashboard-widgets';
 import { DashboardWidgetSlot, type WidgetProps } from './DashboardWidgetSlot';
@@ -17,7 +18,6 @@ import { AddWidgetMenu } from './AddWidgetMenu';
 import { PageControls } from '@/components/layout/PageControls';
 import { TOP_BAR_ENABLED } from '@/lib/constants/feature-flags';
 import type { DatePreset, DateRange } from '@/lib/utils/date-range';
-import type { Notification } from '@/lib/types/database';
 
 // WidthProvider measures the container and feeds `width` to Responsive — no
 // manual ResizeObserver, no fixed width. Responsive gives us the mobile-collapse
@@ -26,7 +26,7 @@ const ResponsiveGridLayout = WidthProvider(Responsive);
 
 // Two breakpoints only: the full 12-col grid on tablet+ and a single stacked
 // column below md (a spatial grid is unusable on a phone — widgets stack).
-const RGL_BREAKPOINTS = { lg: 768, xs: 0 } as const;
+const RGL_BREAKPOINTS = { lg: GRID_MOBILE_BREAKPOINT, xs: 0 } as const;
 const RGL_COLS = { lg: GRID_COLS, xs: 1 } as const;
 
 type DashboardCanvasProps = WidgetProps & {
@@ -37,8 +37,6 @@ type DashboardCanvasProps = WidgetProps & {
   toParam:      string | null;
   /** Resolved DateRange (from the RSC, computed from preset/params). */
   dateRange:    DateRange;
-  /** Streamed notification seed for the title-row bell (TOP_BAR_ENABLED). */
-  notificationsPromise?: Promise<Notification[]>;
 };
 
 export function DashboardCanvas({
@@ -53,13 +51,13 @@ export function DashboardCanvas({
   fromParam,
   toParam,
   dateRange,
-  notificationsPromise,
 }: DashboardCanvasProps) {
   const isPrivileged = role === 'admin' || role === 'founder';
   const { layout, isHydrated, applyLayout, addWidget, removeWidget, resetToDefaults } =
     useDashboardLayout(userId, role);
   const [editMode, setEditMode] = useState(false);
   const isMobile = useMediaQuery(MQ.mobile);
+  const [activeBp, setActiveBp] = useState<'lg' | 'xs'>('lg');
 
   // Widget ids currently on the canvas — drives the Add-widget picker's
   // "what's been removed" set (anything role-available but not here).
@@ -84,10 +82,34 @@ export function DashboardCanvas({
     [layout],
   );
 
+  // The phone (xs) layout is DERIVED from the same placements, never persisted:
+  // sort by (y, x), then force a single stacked column (x:0, w:1) with a per-widget
+  // mobileH row override. compactType="vertical" packs the real y from the running
+  // stack order, and `static` keeps every widget read-only on phones.
+  const xsLayout: Layout[] = useMemo(
+    () =>
+      [...layout]
+        .sort((a, b) => a.y - b.y || a.x - b.x)
+        .map((p, i) => {
+          const def = WIDGET_MAP[p.widgetId];
+          return {
+            i: p.widgetId,
+            x: 0,
+            y: i, // compactType="vertical" packs the real y
+            w: 1,
+            h: def?.mobileH ?? p.h,
+            minW: 1,
+            static: true, // read-only on phones
+          };
+        }),
+    [layout],
+  );
+
   // RGL emits the full Layout[] on every drag/resize. Map back to our shape and
   // commit (the hook no-ops when nothing actually changed, incl. RGL's mount fire).
   const handleLayoutChange = useCallback(
     (next: Layout[]) => {
+      if (activeBp !== 'lg') return; // phone layout is derived + read-only; never persist it
       // Ignore RGL's pre-hydration echo: before localStorage settles, `layout`
       // is the synchronous default — persisting RGL's mount layout here would
       // overwrite the user's saved layout with the default. Wait for hydration.
@@ -101,7 +123,7 @@ export function DashboardCanvas({
       }));
       applyLayout(placements);
     },
-    [applyLayout, isHydrated],
+    [applyLayout, isHydrated, activeBp],
   );
 
   return (
@@ -138,12 +160,8 @@ export function DashboardCanvas({
               header cluster. admin/founder get the SAME serene-domain selector
               the list pages use: a pick writes ?domain= (+ cookie), the page RSC
               re-seeds every cohort widget for that scope (no per-widget tabs). */}
-          {TOP_BAR_ENABLED && notificationsPromise && (
-            <PageControls
-              userId={userId}
-              isPrivileged={isPrivileged}
-              notificationsPromise={notificationsPromise}
-            />
+          {TOP_BAR_ENABLED && (
+            <PageControls isPrivileged={isPrivileged} />
           )}
 
           {editMode && (
@@ -170,39 +188,36 @@ export function DashboardCanvas({
               Reset layout
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => setEditMode((v) => !v)}
-            aria-pressed={editMode}
-            aria-label={editMode ? 'Done editing layout' : 'Edit layout'}
-            className="serene-pressable serene-icon-rotate-hover serene-touch"
-            style={{
-              display:        'flex',
-              alignItems:     'center',
-              justifyContent: 'center',
-              gap:            'var(--space-1)',
-              fontSize:       'var(--text-xs)',
-              fontWeight:     'var(--weight-medium)',
-              color:        editMode ? 'var(--theme-accent-fg)' : 'var(--theme-text-secondary)',
-              background:   editMode ? 'var(--theme-accent)' : 'var(--theme-paper-subtle)',
-              border:       '1px solid var(--theme-paper-border)',
-              borderRadius: isMobile ? 'var(--radius-full)' : 'var(--radius-sm)',
-              cursor:       'pointer',
-              padding:      isMobile ? 0 : '0 var(--space-3)',
-              width:        isMobile ? '32px' : undefined,
-              flexShrink:   0,
-              height:       '32px',
-            }}
-          >
-            {isMobile ? (
-              <Settings size={15} strokeWidth={1.5} />
-            ) : (
-              <>
-                <LayoutDashboard size={12} strokeWidth={1.5} />
-                {editMode ? 'Done' : 'Edit layout'}
-              </>
-            )}
-          </button>
+          {/* Edit mode is disabled below 768px — the phone layout is derived +
+              read-only, so the toggle is hidden entirely there. */}
+          {!isMobile && (
+            <button
+              type="button"
+              onClick={() => setEditMode((v) => !v)}
+              aria-pressed={editMode}
+              aria-label={editMode ? 'Done editing layout' : 'Edit layout'}
+              className="serene-pressable serene-icon-rotate-hover serene-touch"
+              style={{
+                display:        'flex',
+                alignItems:     'center',
+                justifyContent: 'center',
+                gap:            'var(--space-1)',
+                fontSize:       'var(--text-xs)',
+                fontWeight:     'var(--weight-medium)',
+                color:        editMode ? 'var(--theme-accent-fg)' : 'var(--theme-text-secondary)',
+                background:   editMode ? 'var(--theme-accent)' : 'var(--theme-paper-subtle)',
+                border:       '1px solid var(--theme-paper-border)',
+                borderRadius: 'var(--radius-sm)',
+                cursor:       'pointer',
+                padding:      '0 var(--space-3)',
+                flexShrink:   0,
+                height:       '32px',
+              }}
+            >
+              <LayoutDashboard size={12} strokeWidth={1.5} />
+              {editMode ? 'Done' : 'Edit layout'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -212,17 +227,18 @@ export function DashboardCanvas({
           in globals.css (.serene-dashboard-grid …). */}
       <div className={editMode ? 'serene-dashboard-grid is-editing' : 'serene-dashboard-grid'}>
         <ResponsiveGridLayout
-          layouts={{ lg: rglLayout, xs: rglLayout }}
+          layouts={{ lg: rglLayout, xs: xsLayout }}
           breakpoints={RGL_BREAKPOINTS}
           cols={RGL_COLS}
           rowHeight={GRID_ROW_HEIGHT}
-          margin={[GRID_MARGIN, GRID_MARGIN]}
+          margin={{ lg: [GRID_MARGIN, GRID_MARGIN], xs: [12, 12] }}
           containerPadding={[0, 0]}
-          isDraggable={editMode}
-          isResizable={editMode}
+          isDraggable={editMode && !isMobile}
+          isResizable={editMode && !isMobile}
           draggableHandle=".serene-widget-drag"
           resizeHandles={['se']}
           compactType="vertical"
+          onBreakpointChange={(bp) => setActiveBp(bp as 'lg' | 'xs')}
           onLayoutChange={handleLayoutChange}
           // measureBeforeMount MUST stay false: WidthProvider measures its own
           // node's offsetWidth on mount, and mounting with the pre-measure width

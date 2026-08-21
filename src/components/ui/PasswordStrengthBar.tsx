@@ -31,7 +31,9 @@ export function PasswordStrengthBar({ password }: { password: string }) {
               flex:         1,
               height:       "3px",
               borderRadius: "var(--radius-full)",
-              background:   s >= level ? colors[s] : "var(--theme-paper-border)",
+              // Unfilled segments sit on the well tone — the bridged paper-border
+              // is a white hairline and would vanish on the cream material.
+              background:   s >= level ? colors[s] : "var(--neu-well)",
               transition:   "background var(--duration-base) var(--ease-in-out)",
             }}
           />

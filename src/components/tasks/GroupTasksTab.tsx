@@ -24,30 +24,31 @@ import {
   Trash2,
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { createSubtaskAction, getGroupSubtasksAction, getTaskRemarksAction, deleteGroupTaskAction } from '@/lib/actions/tasks';
+import { createSubtaskAction, getGroupSubtasksAction, getTaskRemarksAction, deleteGroupTaskAction, deleteTaskAction } from '@/lib/actions/tasks';
 import { TaskCompletionCircle } from '@/components/tasks/TaskCompletionCircle';
 import { useCreateTriggerModal } from '@/hooks/useCreateTriggerModal';
 import { useMediaQuery, MQ } from '@/hooks/useMediaQuery';
 import { useMountOnFirstOpen } from '@/hooks/useMountOnFirstOpen';
 import { useTaskCompletionToggle } from '@/hooks/useTaskCompletionToggle';
 import { canToggleTaskComplete } from '@/lib/utils/task-complete-auth';
-import { formatRelativeTime, formatDate } from '@/lib/utils/dates';
+import { formatDate } from '@/lib/utils/dates';
 import { getInitials, hashString } from '@/lib/utils/strings';
 import { toast } from '@/lib/toast';
 import type { SubTaskModalTaskUpdate } from '@/components/tasks/SubTaskModal';
-import { TaskStatusIcon } from '@/components/tasks/TaskStatusIcon';
 import { AssigneePickerModal } from '@/components/tasks/AssigneePickerModal';
 import type { AssignableUser } from '@/lib/types';
 import type { GroupTaskWithMeta } from '@/components/tasks/CreateGroupTaskModal';
-import { TASK_STATUS, TASK_PRIORITY, GROUP_TASK_ACCENT_COLORS, GROUP_TASK_ICONS } from '@/lib/constants/task-constants';
+import { TASK_PRIORITY, GROUP_TASK_ACCENT_COLORS, GROUP_TASK_ICONS } from '@/lib/constants/task-constants';
 import type { TaskGroupRow, SubtaskWithAssignee, TaskRemarkWithAuthor } from '@/lib/services/tasks-service';
 import { Avatar } from '@/components/ui/Avatar';
 import { AvatarStack } from '@/components/ui/AvatarStack';
 import { CollapseReveal } from '@/components/ui/CollapseReveal';
+import { MotionRow } from '@/components/ui/RowMotion';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { LoadingVeil } from '@/components/ui/LogoSpinner';
 import type { Task, TaskGroup, TaskStatus, TaskPriority, UserRole, AppDomain } from '@/lib/types/database';
 import { TASK_STATUS_LABELS } from '@/lib/constants/task-types';
-import { EASE_OUT_EXPO, ENTER_DURATION, EXIT_DURATION, FAST_DURATION } from '@/lib/constants/motion';
+import { BASE_DURATION, EASE_OUT_EXPO, ENTER_DURATION, EXIT_DURATION, FAST_DURATION } from '@/lib/constants/motion';
 import {
   filterGroupRows,
   groupFiltersActiveCount,
@@ -262,34 +263,6 @@ function PriorityPill({ priority }: { priority: TaskPriority }) {
         }}
       />
       {cfg.label}
-    </span>
-  );
-}
-
-// ─── Status chip ───────────────────────────────────────────────────────────────
-
-function StatusChip({ status }: { status: TaskStatus }) {
-  const cfg = TASK_STATUS[status];
-  return (
-    <span
-      style={{
-        display:       'inline-flex',
-        alignItems:    'center',
-        gap:           4,
-        padding:       '2px 8px',
-        borderRadius:  'var(--radius-full)',
-        background:    cfg.pillBg,
-        color:         cfg.pillText,
-        fontFamily:    'var(--font-sans)',
-        fontSize:      10,
-        fontWeight:    'var(--weight-semibold)',
-        letterSpacing: '0.04em',
-        whiteSpace:    'nowrap',
-        flexShrink:    0,
-      }}
-    >
-      <TaskStatusIcon status={status} size={9} />
-      {TASK_STATUS_LABELS[status]}
     </span>
   );
 }
@@ -517,6 +490,47 @@ const GroupRow = memo(function GroupRow({
     setModalOpen(false);
   }, [group.id, onGroupCountsChange]);
 
+  // Undo-instead-of-confirm (polish §06): the subtask row exits immediately
+  // (MotionRow), its group counts adjust, and a charcoal undo toast counts down
+  // 5s. deleteTaskAction fires ONLY on timeout (not on Undo) via the toast's
+  // onTimeout — that timer lives in the singleton store, so the commit still
+  // fires if this row/panel unmounts. Undo re-inserts the row and re-adds counts.
+  const handleSubtaskDeferDelete = useCallback((taskId: string) => {
+    const removed = subtasks.find((s) => s.id === taskId);
+    if (!removed) return;
+    const wasCompleted = removed.status === 'completed';
+
+    setSubtasks((prev) => prev.filter((s) => s.id !== taskId));
+    onGroupCountsChange?.(group.id, {
+      subtaskDelta: -1,
+      completedDelta: wasCompleted ? -1 : 0,
+    });
+    setSelectedSubtask(null);
+    setModalOpen(false);
+
+    const restore = () => {
+      setSubtasks((prev) =>
+        prev.some((s) => s.id === taskId) ? prev : [...prev, removed],
+      );
+      onGroupCountsChange?.(group.id, {
+        subtaskDelta: 1,
+        completedDelta: wasCompleted ? 1 : 0,
+      });
+    };
+
+    toast.undo('Subtask deleted', {
+      action: { label: 'Undo', onClick: restore },
+      onTimeout: () => {
+        void deleteTaskAction({ taskId }).then((result) => {
+          if (result.error) {
+            restore();
+            toast.danger("Couldn't delete subtask", { message: result.error });
+          }
+        });
+      },
+    });
+  }, [subtasks, group.id, onGroupCountsChange]);
+
   const [, startTransition] = useTransition();
   const { getEffectiveStatus, handleToggle } = useTaskCompletionToggle();
   const caller = { id: currentUserId, role: callerRole, domain: callerDomain };
@@ -603,7 +617,7 @@ const GroupRow = memo(function GroupRow({
         {/* Chevron */}
         <motion.div
           animate={{ rotate: isExpanded ? 90 : 0 }}
-          transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
+          transition={{ duration: BASE_DURATION, ease: EASE_OUT_EXPO }}
           style={{ display: 'flex', alignItems: 'center', color: 'var(--theme-text-tertiary)', flexShrink: 0 }}
         >
           <ChevronRight style={{ width: 16, height: 16, strokeWidth: 1.5 }} />
@@ -770,7 +784,7 @@ const GroupRow = memo(function GroupRow({
                         initial={{ opacity: 0, y: -4, scale: 0.97 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.97 }}
-                        transition={{ duration: 0.15, ease: EASE_OUT_EXPO }}
+                        transition={{ duration: FAST_DURATION, ease: EASE_OUT_EXPO }}
                         onClick={(e) => e.stopPropagation()}
                         style={{
                           position:     'fixed',
@@ -850,7 +864,10 @@ const GroupRow = memo(function GroupRow({
           <CollapseReveal key={`subtasks-${group.id}`} duration={EXIT_DURATION}>
             <div style={{ height: 1, background: 'var(--theme-paper-border)' }} />
 
-            <div style={{ background: 'var(--theme-paper-subtle)' }}>
+            {/* Expanded area sits on the card's own material — the well tone
+                (--theme-paper-subtle → --neu-well) is state-only (neu Rule 4)
+                and read as a dull band here. The hairline above is the divider. */}
+            <div style={{ background: 'transparent' }}>
 
               {isLoadingSubtasks && (
                 <div style={{ padding: 'var(--space-3) var(--space-5) var(--space-2)' }}>
@@ -861,7 +878,7 @@ const GroupRow = memo(function GroupRow({
                         height:       10,
                         width:        `${w}%`,
                         borderRadius: 'var(--radius-full)',
-                        background:   'var(--theme-paper-border)',
+                        background:   'var(--theme-paper-subtle)',
                         marginBottom: i < 2 ? 'var(--space-3)' : 0,
                         animation:    `pulse 1.5s ${i * 0.1}s ease-in-out infinite`,
                       }}
@@ -886,7 +903,13 @@ const GroupRow = memo(function GroupRow({
                 </div>
               )}
 
-              {!isLoadingSubtasks && subtasks.map((subtask, i) => {
+              {/* Row choreography (polish §02) — a subtask deleted via undo
+                  lifts out and its siblings glide up; initial={false} so first
+                  expand never cascades every existing row. MotionRow owns
+                  enter/exit, so the row itself is a plain div. */}
+              {!isLoadingSubtasks && (
+              <AnimatePresence initial={false}>
+              {subtasks.map((subtask, i) => {
                 const effectiveStatus = getEffectiveStatus(subtask.id, subtask.status);
                 const isSubComplete =
                   effectiveStatus === 'completed' ||
@@ -897,11 +920,8 @@ const GroupRow = memo(function GroupRow({
                   effectiveStatus !== 'error';
 
                 return (
-                  <motion.div
-                    key={subtask.id}
-                    initial={{ opacity: 0, x: -4 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.18, delay: Math.min(i * 0.035, 0.2), ease: EASE_OUT_EXPO }}
+                  <MotionRow key={subtask.id}>
+                  <div
                     role="button"
                     tabIndex={0}
                     onClick={() => handleOpenSubtask(subtask)}
@@ -1028,9 +1048,12 @@ const GroupRow = memo(function GroupRow({
                     >
                       <Eye style={{ width: 14, height: 14, strokeWidth: 1.5 } as React.CSSProperties} />
                     </span>
-                  </motion.div>
+                  </div>
+                  </MotionRow>
                 );
               })}
+              </AnimatePresence>
+              )}
 
               {/* Add subtask row */}
               <AnimatePresence>
@@ -1043,7 +1066,8 @@ const GroupRow = memo(function GroupRow({
                         gap:        'var(--space-2)',
                         padding:      'var(--space-3) var(--space-4)',
                         borderRadius: 'var(--radius-md)',
-                        background:   'var(--theme-paper)',
+                        // Sunken input row against the card paper (well = track/input state)
+                        background:   'var(--theme-paper-subtle)',
                         border:       '1px solid color-mix(in srgb, var(--theme-paper-border) 70%, transparent)',
                       }}
                     >
@@ -1136,7 +1160,7 @@ const GroupRow = memo(function GroupRow({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
+                    transition={{ duration: FAST_DURATION }}
                     onClick={(e) => { e.stopPropagation(); setShowAddSubtask(true); }}
                     style={{
                       display:    'flex',
@@ -1156,7 +1180,8 @@ const GroupRow = memo(function GroupRow({
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.color = 'var(--theme-text-secondary)';
-                      e.currentTarget.style.background = 'var(--theme-paper)';
+                      // Hover fill against the card paper (was paper-on-paper — invisible)
+                      e.currentTarget.style.background = 'var(--theme-paper-subtle)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.color = 'var(--theme-text-tertiary)';
@@ -1169,6 +1194,9 @@ const GroupRow = memo(function GroupRow({
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Remarks-fetch window between tap and modal — see MyTasksCalendarView */}
+            {selectedSubtask && modalOpen && selectedSubtaskRemarks === null && <LoadingVeil />}
 
             <AnimatePresence>
               {selectedSubtask && modalOpen && selectedSubtaskRemarks !== null && (
@@ -1183,6 +1211,7 @@ const GroupRow = memo(function GroupRow({
                   currentUserName={currentUserName}
                   onTaskUpdated={handleSubtaskUpdated}
                   onTaskDeleted={handleSubtaskDeleted}
+                  onDeferDelete={handleSubtaskDeferDelete}
                 />
               )}
             </AnimatePresence>
@@ -1227,6 +1256,12 @@ export function GroupTasksTab({
   useEffect(() => {
     setGroupRows(initialRows);
   }, [initialRows]);
+
+  // Warm the SubTaskModal chunk after hydration (still out of the route chunk,
+  // G-1) — a first tap otherwise pays remarks fetch + chunk download in series.
+  useEffect(() => {
+    void import('@/components/tasks/SubTaskModal');
+  }, []);
 
   const filteredRows = useMemo(
     () => filterGroupRows(groupRows, filters),

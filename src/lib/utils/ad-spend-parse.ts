@@ -13,6 +13,11 @@
 // spanning the whole reporting window) would be silently double-counted on the
 // next day-grain upload — so the ENTIRE file is rejected with an instructional
 // error, never partially ingested.
+//
+// ZERO-SPEND DAYS ARE INGESTED (not skipped): a month-to-date export re-uploaded
+// any time must fully override every day it covers, including a day that dropped
+// to zero (refund/correction) so the stale non-zero row is overwritten. Only
+// unusable rows are skipped (missing campaign name, negative/NaN spend).
 
 import { normalizeCampaignKey } from "@/lib/utils/campaigns";
 
@@ -29,7 +34,7 @@ export type AdSpendUploadRow = {
 export type ParsedAdSpend = {
   ok:       true;
   rows:     AdSpendUploadRow[];
-  /** Zero-spend (inactive) rows dropped during parsing */
+  /** Unusable rows (unnamed/summary rows, impossible spends) dropped during parsing */
   skipped:  number;
   dateFrom: string;
   dateTo:   string;
@@ -146,8 +151,10 @@ export async function parseMetaSpendFile(
       typeof campaignRaw === "string" ? normalizeCampaignKey(campaignRaw) : "";
     const spend = toNumber(raw["Amount spent (INR)"]) ?? 0;
 
-    // Zero-spend inactive rows (and unnamed summary rows) are skipped
-    if (!campaignKey || spend <= 0) {
+    // Only unusable rows are skipped — unnamed/summary rows and impossible
+    // spends. Zero-spend days ARE ingested so a month-to-date re-upload can
+    // zero-out a previously reported day (refund/correction).
+    if (!campaignKey || spend < 0 || Number.isNaN(spend)) {
       skipped += 1;
       continue;
     }
@@ -179,7 +186,7 @@ export async function parseMetaSpendFile(
   if (rows.length === 0) {
     return {
       ok: false,
-      error: "Every row in this file has zero spend — nothing to import.",
+      error: "No campaign rows found in this file.",
     };
   }
 

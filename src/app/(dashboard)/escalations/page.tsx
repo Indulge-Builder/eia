@@ -3,7 +3,6 @@ import { redirect }          from "next/navigation";
 import { cookies }           from "next/headers";
 import type { SearchParams } from "next/dist/server/request/search-params";
 import { getCurrentProfile } from "@/lib/services/profiles-service";
-import { getNotifications }  from "@/lib/services/notifications-service";
 import { resolveDomainParam } from "@/lib/utils/domain-scope";
 import { TOP_BAR_ENABLED }   from "@/lib/constants/feature-flags";
 import { PageControls }      from "@/components/layout/PageControls";
@@ -67,9 +66,7 @@ export default async function EscalationsPage({
         </h1>
         {TOP_BAR_ENABLED && (
           <PageControls
-            userId={profile.id}
             isPrivileged={isPrivileged}
-            notificationsPromise={getNotifications(profile.id)}
           />
         )}
       </div>

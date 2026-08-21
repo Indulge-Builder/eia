@@ -55,11 +55,19 @@ export function ConversationRow({
         gap: "var(--space-3)",
         padding: "var(--space-3) var(--space-4)",
         borderRadius: "var(--radius-md)",
-        background: "transparent",
-        border: "none",
+        // Selected floats on an accent wash — never inset, never a coloured edge.
+        background: isActive
+          ? "color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))"
+          : "transparent",
+        border: isActive
+          ? "1px solid var(--neu-edge)"
+          : "1px solid transparent",
+        boxShadow: isActive ? "var(--neu-shadow-chip)" : "none",
         cursor: "pointer",
         width: "100%",
         textAlign: "left",
+        transition:
+          "background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out)",
       }}
     >
       <div style={{ position: "relative", flexShrink: 0 }}>
@@ -89,7 +97,7 @@ export function ConversationRow({
           fontWeight: isHighlighted
             ? "var(--weight-semibold)"
             : "var(--weight-normal)",
-          color: "var(--theme-text-primary)",
+          color: isActive ? "var(--neu-accent-deep)" : "var(--theme-text-primary)",
           margin: 0,
           minWidth: 0,
           whiteSpace: "nowrap",

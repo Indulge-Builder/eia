@@ -198,10 +198,15 @@ export function SuggestionComposerModal({
                     borderRadius: "var(--radius-full)",
                     fontSize: "var(--text-sm)",
                     cursor: "pointer",
-                    color: selected ? "var(--theme-accent)" : "var(--theme-text-secondary)",
-                    background: selected ? "var(--theme-accent-surface)" : "var(--theme-paper-subtle)",
-                    border: `1px solid ${selected ? "var(--theme-accent)" : "var(--theme-paper-border)"}`,
-                    transition: "color var(--duration-fast) var(--ease-in-out), background var(--duration-fast) var(--ease-in-out), border-color var(--duration-fast) var(--ease-in-out)",
+                    // Selected floats on the accent wash — hairline edge + chip
+                    // shadow, never a coloured border (soft-UI Rule 4).
+                    color: selected ? "var(--neu-accent-deep)" : "var(--theme-text-secondary)",
+                    background: selected
+                      ? "color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))"
+                      : "var(--theme-paper-subtle)",
+                    border: "1px solid var(--neu-edge)",
+                    boxShadow: selected ? "var(--neu-shadow-chip)" : "none",
+                    transition: "color var(--duration-fast) var(--ease-in-out), background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out)",
                   }}
                 >
                   {opt.label}
@@ -257,7 +262,7 @@ export function SuggestionComposerModal({
                   border: "1px solid var(--theme-paper-border)",
                 }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
+                { }
                 <img
                   src={a.previewUrl}
                   alt={`Attachment ${i + 1}`}
@@ -280,7 +285,7 @@ export function SuggestionComposerModal({
                     borderRadius: "var(--radius-full)",
                     border: "none",
                     background: "var(--overlay-scrim)",
-                    color: "#fff",
+                    color: "var(--neu-on-accent-soft)",
                     cursor: "pointer",
                   }}
                 >

@@ -15,6 +15,7 @@ import type { LucideIcon } from "lucide-react";
 import { Table } from "@/components/ui/Table";
 import type { TableColumn } from "@/components/ui/Table";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SectionCard } from "@/components/ui/SectionCard";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_BADGE } from "@/lib/constants/lead-statuses";
 import { DOMAIN_LABELS } from "@/lib/constants/domains";
 import { formatDate, formatRelativeTime } from "@/lib/utils/dates";
@@ -27,61 +28,32 @@ import type { LeadStatus, AppDomain, SlaRecipientRole } from "@/lib/types/databa
 
 // ── Shared bits ──────────────────────────────────────────────────────────────
 
-function SectionCardShell({
-  title,
-  count,
-  action,
-  children,
-}: {
-  title:    string;
-  count:    number;
-  action?:  React.ReactNode;
-  children: React.ReactNode;
-}) {
+// The service caps are 500 timers / 100 tasks / 100 cold leads — any section can
+// exceed the P-03 render threshold. Newest-first ordering means the top rows are
+// the live story; the rest sit behind Table's "Show all N" reveal.
+const SECTION_PREVIEW_ROWS = 50;
+
+function CountPill({ count }: { count: number }) {
   return (
-    <section
-      className="rounded-md border border-(--theme-paper-border) bg-(--theme-paper) shadow-(--shadow-1)"
-      style={{ overflow: "hidden" }}
+    <span
+      style={{
+        minWidth:       "20px",
+        height:         "20px",
+        padding:        "0 6px",
+        display:        "inline-flex",
+        alignItems:     "center",
+        justifyContent: "center",
+        borderRadius:   "var(--radius-full)",
+        background:     count > 0 ? "var(--theme-accent-surface)" : "var(--theme-paper)",
+        border:         "1px solid var(--theme-paper-border)",
+        fontFamily:     "var(--font-mono)",
+        fontSize:       "var(--text-2xs)",
+        fontWeight:     "var(--weight-semibold)",
+        color:          count > 0 ? "var(--theme-accent)" : "var(--theme-text-tertiary)",
+      }}
     >
-      <div
-        style={{
-          display:        "flex",
-          alignItems:     "center",
-          justifyContent: "space-between",
-          gap:            "var(--space-4)",
-          padding:        "var(--space-4) var(--space-5)",
-          borderBottom:   "1px solid var(--theme-paper-border)",
-          background:     "var(--theme-paper-subtle)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-          <span className="label-micro" style={{ color: "var(--theme-text-tertiary)" }}>
-            {title}
-          </span>
-          <span
-            style={{
-              minWidth:       "20px",
-              height:         "20px",
-              padding:        "0 6px",
-              display:        "inline-flex",
-              alignItems:     "center",
-              justifyContent: "center",
-              borderRadius:   "var(--radius-full)",
-              background:     count > 0 ? "var(--theme-accent-surface)" : "var(--theme-paper)",
-              border:         "1px solid var(--theme-paper-border)",
-              fontFamily:     "var(--font-mono)",
-              fontSize:       "var(--text-2xs)",
-              fontWeight:     "var(--weight-semibold)",
-              color:          count > 0 ? "var(--theme-accent)" : "var(--theme-text-tertiary)",
-            }}
-          >
-            {count}
-          </span>
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
+      {count}
+    </span>
   );
 }
 
@@ -220,18 +192,30 @@ export function EscalatedLeadsSection({
   ];
 
   return (
-    <SectionCardShell title={selfView ? "Leads that slipped" : "SLA breaches — live"} count={rows.length}>
+    <SectionCard
+      title={selfView ? "Leads that slipped" : "SLA breaches — live"}
+      headerRight={<CountPill count={rows.length} />}
+      bodyPadding={false}
+    >
       {rows.length === 0 ? (
-        <EmptyState variant="inline" title={selfView ? "None of your leads are breaching right now." : "Nothing is breaching right now."} />
+        // §08 brand empty — a clear breach board is good news; the mark rests
+        // behind the reassurance. No action (breaches aren't user-created).
+        <EmptyState
+          brand
+          title={selfView ? "Nothing of yours is slipping." : "Nothing is breaching right now."}
+          description="When a lead crosses its SLA, it will surface here for you to act on."
+          minHeight="220px"
+        />
       ) : (
         <Table<EscalatedLeadRow>
           columns={columns}
           rows={rows}
           rowKey={(r) => r.leadId}
+          previewRows={SECTION_PREVIEW_ROWS}
           onRowClick={(r) => router.push(`/leads/${r.slug ?? r.leadId}`)}
         />
       )}
-    </SectionCardShell>
+    </SectionCard>
   );
 }
 
@@ -274,18 +258,28 @@ export function OverdueTasksSection({
   ];
 
   return (
-    <SectionCardShell title={selfView ? "Your overdue follow-ups" : "Overdue follow-up tasks"} count={rows.length}>
+    <SectionCard
+      title={selfView ? "Your overdue follow-ups" : "Overdue follow-up tasks"}
+      headerRight={<CountPill count={rows.length} />}
+      bodyPadding={false}
+    >
       {rows.length === 0 ? (
-        <EmptyState variant="inline" title={selfView ? "No follow-up of yours has slipped past due." : "No follow-up has slipped past due."} />
+        <EmptyState
+          brand
+          title={selfView ? "Every follow-up of yours is on time." : "No follow-up has slipped past due."}
+          description="An overdue follow-up task will appear here the moment it passes its deadline."
+          minHeight="220px"
+        />
       ) : (
         <Table<OverdueTaskEscalationRow>
           columns={columns}
           rows={rows}
           rowKey={(r) => r.taskId}
+          previewRows={SECTION_PREVIEW_ROWS}
           onRowClick={(r) => router.push(`/leads/${r.leadSlug ?? r.leadId}`)}
         />
       )}
-    </SectionCardShell>
+    </SectionCard>
   );
 }
 
@@ -323,38 +317,47 @@ export function GoingColdSection({
   ];
 
   return (
-    <SectionCardShell
+    <SectionCard
       title="Going cold"
-      count={rows.length}
-      action={
-        <Link
-          href="/leads?going_cold=true"
-          className="serene-icon-lift-hover"
-          style={{
-            display:        "inline-flex",
-            alignItems:     "center",
-            gap:            "var(--space-1)",
-            fontFamily:     "var(--font-sans)",
-            fontSize:       "var(--text-xs)",
-            color:          "var(--theme-text-secondary)",
-            textDecoration: "none",
-          }}
-        >
-          Open in Leads
-          <ArrowUpRight style={{ width: "12px", height: "12px", strokeWidth: 1.5 }} />
-        </Link>
+      bodyPadding={false}
+      headerRight={
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-4)" }}>
+          <CountPill count={rows.length} />
+          <Link
+            href="/leads?going_cold=true"
+            className="serene-icon-lift-hover"
+            style={{
+              display:        "inline-flex",
+              alignItems:     "center",
+              gap:            "var(--space-1)",
+              fontFamily:     "var(--font-sans)",
+              fontSize:       "var(--text-xs)",
+              color:          "var(--theme-text-secondary)",
+              textDecoration: "none",
+            }}
+          >
+            Open in Leads
+            <ArrowUpRight style={{ width: "12px", height: "12px", strokeWidth: 1.5 }} />
+          </Link>
+        </div>
       }
     >
       {rows.length === 0 ? (
-        <EmptyState variant="inline" title={selfView ? "Every one of your active leads has recent movement." : "Every active lead has recent movement."} />
+        <EmptyState
+          brand
+          title={selfView ? "Every one of your leads has recent movement." : "Every active lead has recent movement."}
+          description="Leads drifting quiet for too long will gather here before they go cold."
+          minHeight="220px"
+        />
       ) : (
         <Table<GoingColdLeadRow>
           columns={columns}
           rows={rows}
           rowKey={(r) => r.leadId}
+          previewRows={SECTION_PREVIEW_ROWS}
           onRowClick={(r) => router.push(`/leads/${r.slug ?? r.leadId}`)}
         />
       )}
-    </SectionCardShell>
+    </SectionCard>
   );
 }

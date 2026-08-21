@@ -222,11 +222,6 @@ export function CreatePersonalTaskModal({
     </>
   );
 
-  // ── Modal header custom content (subtitle below title) ─────────────────────
-  // Modal.tsx renders a single title string. We need to inject a subtitle.
-  // We pass a custom header-area subtitle as the first child of the body slot,
-  // visually flush above the separator line, using negative margin to pull it up.
-
   return (
     <Modal
       open={open}

@@ -13,7 +13,7 @@ import { FilterDropdown } from "@/components/ui/FilterDropdown";
 import { useMediaQuery, MQ } from "@/hooks/useMediaQuery";
 import { toggleAgentRouting, setAgentShiftAction } from "@/lib/actions/agent-routing";
 import { toast } from "@/lib/toast";
-import { EASE_OUT_EXPO } from "@/lib/constants/motion";
+import { EASE_OUT_EXPO, EXIT_DURATION } from "@/lib/constants/motion";
 import { normalizeTimeHHMM } from "@/lib/utils/dates";
 import type { AgentRosterRow, UserRole, AppDomain } from "@/lib/types/database";
 
@@ -21,6 +21,9 @@ interface AgentSettingsTableProps {
   initialRoster: AgentRosterRow[];
   callerRole:    UserRole;
   callerDomain:  AppDomain;
+  /** Rendered between the filter bar and the roster list (e.g. the admin/founder
+   *  config link cards) so the filter bar stays directly under the page title. */
+  beforeList?:   React.ReactNode;
 }
 
 interface ShiftState {
@@ -73,11 +76,14 @@ function WorkDayPicker({ days, onChange, disabled }: WorkDayPickerProps) {
               width:          "26px",
               height:         "26px",
               borderRadius:   "var(--radius-xs)",
-              border:         selected
-                ? "1px solid var(--theme-accent)"
-                : "1px solid var(--theme-paper-border)",
-              background:     selected ? "var(--theme-accent-surface)" : "transparent",
-              color:          selected ? "var(--theme-accent)" : "var(--theme-text-tertiary)",
+              // Selected floats on the accent wash — hairline edge + chip
+              // shadow, never a coloured border (soft-UI Rule 4).
+              border:         "1px solid var(--neu-edge)",
+              background:     selected
+                ? "color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))"
+                : "transparent",
+              boxShadow:      selected ? "var(--neu-shadow-chip)" : "none",
+              color:          selected ? "var(--neu-accent-deep)" : "var(--theme-text-tertiary)",
               fontFamily:     "var(--font-sans)",
               fontSize:       "var(--text-2xs)",
               fontWeight:     selected ? "var(--weight-semibold)" : "var(--weight-normal)",
@@ -87,7 +93,7 @@ function WorkDayPicker({ days, onChange, disabled }: WorkDayPickerProps) {
               display:        "flex",
               alignItems:     "center",
               justifyContent: "center",
-              transition:     "background var(--duration-fast) var(--ease-in-out), border-color var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)",
+              transition:     "background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out), color var(--duration-fast) var(--ease-in-out)",
               flexShrink:     0,
             }}
           >
@@ -126,7 +132,7 @@ const POOL_FILTER_ITEMS = [
 export function AgentSettingsTable({
   initialRoster,
   callerRole,
-  callerDomain,
+  beforeList,
 }: AgentSettingsTableProps) {
   const isPrivileged     = callerRole === "admin" || callerRole === "founder";
   const showDomainFilter = isPrivileged;
@@ -370,6 +376,10 @@ export function AgentSettingsTable({
         />
       </FilterBar>
 
+      {/* ── Config link cards (slot) — sits below the filter bar so the bar
+           stays directly under the page title, consistent with list pages ── */}
+      {beforeList}
+
       {/* ── Empty state ────────────────────────────────────────────── */}
       {filtered.length === 0 && (
         <div style={{ padding: "var(--space-20) var(--space-8)", textAlign: "center" }}>
@@ -601,7 +611,7 @@ export function AgentSettingsTable({
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: (isSaving || isPending) ? 0.6 : 1, y: 0 }}
                 transition={{
-                  duration: 0.25,
+                  duration: EXIT_DURATION,
                   delay:    Math.min(i * 80, 320) / 1000,
                   ease:     EASE_OUT_EXPO,
                 }}

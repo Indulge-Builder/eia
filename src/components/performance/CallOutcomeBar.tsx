@@ -149,7 +149,8 @@ export function CallOutcomeBar({ breakdown, onSliceClick }: Props) {
               background:     config.bgColor,
               width:          '100%',
               textAlign:      'left' as const,
-              border:         'none',
+              border:         '1px solid var(--neu-edge)',
+              boxShadow:      'var(--neu-shadow-chip)',
               cursor:         onSliceClick ? 'pointer' : 'default',
             };
             const rowInner = (

@@ -87,7 +87,7 @@ export function NotificationItem({ notification, onMarkRead, onClose }: Notifica
         width:        "100%",
         padding:      "var(--space-3) var(--space-4)",
         // One uniform row — every shown item is unread. Transparent at rest,
-        // paper-subtle on hover. No per-item pill chrome, no unread dot.
+        // faint accent wash on hover. No per-item pill chrome, no unread dot.
         background:   "transparent",
         border:       "none",
         cursor:       "pointer",
@@ -95,7 +95,9 @@ export function NotificationItem({ notification, onMarkRead, onClose }: Notifica
         transition:   "background var(--transition-hover)",
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLElement).style.background = "var(--theme-paper-subtle)";
+        // Hover never darkens on the soft-UI material — a faint accent wash instead.
+        (e.currentTarget as HTMLElement).style.background =
+          "color-mix(in srgb, var(--theme-accent) 6%, transparent)";
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLElement).style.background = "transparent";

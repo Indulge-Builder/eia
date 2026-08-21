@@ -43,7 +43,8 @@ export function AgentDistributionBar({ distribution, total }: AgentDistributionB
           height:       '8px',
           borderRadius: 'var(--radius-full)',
           overflow:     'hidden',
-          background:   'var(--theme-paper-subtle)',
+          background:   'var(--neu-track-bg)',
+          boxShadow:    'var(--neu-shadow-track)',
         }}
       >
         <motion.div

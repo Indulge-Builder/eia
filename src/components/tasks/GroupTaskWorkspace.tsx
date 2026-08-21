@@ -63,6 +63,7 @@ import {
   getGroupSubtasksAction,
   getTaskRemarksAction,
   deleteGroupTaskAction,
+  deleteTaskAction,
 } from "@/lib/actions/tasks";
 import { getAssignableUsersAction } from "@/lib/actions/profiles";
 import { formatRelativeTime, formatDate } from "@/lib/utils/dates";
@@ -83,7 +84,9 @@ import type {
 import { Avatar } from "@/components/ui/Avatar";
 import { BackButton } from "@/components/ui/BackButton";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { MotionRow } from "@/components/ui/RowMotion";
 import { DatePicker } from "@/components/ui/DatePicker";
+import { LoadingVeil } from "@/components/ui/LogoSpinner";
 import type {
   Task,
   TaskGroup,
@@ -92,7 +95,7 @@ import type {
   UserRole,
   AppDomain,
 } from "@/lib/types/database";
-import { EASE_OUT_EXPO } from "@/lib/constants/motion";
+import { BASE_DURATION, EASE_OUT_EXPO } from "@/lib/constants/motion";
 
 // Load-on-intent (perf audit G-1): SubTaskModal (1,672 lines) stays out of the
 // /tasks/[id] route chunk until a subtask is first opened (the call site
@@ -289,7 +292,9 @@ export function GroupTaskWorkspace({
 
   // ── View toggle — default 'list', hydrated from localStorage after mount ──
   const [view, setView] = useState<WorkspaceView>("list");
-  const [hydrated, setHydrated] = useState(false);
+  // Value deliberately unread — the state exists so the post-hydration set
+  // triggers the re-render that applies the localStorage view choice.
+  const [, setHydrated] = useState(false);
   const LS_KEY = `serene:tasks:workspace-view:${group.id}`;
 
   useEffect(() => {
@@ -301,6 +306,12 @@ export function GroupTaskWorkspace({
     }
     setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Warm the SubTaskModal chunk after hydration (still out of the route chunk,
+  // G-1) — a first tap otherwise pays remarks fetch + chunk download in series.
+  useEffect(() => {
+    void import("@/components/tasks/SubTaskModal");
   }, []);
 
   function handleViewChange(v: WorkspaceView) {
@@ -418,6 +429,40 @@ export function GroupTaskWorkspace({
     setSubtasks((prev) => prev.filter((s) => s.id !== taskId));
     setSelectedSubtask(null);
     setModalOpen(false);
+  }, []);
+
+  // Undo-instead-of-confirm (polish §06): the subtask lifts out immediately
+  // (MotionRow in list view / AnimatePresence in board), a charcoal undo toast
+  // counts down 5s, and deleteTaskAction fires ONLY on the toast timeout (Undo
+  // cancels it). The onTimeout runs from the singleton toast store's timer, so
+  // the commit still fires if the user navigates away. Undo restores the row.
+  const handleSubtaskDeferDelete = useCallback((taskId: string) => {
+    let removed: SubtaskWithAssignee | undefined;
+    setSubtasks((prev) => {
+      removed = prev.find((s) => s.id === taskId);
+      return prev.filter((s) => s.id !== taskId);
+    });
+    setSelectedSubtask(null);
+    setModalOpen(false);
+    if (!removed) return;
+    const row = removed;
+
+    const restore = () =>
+      setSubtasks((prev) =>
+        prev.some((s) => s.id === taskId) ? prev : [...prev, row],
+      );
+
+    toast.undo("Subtask deleted", {
+      action: { label: "Undo", onClick: restore },
+      onTimeout: () => {
+        void deleteTaskAction({ taskId }).then((result) => {
+          if (result.error) {
+            restore();
+            toast.danger("Couldn't delete subtask", { message: result.error });
+          }
+        });
+      },
+    });
   }, []);
 
   function handleModalClose() {
@@ -779,6 +824,7 @@ export function GroupTaskWorkspace({
                 boxShadow: "var(--shadow-1)",
               }}
             >
+              <AnimatePresence initial={false}>
               {sortedSubtasks.map((subtask, idx) => {
                 const effectiveStatus = getEffectiveStatus(
                   subtask.id,
@@ -795,15 +841,10 @@ export function GroupTaskWorkspace({
                   effectiveStatus !== "error";
 
                 return (
-                  <motion.div
-                    key={subtask.id}
-                    initial={{ opacity: 0, y: 4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.2,
-                      delay: Math.min(idx * 0.03, 0.24),
-                      ease: EASE_OUT_EXPO,
-                    }}
+                  // MotionRow owns enter/exit (§02) — the deleted-via-undo row
+                  // lifts out, siblings glide up. The row is a plain div.
+                  <MotionRow key={subtask.id}>
+                  <div
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -944,9 +985,11 @@ export function GroupTaskWorkspace({
                         style={{ width: 12, height: 12, strokeWidth: 1.5 }}
                       />
                     </button>
-                  </motion.div>
+                  </div>
+                  </MotionRow>
                 );
               })}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -1240,7 +1283,7 @@ export function GroupTaskWorkspace({
               initial={{ opacity: 0, y: 8, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.97 }}
-              transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
+              transition={{ duration: BASE_DURATION, ease: EASE_OUT_EXPO }}
               className="w-full md:w-80"
               style={{
                 background: "var(--theme-paper)",
@@ -1494,6 +1537,9 @@ export function GroupTaskWorkspace({
         </button>
       </div>
 
+      {/* Remarks-fetch window between tap and modal — see MyTasksCalendarView */}
+      {selectedSubtask && modalOpen && selectedSubtaskRemarks === null && <LoadingVeil />}
+
       {/* Task Modal */}
       <AnimatePresence>
         {selectedSubtask && modalOpen && selectedSubtaskRemarks !== null && (
@@ -1512,6 +1558,7 @@ export function GroupTaskWorkspace({
             currentUserName={currentUserName}
             onTaskUpdated={handleSubtaskUpdated}
             onTaskDeleted={handleSubtaskDeleted}
+            onDeferDelete={handleSubtaskDeferDelete}
           />
         )}
       </AnimatePresence>

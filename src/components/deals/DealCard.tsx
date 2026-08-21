@@ -1,13 +1,15 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { m as motion } from 'framer-motion';
+import { PetalFall } from '@/components/ui/PetalFall';
 import { DOMAIN_LABELS } from '@/lib/constants/domains';
 import { DEAL_TYPE_LABELS, DEAL_DURATION_LABELS, DEAL_CATEGORY_LABELS } from '@/lib/constants/deal-types';
 import { getLeadSourceLabel } from '@/lib/constants/lead-sources';
 import { formatDate } from '@/lib/utils/dates';
 import { formatCurrency } from '@/lib/utils/numbers';
-import { EASE_OUT_EXPO } from '@/lib/constants/motion';
+import { EASE_OUT_EXPO, EXIT_DURATION } from '@/lib/constants/motion';
 import { useMediaQuery, MQ } from '@/hooks/useMediaQuery';
 import type { DealWithRelations } from '@/lib/services/deals-service';
 
@@ -49,7 +51,8 @@ function WalkInPill() {
         padding:       '2px 8px',
         borderRadius:  'var(--radius-full)',
         background:    'var(--color-info-light)',
-        border:        '1px solid color-mix(in srgb, var(--color-info) 30%, transparent)',
+        border:        '1px solid var(--neu-edge)',
+        boxShadow:     'var(--neu-shadow-chip)',
         fontFamily:    'var(--font-sans)',
         fontSize:      'var(--text-2xs)',
         fontWeight:    'var(--weight-medium)',
@@ -113,9 +116,8 @@ function DealTypeChip({
           padding:      '2px 10px',
           borderRadius: 'var(--radius-full)',
           background:   isMember ? 'var(--theme-accent-surface)' : 'var(--theme-paper-subtle)',
-          border:       isMember
-            ? '1px solid color-mix(in srgb, var(--theme-accent) 25%, transparent)'
-            : '1px solid var(--theme-paper-border)',
+          border:       '1px solid var(--neu-edge)',
+          boxShadow:    isMember ? 'var(--neu-shadow-chip)' : undefined,
           fontFamily:   'var(--font-sans)',
           fontSize:     'var(--text-xs)',
           fontWeight:   'var(--weight-medium)',
@@ -149,6 +151,9 @@ function DealTypeChip({
 }
 
 const cardStyle: React.CSSProperties = {
+  // relative + hidden ground the one-shot PetalFall layer (won celebration)
+  position:       'relative',
+  overflow:       'hidden',
   display:        'flex',
   flexWrap:       'wrap',
   alignItems:     'center',
@@ -156,12 +161,37 @@ const cardStyle: React.CSSProperties = {
   padding:        'var(--space-4) var(--space-5)',
   background:     'var(--theme-paper)',
   border:         '1px solid var(--theme-paper-border)',
-  borderRadius:   'var(--radius-md)',
+  borderRadius:   'var(--neu-radius-card)',
   boxShadow:      'var(--shadow-1)',
   textDecoration: 'none',
   transition:     'box-shadow var(--duration-fast) var(--ease-in-out), transform var(--duration-instant) var(--ease-spring)',
   outline:        'none',
 };
+
+/**
+ * Cross-refresh celebration handshake (polish handoff §03). The deals list
+ * is RSC-rendered, so "this deal just transitioned into Won" can't ride
+ * client state through router.refresh() — NewDealModal stamps the new deal
+ * id here on success, and the freshly-rendered card claims it exactly once.
+ * Petals are RESERVED for the Won transition — never fire on ordinary
+ * renders of already-won deals.
+ */
+export const DEAL_CELEBRATE_STORAGE_KEY = 'serene:celebrate-deal';
+
+function useWonCelebration(dealId: string): [boolean, () => void] {
+  const [celebrating, setCelebrating] = useState(false);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(DEAL_CELEBRATE_STORAGE_KEY) === dealId) {
+        sessionStorage.removeItem(DEAL_CELEBRATE_STORAGE_KEY);
+        setCelebrating(true);
+      }
+    } catch {
+      // sessionStorage unavailable — celebration is decorative, skip
+    }
+  }, [dealId]);
+  return [celebrating, () => setCelebrating(false)];
+}
 
 function CardBody({ deal }: { deal: DealWithRelations }) {
   const isMobile = useMediaQuery(MQ.mobile);
@@ -356,6 +386,7 @@ function CardBody({ deal }: { deal: DealWithRelations }) {
 
 export function DealCard({ deal, index }: DealCardProps) {
   const staggerDelay = Math.min(index * 80, 320);
+  const [celebrating, endCelebration] = useWonCelebration(deal.id);
 
   // Walk-in deals have no lead — render as a non-link card
   if (!deal.lead_id) {
@@ -363,7 +394,7 @@ export function DealCard({ deal, index }: DealCardProps) {
       <motion.div
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: staggerDelay / 1000, ease: EASE_OUT_EXPO }}
+        transition={{ duration: EXIT_DURATION, delay: staggerDelay / 1000, ease: EASE_OUT_EXPO }}
         style={cardStyle}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-2)';
@@ -375,6 +406,7 @@ export function DealCard({ deal, index }: DealCardProps) {
         }}
       >
         <CardBody deal={deal} />
+        {celebrating && <PetalFall onDone={endCelebration} />}
       </motion.div>
     );
   }
@@ -386,7 +418,7 @@ export function DealCard({ deal, index }: DealCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: staggerDelay / 1000, ease: EASE_OUT_EXPO }}
+      transition={{ duration: EXIT_DURATION, delay: staggerDelay / 1000, ease: EASE_OUT_EXPO }}
     >
       <Link
         href={href}
@@ -407,6 +439,7 @@ export function DealCard({ deal, index }: DealCardProps) {
         }}
       >
         <CardBody deal={deal} />
+        {celebrating && <PetalFall onDone={endCelebration} />}
       </Link>
     </motion.div>
   );

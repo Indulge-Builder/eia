@@ -1,0 +1,1019 @@
+/* ================================================================
+   SERENE — NEUMORPHIC (SOFT UI) TOKEN LAYER — FINAL REVISION
+   src/styles/serene-neumorphic-tokens.css
+
+   Additive layer imported AFTER design-tokens.css (globals.css).
+   Source of truth: design_handoff_neumorphic_system/ (README +
+   serene-neumorphic-tokens.css + the two .dc.html specimens).
+
+   FINAL FEEL (locked): "Whisper" shadow depth + "Marshmallow" radii.
+   There is exactly ONE depth and ONE radius scale — the previous
+   drop's "Reference" depth (6px/14px offsets, .38/.42 alphas) and
+   24px card radii are OBSOLETE. Never reintroduce depth/radius
+   variants.
+
+   THE FIVE RULES
+   1. One material, one light — warm midtone ground, light from
+      top-left (315°). Never pure white or black surfaces.
+   2. Shadows come in pairs — dark bottom-right + light top-left.
+      Never a lone drop shadow.
+   3. Raised = touchable. Inputs FLOAT too — distinguished from
+      buttons by the gradient sheen + inner top highlight
+      (--neu-input-bg + --neu-shadow-input), never by sinking.
+   4. Inset marks only state — pressed buttons, toggle/tab tracks,
+      skeletons. Selected items float on an accent wash instead.
+   5. Hover: --neu-shadow-hover + translateY(-1px), gated to
+      (hover:hover) and (pointer:fine). Press: --neu-shadow-pressed
+      + scale(0.98). Focus-visible: --neu-focus-ring.
+
+   THEME SCOPE (README "Theme Scope"): EIGHT themes — earth / air /
+   water / fire / candy / rose / moss / lilac (martini RETIRED).
+   Everything accent-flavoured derives from --theme-accent*; this
+   file also ships the design-approved SOFTENED accent overrides for
+   the pre-existing themes (stock accents were too heavy for the
+   cream material). Surfaces, shadow pairs, text, semantic status
+   chips, and the --domain-* chart palette NEVER re-tint.
+
+   Sections:
+   1. Cream material (:root) — surfaces, Whisper shadows, radii,
+      text, pastels, chips
+   2. Accent — theme-derived + softened per-theme overrides
+   3. data-neu="dark" — warm charcoal variant (accents auto-lift)
+   4. LEGACY TOKEN BRIDGE — re-points --theme-* / --shadow-* /
+      radius scale / semantic / status tokens at neu values
+   5. Component recipe classes (.neu-*)
+   6. Restyles of design-tokens.css utility classes
+   7. MOTION LAYER — "alive but calm" (scroll-driven reveals,
+      chart draw-ins, interactive spring, idle loops)
+   ================================================================ */
+
+
+/* ================================================================
+   1. CREAM MATERIAL — theme-invariant surfaces (Whisper depth)
+   ================================================================ */
+
+:root {
+  /* Surfaces */
+  --neu-canvas:        #ECE8E1;
+  --neu-surface:       #F1EDE6;
+  --neu-surface-high:  #F3EFE8;
+  --neu-well:          #E9E4DB;   /* state-only: tracks, skeletons */
+
+  /* Shadow primitives */
+  --neu-dark:   166 156 140;               /* warm putty */
+  --neu-light:  255 255 255;
+  --neu-edge:   rgba(255, 255, 255, 0.55); /* 1px hairline on raised */
+  --neu-edge-strong: rgba(255, 255, 255, 0.7);
+
+  /* Raised (out) — FINAL: Whisper (2/10) */
+  --neu-shadow-raised-sm:
+    2px 2px 6px   rgb(var(--neu-dark) / 0.24),
+    -2px -2px 6px rgb(var(--neu-light) / 0.65);
+  --neu-shadow-raised:
+    3px 3px 8px   rgb(var(--neu-dark) / 0.26),
+    -3px -3px 8px rgb(var(--neu-light) / 0.70);
+  --neu-shadow-raised-lg:
+    6px 6px 16px   rgb(var(--neu-dark) / 0.28),
+    -6px -6px 16px rgb(var(--neu-light) / 0.75);
+
+  /* Hover lift (pair with transform: translateY(-1px)) */
+  --neu-shadow-hover:
+    5px 5px 12px   rgb(var(--neu-dark) / 0.30),
+    -5px -5px 12px rgb(var(--neu-light) / 0.80);
+
+  /* Inset (state-only) */
+  --neu-shadow-inset:
+    inset 2px 2px 5px   rgb(var(--neu-dark) / 0.32),
+    inset -2px -2px 5px rgb(var(--neu-light) / 0.75);
+  --neu-shadow-pressed:
+    inset 2px 2px 4px   rgb(var(--neu-dark) / 0.35),
+    inset -2px -2px 4px rgb(var(--neu-light) / 0.60);
+
+  /* Text inputs FLOAT (Rule 3): gradient sheen + inner top highlight */
+  --neu-input-bg: linear-gradient(180deg, #F7F4EE, #F1EDE6);
+  --neu-input-edge: rgba(255, 255, 255, 0.65);
+  --neu-shadow-input:
+    3px 3px 8px   rgb(var(--neu-dark) / 0.22),
+    -3px -3px 8px rgb(var(--neu-light) / 0.70),
+    inset 0 1px 0 rgb(var(--neu-light) / 0.85);
+
+  /* Satin inset track (toggle/tab tracks — Rule 4) */
+  --neu-track-bg: linear-gradient(180deg, #E8E3DA, #F0ECE5);
+  --neu-shadow-track:
+    inset 2px 2px 5px   rgb(var(--neu-dark) / 0.20),
+    inset -1px -1px 3px rgb(var(--neu-light) / 0.55),
+    0 1px 0             rgb(var(--neu-light) / 0.65);
+
+  /* The active pill floating inside a track */
+  --neu-tab-active-bg: linear-gradient(180deg, #F9F6F0, #F0ECE5);
+  --neu-shadow-tab-active:
+    2px 2px 6px    rgb(var(--neu-dark) / 0.28),
+    -2px -2px 6px  rgb(var(--neu-light) / 0.70),
+    inset 0 1px 0  rgb(var(--neu-light) / 0.85);
+
+  /* Chips / status pills (pastel fill + deep label + raised-sm) */
+  --neu-shadow-chip:
+    2px 2px 5px   rgb(var(--neu-dark) / 0.22),
+    -2px -2px 5px rgb(var(--neu-light) / 0.60);
+
+  /* Small knobs (toggle knob, calendar selected day) */
+  --neu-shadow-knob:
+    2px 2px 5px   rgb(var(--neu-dark) / 0.45),
+    -1px -1px 3px rgb(var(--neu-light) / 0.55);
+
+  /* Modal panel above the scrim (README modal recipe) */
+  --neu-shadow-modal:
+    14px 14px 40px rgba(120, 110, 92, 0.35),
+    -8px -8px 24px rgb(var(--neu-light) / 0.50);
+  --neu-scrim: rgba(56, 51, 43, 0.35);
+
+  /* Radii — FINAL: Marshmallow scale (the ONLY radius scale) */
+  --neu-radius-card:  32px;
+  --neu-radius-panel: 28px;
+  --neu-radius-field: 22px;
+  --neu-radius-tile:  18px;
+  --neu-radius-chip:  14px;
+  --neu-radius-pill:  999px;
+
+  /* Text on the cream material */
+  --neu-text-primary:   #38332B;
+  --neu-text-secondary: #8A8274;
+  --neu-text-tertiary:  #ABA396;
+  --neu-text-disabled:  #C4BCAE;
+  --neu-on-accent-soft: #FDF9F0; /* warm white on deep pastel fills */
+
+  /* Elaya's charcoal disc — the ONLY dark-first surface that survives.
+     The glyph is the company logo (public/elaya-glyph-192.png, gold
+     lotus mandala on near-black) filling the disc; tiny inline
+     mentions (< 24px) keep the ✦ character in --neu-glyph-star. */
+  --neu-glyph-disc: #2D2920;
+  --neu-glyph-star: #DFA9AE;
+
+  /* Charts — warm putty dashed gridlines (README §Charts) */
+  --neu-chart-grid: rgba(166, 156, 140, 0.22);
+
+  /* ── Pastel support family (equal lightness/chroma) ─────────────
+     -deep for text/icons on cream; base for fills/knobs/dots.
+     THEME-INVARIANT — chart series 2+ and semantic accents. */
+  --neu-sage:        #A9C4A0;  --neu-sage-deep:   #7E9B76;
+  --neu-powder:      #A3BFD6;  --neu-powder-deep: #7797B3;
+  --neu-butter:      #E3CB96;  --neu-butter-deep: #B39C63;
+  --neu-lilac:       #B3A9D4;  --neu-lilac-deep:  #8A7FB0;
+  --neu-peach:       #E5B896;  --neu-peach-deep:  #BC8E67;
+  --neu-teal:        #8FBFB5;  --neu-teal-deep:   #5F8F86;
+  --neu-danger:      #D98E85;  --neu-danger-deep: #B06A61;
+
+  /* Semantic mapping */
+  --neu-success:      var(--neu-sage);   --neu-success-deep: var(--neu-sage-deep);
+  --neu-info:         var(--neu-powder); --neu-info-deep:    var(--neu-powder-deep);
+  --neu-warning:      var(--neu-butter); --neu-warning-deep: var(--neu-butter-deep);
+
+  /* Chip fills (pastel) + deep-tone labels — exact specimen pairs.
+     SEMANTIC, never re-tinted by the theme (README Theme Scope). */
+  --neu-chip-sage-bg:   #DCE8D6;  --neu-chip-sage-fg:   #5F7D57;
+  --neu-chip-powder-bg: #D9E4EE;  --neu-chip-powder-fg: #5E7F9B;
+  --neu-chip-butter-bg: #F0E4C8;  --neu-chip-butter-fg: #96814C;
+  --neu-chip-rose-bg:   #F0D9D4;  --neu-chip-rose-fg:   #A85B50;
+  --neu-chip-lilac-bg:  #E2DDEE;  --neu-chip-lilac-fg:  #7A6FA0;
+  --neu-chip-teal-bg:   #D6E8E4;  --neu-chip-teal-fg:   #5F8F86;
+  --neu-chip-neutral-bg:#E9E4DB;  --neu-chip-neutral-fg:#8A8274;
+
+  /* ── Polish layer (design_handoff_polish_layer) ─────────────────
+     Charcoal family — tooltip / action-toast / palette-scrim
+     surfaces (the --neu-glyph-disc tone, promoted to a family).
+     BRAND/SEMANTIC-FIXED below the charcoal: the save-morph sage,
+     the deal-won petal gold (the SeedMandala darkDisc stops), and
+     the Won chip pastel — none of these ever re-tint with the theme. */
+  --neu-charcoal:           #2D2920;
+  --neu-charcoal-text:      #F1EDE6;
+  --neu-charcoal-shadow:    4px 4px 12px rgba(120, 110, 92, 0.35);
+  --neu-charcoal-shadow-lg: 6px 6px 16px rgba(120, 110, 92, 0.40);
+  --neu-palette-scrim:      rgba(56, 51, 43, 0.28);
+  /* Floating palette panel — deeper drop than raised-lg, one light kick */
+  --neu-shadow-floating:
+    12px 12px 32px rgba(120, 110, 92, 0.35),
+    -6px -6px 16px rgb(var(--neu-light) / 0.50);
+  /* Save-morph success re-tint (semantic sage — NOT the theme accent) */
+  --neu-success-gradient: linear-gradient(145deg, #B8CFAF, #98B58E);
+  --neu-success-ink:      #26301F;
+  /* Deal-won petals (brand gold — reserved exclusively for Won) */
+  --neu-petal-gradient:   linear-gradient(145deg, #E8CFA0, #C08A4E);
+
+  /* ── Mode-aware role tokens (design_handoff_dark_mode) ──────────
+     Light values here; [data-neu="dark"] overrides them (§3). Components
+     read ONLY these roles — never a per-component isDark branch. */
+  /* Tooltip — charcoal pill on cream (inverts to cream-on-charcoal in dark) */
+  --neu-tooltip-bg:      var(--neu-charcoal);
+  --neu-tooltip-text:    var(--neu-charcoal-text);
+  --neu-tooltip-shadow:  var(--neu-charcoal-shadow);
+  --neu-tooltip-kbd-bg:  rgb(var(--neu-light) / 0.14);
+  /* Undo/action toast — charcoal in light; surface-high in dark */
+  --neu-toast-action-bg:     var(--neu-charcoal);
+  --neu-toast-action-text:   var(--neu-charcoal-text);
+  --neu-toast-action-border: transparent;
+  --neu-toast-action-shadow: var(--neu-charcoal-shadow-lg);
+  --neu-toast-undo-bg:       rgb(var(--neu-light) / 0.10);
+  --neu-toast-undo-border:   rgb(var(--neu-light) / 0.18);
+  /* Command palette panel */
+  --neu-palette-bg:      var(--neu-surface);
+  --neu-palette-shadow:  var(--neu-shadow-floating);
+  /* Chat: the sender's bubble wash (incoming bubbles stay surface-high) */
+  --neu-chat-user-bg: color-mix(in srgb, var(--theme-accent, #D68891) 12%, var(--neu-surface));
+  /* Hairline on accent-gradient fills (buttons, active accent tab chips) */
+  --neu-accent-btn-edge: rgba(255, 255, 255, 0.25);
+  /* SeedMandala gradient stops — BRAND-FIXED, never theme-tinted; dark
+     lifts them so the gold carries on charcoal (never repoint at accents). */
+  --neu-mandala-from:      #2B1D10;
+  --neu-mandala-to:        #C08A4E;
+  --neu-mandala-disc-from: #E8CFA0;
+  --neu-mandala-disc-to:   #C08A4E;
+  /* Empty-state corner watermark mandala + boot-screen ambient glow */
+  --neu-watermark-opacity: 0.08;
+  --neu-boot-glow: color-mix(in srgb, var(--neu-accent, #D68891) 28%, transparent);
+}
+
+
+/* ================================================================
+   2. ACCENT — theme-derived, with design-approved SOFTENED values
+   Every accent token derives from --theme-accent*; the per-theme
+   blocks below OVERRIDE the stock design-tokens.css accents (which
+   read too heavy/saturated on the cream material) with pastel
+   replacements at the support family's lightness. All accents take
+   DARK INK fg — pastels can never hold white text.
+   rose / moss / lilac carry their final accents in their own
+   design-tokens.css blocks — no override needed here.
+   ================================================================ */
+
+:root {
+  --neu-accent:      var(--theme-accent, #D68891);
+  --neu-accent-deep: var(--theme-accent-muted, #915B61); /* text-safe on cream */
+  --neu-accent-fg:   var(--theme-accent-fg, #45272A);    /* ink on accent fills */
+  --neu-accent-gradient: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--neu-accent) 88%, white),
+    color-mix(in srgb, var(--neu-accent) 90%, black)
+  );
+  --neu-accent-wash: color-mix(in srgb, var(--neu-accent) 16%, transparent);
+
+  /* Card-header strip wash (CardHeader / SectionCard / SubTaskModal headers) —
+     deliberately STRONGER than --neu-accent-wash: 12% of the softened pastel
+     over cream read washed-out (2026-07-03). Mixed into the surface (opaque)
+     so it renders identically on any card. Tune header intensity HERE only. */
+  --neu-header-wash: color-mix(in srgb, var(--neu-accent) 22%, var(--neu-surface));
+  --neu-header-edge: color-mix(in srgb, var(--neu-accent) 32%, transparent);
+
+  /* Header TEXT vocabulary (2026-08-10). The wash and the label can never be the
+     same tone: full --theme-accent on the 22% accent wash measured 1.6–2.0:1, and
+     .label-micro is 10px — WCAG normal text, bar 4.5:1. Swapping to accent-muted
+     is NOT enough (3.9–4.1:1); the tint under it raises the floor. So the hue is
+     split across three tiers: the wash keeps the colour, the label takes the
+     theme's OWN dark ink softened into that wash (~5.9–7.8:1), and the icon —
+     a graphic, 3:1 bar — keeps real chroma at accent-muted (~3.9–4.1:1) so the
+     strip never reads monochrome. Tune header TEXT here only, as with the wash. */
+  --neu-header-ink:  color-mix(in srgb, var(--theme-accent-fg) 82%, var(--neu-header-wash));
+  --neu-header-icon: var(--theme-accent-muted);
+
+  --neu-focus-ring:
+    0 0 0 1px var(--theme-accent, var(--neu-accent)),
+    6px 6px 14px rgb(var(--neu-dark) / 0.38),
+    -6px -6px 14px rgb(var(--neu-light) / 0.85);
+}
+
+/* Softened accents are applied by re-pointing the --theme-accent*
+   family itself (this file imports after design-tokens.css, so these
+   win). Components referencing --theme-accent directly therefore get
+   the softened tone too — one source, no drift. Removing this file's
+   import restores the stock accents.
+   The no-attribute default is scoped with :not([data-theme]) — a bare
+   :root here would out-cascade the rose/moss/lilac blocks in
+   design-tokens.css (equal specificity, later import) and paint every
+   new theme honey-gold. */
+:root:not([data-theme]),
+[data-theme="earth"] {
+  --theme-accent:         #D0AC5A;   /* honey gold (2026-08-10 retune; was #D6BC82, stock #c9a553) */
+  --theme-accent-hover:   color-mix(in srgb, #D0AC5A 86%, black);
+  --theme-accent-muted:   #7D6738;   /* text-safe on cream (AA 4.65:1) */
+  --theme-accent-surface: color-mix(in srgb, #D0AC5A 16%, transparent);
+  --theme-accent-fg:      #33290F;
+}
+[data-theme="air"] {
+  --theme-accent:         #7CA3C8;   /* powder sky (retune; was #97B5D2, stock #54769e) */
+  --theme-accent-hover:   color-mix(in srgb, #7CA3C8 86%, black);
+  --theme-accent-muted:   #4B6E8B;
+  --theme-accent-surface: color-mix(in srgb, #7CA3C8 16%, transparent);
+  --theme-accent-fg:      #223240;
+}
+[data-theme="water"] {
+  --theme-accent:         #68B1A5;   /* seafoam (retune; was #8FC3B9, stock #1e7d72) */
+  --theme-accent-hover:   color-mix(in srgb, #68B1A5 86%, black);
+  --theme-accent-muted:   #407369;
+  --theme-accent-surface: color-mix(in srgb, #68B1A5 16%, transparent);
+  --theme-accent-fg:      #1C2E2A;
+}
+[data-theme="fire"] {
+  --theme-accent:         #E18C63;   /* terracotta peach (retune; was #DC9877, stock #c25022) */
+  --theme-accent-hover:   color-mix(in srgb, #E18C63 86%, black);
+  --theme-accent-muted:   #9D5637;
+  --theme-accent-surface: color-mix(in srgb, #E18C63 16%, transparent);
+  --theme-accent-fg:      #3A1F12;
+}
+[data-theme="candy"] {
+  --theme-accent:         #DF8DB7;   /* rose-pink (retune; was #F0B5D2, stock #f9b2d7) */
+  --theme-accent-hover:   color-mix(in srgb, #DF8DB7 86%, black);
+  --theme-accent-muted:   #9D4E7C;
+  --theme-accent-surface: color-mix(in srgb, #DF8DB7 16%, transparent);
+  --theme-accent-fg:      #2E1522;
+}
+
+
+/* ================================================================
+   3. DARK VARIANT — warm charcoal (data-neu="dark")
+   Neumorphism needs a midtone for highlights to register —
+   never apply this system on the retired #0d0c0a canvas.
+   Accents auto-lift lighter via color-mix so they hold on charcoal.
+   ================================================================ */
+
+[data-neu="dark"] {
+  --neu-canvas:        #28241C;
+  --neu-surface:       #2D2920;
+  --neu-surface-high:  #332E24;
+  --neu-well:          #221E17;
+
+  --neu-dark:   0 0 0;
+  --neu-light:  255 240 214;                /* warm candle highlight */
+  --neu-edge:   rgba(255, 240, 214, 0.06);
+  --neu-edge-strong: rgba(255, 240, 214, 0.09);
+
+  --neu-shadow-raised-sm:
+    3px 3px 8px   rgb(var(--neu-dark) / 0.45),
+    -3px -3px 8px rgb(var(--neu-light) / 0.045);
+  --neu-shadow-raised:
+    6px 6px 14px   rgb(var(--neu-dark) / 0.50),
+    -6px -6px 14px rgb(var(--neu-light) / 0.05);
+  --neu-shadow-raised-lg:
+    10px 10px 24px   rgb(var(--neu-dark) / 0.55),
+    -10px -10px 24px rgb(var(--neu-light) / 0.055);
+  --neu-shadow-hover:
+    8px 8px 18px   rgb(var(--neu-dark) / 0.55),
+    -8px -8px 18px rgb(var(--neu-light) / 0.06);
+  --neu-shadow-inset:
+    inset 3px 3px 7px   rgb(var(--neu-dark) / 0.50),
+    inset -3px -3px 7px rgb(var(--neu-light) / 0.05);
+  --neu-shadow-pressed:
+    inset 2px 2px 5px   rgb(var(--neu-dark) / 0.55),
+    inset -2px -2px 5px rgb(var(--neu-light) / 0.04);
+
+  --neu-input-bg: linear-gradient(180deg, #332E24, #2D2920);
+  --neu-input-edge: rgba(255, 240, 214, 0.08);
+  --neu-shadow-input:
+    3px 3px 8px   rgb(var(--neu-dark) / 0.45),
+    -3px -3px 8px rgb(var(--neu-light) / 0.045),
+    inset 0 1px 0 rgb(var(--neu-light) / 0.06);
+
+  --neu-track-bg: linear-gradient(180deg, #221E17, #2B261E);
+  --neu-shadow-track:
+    inset 2px 2px 5px   rgb(var(--neu-dark) / 0.40),
+    inset -1px -1px 3px rgb(var(--neu-light) / 0.04),
+    0 1px 0             rgb(var(--neu-light) / 0.05);
+
+  --neu-tab-active-bg: linear-gradient(180deg, #3A342A, #2F2A21);
+  --neu-shadow-tab-active:
+    2px 2px 6px    rgb(var(--neu-dark) / 0.45),
+    -2px -2px 6px  rgb(var(--neu-light) / 0.05),
+    inset 0 1px 0  rgb(var(--neu-light) / 0.06);
+
+  --neu-shadow-chip:
+    2px 2px 5px   rgb(var(--neu-dark) / 0.40),
+    -2px -2px 5px rgb(var(--neu-light) / 0.04);
+  --neu-shadow-knob:
+    2px 2px 5px   rgb(var(--neu-dark) / 0.55),
+    -1px -1px 3px rgb(var(--neu-light) / 0.05);
+  --neu-shadow-modal:
+    14px 14px 40px rgba(0, 0, 0, 0.55),
+    -8px -8px 24px rgb(var(--neu-light) / 0.04);
+  --neu-scrim: rgba(12, 10, 7, 0.5);
+
+  /* Dark: accent lifts lighter so it holds on charcoal */
+  --neu-accent:          color-mix(in srgb, var(--theme-accent, #D68891) 82%, white);
+  --neu-accent-deep:     color-mix(in srgb, var(--theme-accent, #D68891) 66%, white);
+  --neu-accent-fg:       var(--theme-accent-fg, #45272A);
+  --neu-accent-gradient: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--neu-accent) 92%, white),
+    color-mix(in srgb, var(--neu-accent) 86%, black)
+  );
+  --neu-accent-wash:     color-mix(in srgb, var(--neu-accent) 14%, transparent);
+
+  /* Header ink INVERTS on charcoal. The light formula (theme dark ink mixed into
+     the wash) measures 1.3–1.7:1 here — the same failure, mirrored. Both tones
+     move to the LIGHT end of the hue instead: label at accent-deep (5.0–5.4:1),
+     icon at the lifted accent (4.2–4.8:1, clears its 3:1 graphic bar). The wash
+     itself needs no override — it derives from --neu-accent/--neu-surface. */
+  --neu-header-ink:  var(--neu-accent-deep);
+  --neu-header-icon: var(--neu-accent);
+
+  --neu-text-primary:   #E8E0D4;
+  --neu-text-secondary: #A39A88;
+  --neu-text-tertiary:  #6E675C;
+  --neu-text-disabled:  #55503F;
+  --neu-on-accent-soft: #FDF9F0;
+
+  --neu-glyph-disc: #221E17;
+  --neu-chart-grid: rgba(255, 240, 214, 0.10);
+
+  /* Pastels flip: base darkens for fills, deep lightens for text */
+  --neu-sage:        #9DB894;  --neu-sage-deep:   #B9D2B0;
+  --neu-powder:      #97B3CA;  --neu-powder-deep: #B7CFE2;
+  --neu-butter:      #D7BF8A;  --neu-butter-deep: #E9D6AC;
+  --neu-lilac:       #A79DC8;  --neu-lilac-deep:  #C5BCE0;
+  --neu-peach:       #D9AC8A;  --neu-peach-deep:  #EBC5A8;
+  --neu-teal:        #83AFA5;  --neu-teal-deep:   #A5CCC3;
+  --neu-danger:      #CD8279;  --neu-danger-deep: #E0A29A;
+
+  /* Chips derive from the pastels so they stay legible on charcoal */
+  --neu-chip-sage-bg:   color-mix(in srgb, var(--neu-sage) 24%, var(--neu-surface));
+  --neu-chip-sage-fg:   var(--neu-sage-deep);
+  --neu-chip-powder-bg: color-mix(in srgb, var(--neu-powder) 24%, var(--neu-surface));
+  --neu-chip-powder-fg: var(--neu-powder-deep);
+  --neu-chip-butter-bg: color-mix(in srgb, var(--neu-butter) 24%, var(--neu-surface));
+  --neu-chip-butter-fg: var(--neu-butter-deep);
+  --neu-chip-rose-bg:   color-mix(in srgb, var(--neu-danger) 24%, var(--neu-surface));
+  --neu-chip-rose-fg:   var(--neu-danger-deep);
+  --neu-chip-lilac-bg:  color-mix(in srgb, var(--neu-lilac) 24%, var(--neu-surface));
+  --neu-chip-lilac-fg:  var(--neu-lilac-deep);
+  --neu-chip-teal-bg:   color-mix(in srgb, var(--neu-teal) 24%, var(--neu-surface));
+  --neu-chip-teal-fg:   var(--neu-teal-deep);
+  --neu-chip-neutral-bg:color-mix(in srgb, var(--neu-text-tertiary) 24%, var(--neu-surface));
+  --neu-chip-neutral-fg:var(--neu-text-secondary);
+
+  /* ── Dark-specific deltas (design_handoff_dark_mode README) ─────── */
+
+  /* Tooltip INVERTS: cream pill, ink text (charcoal-on-charcoal vanishes) */
+  --neu-tooltip-bg:      #ECE8E1;
+  --neu-tooltip-text:    #38332B;
+  --neu-tooltip-shadow:  4px 4px 14px rgba(0, 0, 0, 0.5);
+  --neu-tooltip-kbd-bg:  rgba(56, 51, 43, 0.1);
+
+  /* Undo/action toast floats on surface-high + raised-lg — NOT the light
+     mode's #2D2920 charcoal (invisible on this canvas) */
+  --neu-toast-action-bg:     var(--neu-surface-high);
+  --neu-toast-action-text:   var(--neu-text-primary);
+  --neu-toast-action-border: var(--neu-edge-strong);
+  --neu-toast-action-shadow: var(--neu-shadow-raised-lg);
+  --neu-toast-undo-bg:       rgba(255, 240, 214, 0.06);
+  --neu-toast-undo-border:   var(--neu-edge-strong);
+
+  /* Command palette: panel on surface-high with modal-class elevation;
+     scrim deepens with the rest of the dark scrim family */
+  --neu-palette-bg:     var(--neu-surface-high);
+  --neu-palette-shadow: var(--neu-shadow-modal);
+  --neu-palette-scrim:  rgba(12, 10, 7, 0.5);
+
+  /* Charcoal-family shadows go black-based (warm-putty reads muddy here) */
+  --neu-charcoal-shadow:    4px 4px 12px rgba(0, 0, 0, 0.5);
+  --neu-charcoal-shadow-lg: 6px 6px 16px rgba(0, 0, 0, 0.55);
+  --neu-shadow-floating:
+    12px 12px 32px rgba(0, 0, 0, 0.55),
+    -6px -6px 16px rgb(var(--neu-light) / 0.04);
+
+  /* Chat: sender bubble = lifted-accent wash + hairline */
+  --neu-chat-user-bg: var(--neu-accent-wash);
+
+  /* Hairline on accent fills turns candle-warm */
+  --neu-accent-btn-edge: rgba(255, 240, 214, 0.09);
+
+  /* SeedMandala lifts (brand-fixed): default #5A4426→#D6AF6E so the mark
+     carries on charcoal; Elaya disc #7A5C30→#E8CFA0 on the #221E17 disc.
+     Watermark rises to 10%; boot glow drops to brand gold at 18%. */
+  --neu-mandala-from:      #5A4426;
+  --neu-mandala-to:        #D6AF6E;
+  --neu-mandala-disc-from: #7A5C30;
+  --neu-mandala-disc-to:   #E8CFA0;
+  --neu-watermark-opacity: 0.10;
+  --neu-boot-glow: rgba(214, 175, 110, 0.18);
+
+  /* On-cream accent tones lift for charcoal — "text-safe" flips lighter
+     here, so legacy consumers of the muted/hover/surface family stay
+     legible (README: accents auto-lift; fg stays the theme's dark ink).
+     No cycle: dark --neu-accent* derive from --theme-accent, which the
+     [data-theme] blocks own and this block never touches. */
+  --theme-accent-muted:   var(--neu-accent-deep);
+  --theme-accent-hover:   color-mix(in srgb, var(--neu-accent) 86%, white);
+  --theme-accent-surface: var(--neu-accent-wash);
+}
+
+
+/* ================================================================
+   4. LEGACY TOKEN BRIDGE
+   Re-points the pre-neumorphic token families at the soft-UI
+   system so every existing component converts at the token level.
+   Placed AFTER design-tokens.css in import order, so these
+   declarations win over both :root and the per-[data-theme] blocks
+   (equal specificity, later source).
+   ================================================================ */
+
+:root,
+[data-theme] {
+  /* Ground: the dark canvas retires — one warm material everywhere */
+  --theme-canvas:            var(--neu-canvas);
+  --theme-canvas-glow:       var(--theme-accent-surface);
+  --theme-canvas-text:       var(--neu-text-primary);
+  --theme-canvas-gradient-1: none;
+  --theme-canvas-gradient-2: none;
+  --theme-canvas-gradient-3: none;
+
+  /* Paper → the raised cream surface */
+  --theme-paper:             var(--neu-surface);
+  --theme-paper-subtle:      var(--neu-well);
+  --theme-paper-border:      var(--neu-edge);
+
+  /* Text → warm inks */
+  --theme-text-primary:      var(--neu-text-primary);
+  --theme-text-secondary:    var(--neu-text-secondary);
+  --theme-text-tertiary:     var(--neu-text-tertiary);
+  --theme-text-inverse:      var(--neu-on-accent-soft);
+
+  /* Sidebar → cream raised rail */
+  --theme-sidebar-bg:        var(--neu-surface);
+  --theme-sidebar-border:    var(--neu-edge);
+  --theme-sidebar-text:      var(--neu-text-secondary);
+  --theme-sidebar-active:    var(--theme-accent-muted);
+  --theme-sidebar-hover-bg:  color-mix(in srgb, var(--theme-accent) 6%, transparent);
+  --theme-sidebar-active-bg: var(--theme-accent-surface);
+  --theme-sidebar-active-pill: var(--theme-accent);
+
+  /* Legacy radius scale → Marshmallow roles. Utility classes
+     (rounded-md/lg/xl) and inline var(--radius-*) all resolve here:
+     md → chip 14 · lg → field 22 · xl → card 32. Cards/panels that
+     need the exact 32/28 role use --neu-radius-card/-panel directly. */
+  --radius-sm: 10px;
+  --radius-md: var(--neu-radius-chip);   /* 14px */
+  --radius-lg: var(--neu-radius-field);  /* 22px */
+  --radius-xl: var(--neu-radius-card);   /* 32px */
+
+  /* Shadow scale → paired Whisper shadows */
+  --shadow-color: var(--neu-dark);
+  --shadow-1:     var(--neu-shadow-raised-sm);
+  --shadow-2:     var(--neu-shadow-raised);
+  --shadow-3:     var(--neu-shadow-raised-lg);
+  --shadow-4:     var(--neu-shadow-modal);
+  --shadow-paper: none;               /* the floating paper sheet retires */
+  --shadow-sidebar: var(--neu-shadow-raised);
+  --shadow-inset: var(--neu-shadow-inset);
+  --shadow-focus: var(--neu-focus-ring);
+  --shadow-gold-shimmer: none;
+  --shadow-accent-ring:
+    0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent),
+    var(--neu-shadow-raised-sm);
+  --shadow-accent-glow: var(--neu-shadow-raised-sm);
+  --shadow-accent-lift: var(--neu-shadow-hover);
+
+  /* Interactive spring (motion layer §7) — the springy transition
+     rides the existing composition token so every consumer gets it. */
+  --transition-interactive:
+    background-color 220ms ease,
+    color            180ms ease,
+    box-shadow       300ms var(--ease-spring),
+    transform        220ms cubic-bezier(0.34, 1.3, 0.64, 1);
+
+  /* Overlays → warm scrim (README: rgba(56,51,43,…)) */
+  --overlay-bg:       rgba(56, 51, 43, 0.45);
+  --overlay-bg-light: var(--neu-scrim);
+  --overlay-scrim:    rgba(56, 51, 43, 0.52);
+
+  /* Semantic family → pastel fills, deep-tone text (theme-invariant) */
+  --color-success:        var(--neu-sage-deep);
+  --color-success-light:  var(--neu-chip-sage-bg);
+  --color-success-text:   var(--neu-chip-sage-fg);
+  --color-success-fg:     var(--neu-on-accent-soft);
+
+  --color-warning:        var(--neu-butter-deep);
+  --color-warning-light:  var(--neu-chip-butter-bg);
+  --color-warning-text:   var(--neu-chip-butter-fg);
+  --color-warning-fg:     var(--neu-on-accent-soft);
+
+  --color-danger:         var(--neu-danger-deep);
+  --color-danger-light:   var(--neu-chip-rose-bg);
+  --color-danger-text:    var(--neu-chip-rose-fg);
+  --color-danger-fg:      var(--neu-on-accent-soft);
+
+  --color-info:           var(--neu-powder-deep);
+  --color-info-light:     var(--neu-chip-powder-bg);
+  --color-info-text:      var(--neu-chip-powder-fg);
+
+  --color-neutral:        var(--neu-text-secondary);
+  --color-neutral-light:  var(--neu-chip-neutral-bg);
+  --color-neutral-text:   var(--neu-chip-neutral-fg);
+
+  /* Dark-surface semantic variants — no dark shell remains; map to
+     the deep/pastel tier so residual consumers stay legible. */
+  --color-success-dark-text:   var(--neu-sage-deep);
+  --color-success-dark-fill:   color-mix(in srgb, var(--neu-sage) 20%, transparent);
+  --color-success-dark-border: color-mix(in srgb, var(--neu-sage) 34%, transparent);
+  --color-warning-dark-text:   var(--neu-butter-deep);
+  --color-warning-dark-fill:   color-mix(in srgb, var(--neu-butter) 20%, transparent);
+  --color-warning-dark-border: color-mix(in srgb, var(--neu-butter) 34%, transparent);
+  --color-danger-dark-text:    var(--neu-danger-deep);
+  --color-danger-dark-fill:    color-mix(in srgb, var(--neu-danger) 20%, transparent);
+  --color-danger-dark-border:  color-mix(in srgb, var(--neu-danger) 34%, transparent);
+  --color-info-dark-text:      var(--neu-powder-deep);
+  --color-info-dark-fill:      color-mix(in srgb, var(--neu-powder) 20%, transparent);
+  --color-info-dark-border:    color-mix(in srgb, var(--neu-powder) 34%, transparent);
+  --color-neutral-dark-text:   var(--neu-text-secondary);
+  --color-neutral-dark-fill:   color-mix(in srgb, var(--neu-text-tertiary) 14%, transparent);
+  --color-neutral-dark-border: color-mix(in srgb, var(--neu-text-tertiary) 26%, transparent);
+
+  /* Lead status colours — still fixed and theme-invariant, in the
+     pastel family. Borders match the fill (chips carry the hairline
+     edge + raised-sm shadow instead of a coloured border). */
+  --status-new-text:            var(--neu-chip-butter-fg);
+  --status-new-light:           var(--neu-chip-butter-bg);
+  --status-new-border:          var(--neu-chip-butter-bg);
+
+  --status-touched-text:        var(--neu-chip-powder-fg);
+  --status-touched-light:       var(--neu-chip-powder-bg);
+  --status-touched-border:      var(--neu-chip-powder-bg);
+
+  --status-in-discussion-text:  var(--neu-chip-teal-fg);
+  --status-in-discussion-light: var(--neu-chip-teal-bg);
+  --status-in-discussion-border:var(--neu-chip-teal-bg);
+
+  --status-won-text:            var(--neu-chip-sage-fg);
+  --status-won-light:           var(--neu-chip-sage-bg);
+  --status-won-border:          var(--neu-chip-sage-bg);
+
+  --status-nurturing-text:      var(--neu-chip-lilac-fg);
+  --status-nurturing-light:     var(--neu-chip-lilac-bg);
+  --status-nurturing-border:    var(--neu-chip-lilac-bg);
+
+  --status-lost-text:           var(--neu-chip-rose-fg);
+  --status-lost-light:          var(--neu-chip-rose-bg);
+  --status-lost-border:         var(--neu-chip-rose-bg);
+
+  --status-junk-text:           var(--neu-chip-rose-fg);
+  --status-junk-light:          var(--neu-chip-rose-bg);
+  --status-junk-border:         var(--neu-chip-rose-bg);
+
+  /* Saturated tier (stacked bars, legend dots) → pastel bases so
+     charts speak the same soft language. Theme-invariant. */
+  --status-new-solid:           var(--neu-butter);
+  --status-touched-solid:       var(--neu-powder);
+  --status-in-discussion-solid: var(--neu-teal);
+  --status-nurturing-solid:     var(--neu-lilac);
+  --status-won-solid:           var(--neu-sage);
+  --status-lost-solid:          var(--neu-danger);
+  --status-junk-solid:          var(--neu-text-tertiary);
+}
+
+/* Bridge-level dark deltas — MUST live after the bridge: <html> carries
+   BOTH data-theme and data-neu, and the bridge's [data-theme] selector has
+   equal specificity, so only source order lets these win. Everything else
+   in the bridge resolves through --neu-* roles and flips automatically;
+   these two are literals (the warm-taupe scrims deepen on charcoal). */
+[data-neu="dark"] {
+  --overlay-bg:    rgba(12, 10, 7, 0.5);
+  --overlay-scrim: rgba(12, 10, 7, 0.55);
+}
+
+
+/* ================================================================
+   5. COMPONENT RECIPES
+   ================================================================ */
+
+/* Raised card — the default surface (cards, widgets, dossier cards) */
+.neu-card {
+  background: var(--neu-surface);
+  border: 1px solid var(--neu-edge);
+  border-radius: var(--neu-radius-card);
+  box-shadow: var(--neu-shadow-raised);
+}
+
+/* Icon tiles, small raised chips */
+.neu-tile {
+  background: var(--neu-surface);
+  border: 1px solid var(--neu-edge);
+  border-radius: var(--neu-radius-tile);
+  box-shadow: var(--neu-shadow-raised-sm);
+}
+
+/* State-only well (toggle/tab tracks, skeleton ground) — NEVER inputs */
+.neu-well {
+  background: var(--neu-well);
+  border-radius: var(--neu-radius-field);
+  box-shadow: var(--neu-shadow-inset);
+}
+
+/* Floating text field (Rule 3) — gradient sheen + inner top highlight */
+.neu-input {
+  background: var(--neu-input-bg);
+  border: 1px solid var(--neu-input-edge);
+  border-radius: var(--neu-radius-field);
+  box-shadow: var(--neu-shadow-input);
+  color: var(--neu-text-primary);
+}
+.neu-input:focus-visible,
+.neu-input:focus-within {
+  outline: none;
+  box-shadow:
+    0 0 0 1px var(--theme-accent),
+    var(--neu-shadow-input);
+}
+
+/* Satin inset track that active pills float inside */
+.neu-track {
+  background: var(--neu-track-bg);
+  box-shadow: var(--neu-shadow-track);
+  border-radius: var(--neu-radius-pill);
+}
+
+/* Selected/active/applied — accent wash + slight lift, never inset (Rule 4) */
+.neu-selected {
+  background: color-mix(in srgb, var(--theme-accent) 16%, var(--neu-surface));
+  border: 1px solid var(--neu-edge);
+  box-shadow: var(--neu-shadow-raised-sm);
+}
+
+/* Base interactive raised element */
+.neu-btn {
+  background: var(--neu-surface);
+  border: 1px solid var(--neu-edge);
+  border-radius: var(--neu-radius-pill);
+  box-shadow: var(--neu-shadow-raised-sm);
+  color: var(--neu-text-primary);
+  transition: var(--transition-interactive);
+}
+.neu-btn-primary {
+  background: var(--neu-accent-gradient);
+  border-color: var(--neu-accent-btn-edge);
+  color: var(--theme-accent-fg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .neu-btn:hover:not(:disabled) {
+    box-shadow: var(--neu-shadow-hover);
+    transform: translateY(-1px);
+  }
+}
+.neu-btn:active:not(:disabled) {
+  box-shadow: var(--neu-shadow-pressed);
+  transform: scale(0.98);
+}
+.neu-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--neu-focus-ring);
+}
+
+/* Chart panel — charts sit RAISED on the gradient sheen, never a well */
+.neu-chart-panel {
+  background: var(--neu-input-bg);
+  border: 1px solid var(--neu-input-edge);
+  border-radius: var(--neu-radius-panel);
+  box-shadow: var(--neu-shadow-input);
+}
+
+
+/* ================================================================
+   6. RESTYLES OF EXISTING UTILITY CLASSES
+   (defined in design-tokens.css; this file imports later, so
+   equal-specificity redeclarations here win)
+   ================================================================ */
+
+/* Button variants — raised soft chrome */
+.serene-btn-primary {
+  background: var(--neu-accent-gradient);
+  color: var(--theme-accent-fg);
+  border: 1px solid var(--neu-accent-btn-edge);
+  box-shadow: var(--neu-shadow-raised-sm);
+}
+.serene-btn-secondary {
+  background: var(--neu-surface);
+  color: var(--neu-text-primary);
+  border: 1px solid var(--neu-edge);
+  box-shadow: var(--neu-shadow-raised-sm);
+}
+.serene-btn-ghost {
+  background: transparent;
+  color: var(--neu-text-primary);
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+.serene-btn-danger {
+  background: var(--neu-chip-rose-bg);
+  color: var(--neu-chip-rose-fg);
+  border: 1px solid var(--neu-edge);
+  box-shadow: var(--neu-shadow-chip);
+}
+.serene-btn-success {
+  background: var(--neu-chip-sage-bg);
+  color: var(--neu-chip-sage-fg);
+  border: 1px solid var(--neu-edge);
+  box-shadow: var(--neu-shadow-chip);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .serene-btn-primary:hover:not(:disabled) {
+    background: var(--neu-accent-gradient);
+    box-shadow: var(--neu-shadow-hover);
+    transform: translateY(-1px);
+  }
+  .serene-btn-secondary:hover:not(:disabled) {
+    border-color: var(--neu-edge-strong);
+    box-shadow: var(--neu-shadow-hover);
+    transform: translateY(-1px);
+  }
+  .serene-btn-ghost:hover:not(:disabled) {
+    background: var(--neu-accent-wash);
+  }
+  .serene-btn-danger:hover:not(:disabled) {
+    background: var(--neu-danger-deep);
+    color: var(--neu-on-accent-soft);
+    border-color: transparent;
+    box-shadow: var(--neu-shadow-hover);
+  }
+  .serene-btn-success:hover:not(:disabled) {
+    background: var(--neu-sage-deep);
+    color: var(--neu-on-accent-soft);
+    border-color: transparent;
+    box-shadow: var(--neu-shadow-hover);
+  }
+}
+
+/* Press: pressed-inset shadow + scale (Rule 5). Declared after the
+   hover rules so press beats hover by cascade. */
+.serene-btn-primary:active:not(:disabled),
+.serene-btn-secondary:active:not(:disabled),
+.serene-btn-danger:active:not(:disabled),
+.serene-btn-success:active:not(:disabled) {
+  box-shadow: var(--neu-shadow-pressed);
+  transform: scale(0.98);
+}
+
+/* Status pills — pastel fill + deep label + raised-sm, hairline edge.
+   Fill/text arrive via the bridged --status-* tokens; the pill chrome
+   itself swaps the flat drop shadow for the paired chip shadow. */
+.status-pill {
+  border: 1px solid var(--neu-edge);
+  box-shadow: var(--neu-shadow-chip);
+}
+
+/* Skeletons — left→right sheen on the well tone (logo-motion handoff:
+   the shimmer sweep replaces the opacity pulse), no deep inset. */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--neu-well) 25%,
+    var(--neu-surface-high) 50%,
+    var(--neu-well) 75%
+  );
+  background-size: 200% 100%;
+  animation: serene-shimmer-sweep 1.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background: var(--neu-well);
+  }
+}
+
+/* Section labels — tracked caps in accent-deep (README §Type) */
+.type-eyebrow,
+.label-micro {
+  color: var(--neu-accent-deep);
+}
+
+/* Scrollbars — warm putty thumbs on the cream material */
+.scrollable,
+.sidebar-scrollable {
+  scrollbar-color: rgb(var(--neu-dark) / 0.30) transparent;
+}
+.scrollable::-webkit-scrollbar-thumb,
+.sidebar-scrollable::-webkit-scrollbar-thumb {
+  background: rgb(var(--neu-dark) / 0.30);
+}
+.scrollable::-webkit-scrollbar-thumb:hover,
+.sidebar-scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--neu-dark) / 0.48);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .serene-btn-primary:hover:not(:disabled),
+  .serene-btn-secondary:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+
+/* ================================================================
+   7. MOTION LAYER — "alive but calm"
+   Scroll-driven where supported; one-shot entrance fallback;
+   everything honors prefers-reduced-motion.
+   ================================================================ */
+
+@keyframes neu-rise    { from { opacity: 0; transform: translateY(26px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes neu-grow-y  { from { transform: scaleY(0.12); opacity: 0.5; } to { transform: none; opacity: 1; } }
+@keyframes neu-grow-x  { from { transform: scaleX(0.08); } to { transform: none; } }
+@keyframes neu-draw    { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes neu-twinkle { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.22) rotate(18deg); opacity: 0.75; } }
+
+/* Card entrance — scroll-driven (plays in both directions, self-
+   staggers). Ends at transform:none so position:fixed descendants
+   are unaffected. NEVER on react-grid-layout items or elements with
+   their own inline/Framer transform. */
+.neu-reveal {
+  animation: neu-rise linear both;
+  animation-timeline: view();
+  animation-range: entry 0% entry 38%;
+}
+/* Chart stroke draw-in: set pathLength="1" stroke-dasharray="1" on the path */
+.neu-draw {
+  animation: neu-draw linear both;
+  animation-timeline: view();
+  animation-range: entry 10% entry 65%;
+}
+/* Bars grow from their baseline (transform-origin: bottom) */
+.neu-grow {
+  transform-origin: bottom;
+  animation: neu-grow-y linear both;
+  animation-timeline: view();
+  animation-range: entry 0% entry 55%;
+}
+/* Progress fills sweep from the left */
+.neu-sweep {
+  transform-origin: left;
+  animation: neu-grow-x linear both;
+  animation-timeline: view();
+  animation-range: entry 0% entry 60%;
+}
+
+/* Fallback — browsers without animation-timeline get a one-shot
+   entrance with the same values (README motion appendix). */
+@supports not (animation-timeline: view()) {
+  .neu-reveal { animation: neu-rise var(--duration-enter) var(--ease-out-expo) both; }
+  .neu-draw   { animation: neu-draw 900ms var(--ease-out-soft) both; }
+  .neu-grow   { animation: neu-grow-y var(--duration-page) var(--ease-out-expo) both; }
+  .neu-sweep  { animation: neu-grow-x var(--duration-page) var(--ease-out-expo) both; }
+}
+
+/* Interactive spring — standalone class for non-Button clickables;
+   Buttons get the same values via the bridged --transition-interactive. */
+.neu-interactive {
+  transition:
+    transform 220ms cubic-bezier(0.34, 1.3, 0.64, 1),
+    box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 220ms ease,
+    color 180ms ease,
+    border-color 220ms ease;
+}
+
+/* Idle loops ------------------------------------------------------ */
+
+/* Elaya breathe — the package's amplitude (0.35 ↔ 0.95) supersedes the
+   design-tokens.css §15 definition (same name, later import wins).
+   Consumers keep the existing .elaya-breathe class untouched. */
+@keyframes serene-elaya-breathe {
+  0%, 100% { opacity: 0.35; }
+  50%       { opacity: 0.95; }
+}
+
+/* Typing dots — 1.2s loop, consumers stagger by 150ms inline */
+@keyframes serene-neu-dot {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  30%      { opacity: 1;    transform: translateY(-3px); }
+}
+.serene-neu-dot {
+  animation: serene-neu-dot 1.2s ease-in-out infinite;
+}
+
+/* MotionButton breathing halo — 2.6s, opacity/transform only */
+@keyframes serene-neu-halo {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50%      { opacity: 0.75; transform: scale(1.045); }
+}
+.serene-neu-halo {
+  animation: serene-neu-halo 2.6s ease-in-out infinite;
+}
+
+/* Listening pulse (DictationButton recording state) */
+@keyframes serene-neu-listening {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+.serene-neu-listening {
+  animation: serene-neu-listening 1.6s ease-in-out infinite;
+}
+
+/* Masthead ✦ twinkle — 5s (logo/brand sparkles only) */
+.serene-neu-twinkle {
+  display: inline-block;
+  animation: neu-twinkle 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neu-reveal, .neu-draw, .neu-grow, .neu-sweep,
+  .serene-neu-dot,
+  .serene-neu-halo,
+  .serene-neu-listening,
+  .serene-neu-twinkle {
+    animation: none;
+  }
+}

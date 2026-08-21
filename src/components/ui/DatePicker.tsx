@@ -316,15 +316,18 @@ export function DatePicker({
           flex:        '1 1 auto',
           height:      '2.25rem',
           padding:     'var(--space-2) var(--space-3)',
-          background:  'var(--theme-paper-subtle)',
-          border:      `1px solid ${focused || open ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
-          borderRadius:'var(--radius-md)',
+          // Fields FLOAT (soft-UI rule 3): gradient sheen + paired input shadow.
+          background:  'var(--neu-input-bg)',
+          border:      `1px solid ${focused || open ? 'var(--theme-accent)' : 'var(--neu-input-edge)'}`,
+          borderRadius:'var(--radius-lg)',
           fontSize:    'var(--text-sm)',
           fontFamily:  'var(--font-sans)',
           color:       value ? 'var(--theme-text-primary)' : 'var(--theme-text-tertiary)',
           cursor:      disabled ? 'not-allowed' : 'pointer',
           opacity:     disabled ? 0.5 : 1,
-          boxShadow:   focused || open ? 'var(--shadow-focus)' : 'none',
+          boxShadow:   focused || open
+            ? '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)'
+            : 'var(--neu-shadow-input)',
           transition:  'var(--transition-hover)',
           outline:     'none',
           whiteSpace:  'nowrap',

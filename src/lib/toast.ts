@@ -6,7 +6,7 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type ToastType = "success" | "warning" | "danger" | "info" | "loading" | "elaya";
+export type ToastType = "success" | "warning" | "danger" | "info" | "loading" | "elaya" | "undo";
 
 export interface ToastAction {
   label: string;
@@ -17,6 +17,12 @@ export interface ToastOptions {
   message?: string;
   action?: ToastAction;
   duration?: number;
+  /**
+   * Undo toasts only (polish handoff §06): fires when the countdown expires
+   * WITHOUT the action being clicked — the deferred server commit of an
+   * optimistic delete. Never fires after Undo (dismissal clears the timer).
+   */
+  onTimeout?: () => void;
 }
 
 export interface ToastItem {
@@ -26,6 +32,7 @@ export interface ToastItem {
   message?: string;
   action?: ToastAction;
   duration: number;     // 0 = never auto-dismiss
+  onTimeout?: () => void;
   createdAt: number;
 }
 
@@ -38,6 +45,7 @@ const DEFAULT_DURATIONS: Record<ToastType, number> = {
   danger:  0,      // never auto-dismisses
   loading: 0,      // lives until resolved
   elaya:   7000,
+  undo:    5000,   // polish §06 — the depletion bar IS the countdown
 };
 
 // ─── Internal state ───────────────────────────────────────────────────────────
@@ -115,6 +123,7 @@ function _create(type: ToastType, title: string, opts: ToastOptions = {}): strin
     message:   opts.message,
     action:    opts.action,
     duration,
+    onTimeout: opts.onTimeout,
     createdAt: Date.now(),
   });
 }
@@ -142,6 +151,21 @@ export const toast = {
 
   elaya(title: string, opts?: ToastOptions): string {
     return _create("elaya", title, opts);
+  },
+
+  /**
+   * Undo-instead-of-confirm (polish §06) — charcoal action toast with an
+   * accent depletion bar. The caller removes the item OPTIMISTICALLY first:
+   *
+   *   toast.undo("Note deleted", {
+   *     action:    { label: "Undo", onClick: restoreItem },
+   *     onTimeout: commitServerDelete,   // runs ONLY if Undo wasn't clicked
+   *   });
+   *
+   * Reserve ConfirmDialog for truly irreversible operations.
+   */
+  undo(title: string, opts?: ToastOptions): string {
+    return _create("undo", title, opts);
   },
 
   /**

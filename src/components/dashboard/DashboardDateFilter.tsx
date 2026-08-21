@@ -8,7 +8,7 @@ import { DatePicker } from '@/components/ui/DatePicker';
 import { useMediaQuery, MQ } from '@/hooks/useMediaQuery';
 import { buildFilterParams, dateToUrlParam, dateFromUrlParam } from '@/lib/utils/filter-params';
 import { DATE_PRESET_LABELS, type DatePreset } from '@/lib/utils/date-range';
-import { DROPDOWN_VARIANTS } from '@/lib/constants/motion';
+import { DROPDOWN_VARIANTS, FAST_DURATION } from '@/lib/constants/motion';
 
 const PRESETS: { value: Exclude<DatePreset, 'custom'>; label: string }[] = [
   { value: 'today',      label: DATE_PRESET_LABELS.today      },
@@ -118,9 +118,12 @@ export function DashboardDateFilter({ activePreset, fromParam, toParam }: Dashbo
           width:          isMobile ? '36px' : undefined,
           padding:        isMobile ? 0 : '0 var(--space-3)',
           borderRadius:   'var(--radius-md)',
-          border:       `1px solid ${open || isActive ? 'var(--theme-accent)' : 'var(--theme-paper-border)'}`,
-          background:   open || isActive ? 'var(--theme-accent-surface)' : 'var(--theme-paper)',
-          color:        open || isActive ? 'var(--theme-accent)' : 'var(--theme-text-secondary)',
+          border:       '1px solid var(--neu-edge)',
+          background:   open || isActive
+            ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
+            : 'var(--theme-paper)',
+          color:        open || isActive ? 'var(--neu-accent-deep)' : 'var(--theme-text-secondary)',
+          boxShadow:    'var(--neu-shadow-chip)',
           fontSize:     'var(--text-xs)',
           fontWeight:   'var(--weight-medium)',
           cursor:       'pointer',
@@ -135,7 +138,7 @@ export function DashboardDateFilter({ activePreset, fromParam, toParam }: Dashbo
             {activeLabel}
             <motion.span
               animate={{ rotate: open ? 180 : 0 }}
-              transition={{ duration: 0.15, ease: 'easeInOut' }}
+              transition={{ duration: FAST_DURATION, ease: 'easeInOut' }}
               style={{ display: 'flex', alignItems: 'center' }}
             >
               <ChevronDown size={14} strokeWidth={1.5} />
@@ -181,8 +184,11 @@ export function DashboardDateFilter({ activePreset, fromParam, toParam }: Dashbo
                       width:        '100%',
                       padding:      'var(--space-2) var(--space-3)',
                       borderRadius: 'var(--radius-sm)',
-                      background:   isSelected ? 'var(--theme-accent-surface)' : 'transparent',
-                      color:        isSelected ? 'var(--theme-accent)' : 'var(--theme-text-primary)',
+                      background:   isSelected
+                        ? 'color-mix(in srgb, var(--theme-accent) 12%, var(--neu-surface))'
+                        : 'transparent',
+                      boxShadow:    isSelected ? 'var(--neu-shadow-chip)' : 'none',
+                      color:        isSelected ? 'var(--neu-accent-deep)' : 'var(--theme-text-primary)',
                       fontSize:     'var(--text-xs)',
                       fontWeight:   isSelected ? 'var(--weight-semibold)' : 'var(--weight-normal)',
                       cursor:       'pointer',
@@ -191,7 +197,7 @@ export function DashboardDateFilter({ activePreset, fromParam, toParam }: Dashbo
                       transition:   'background var(--duration-fast) var(--ease-in-out)',
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'var(--theme-paper-subtle)';
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'var(--neu-accent-wash)';
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
@@ -248,7 +254,8 @@ export function DashboardDateFilter({ activePreset, fromParam, toParam }: Dashbo
                   width:        '100%',
                   height:       '30px',
                   borderRadius: 'var(--radius-sm)',
-                  background:   'var(--theme-accent)',
+                  background:   'var(--neu-accent-gradient)',
+                  boxShadow:    'var(--neu-shadow-raised-sm)',
                   color:        'var(--theme-accent-fg)',
                   fontSize:     'var(--text-xs)',
                   fontWeight:   'var(--weight-semibold)',

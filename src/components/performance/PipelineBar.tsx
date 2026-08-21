@@ -70,15 +70,18 @@ export function PipelineBar({
           overflow:     'hidden',
           gap:          '2px',
           marginBottom: 'var(--space-4)',
-          background:   'var(--theme-paper-border)',
+          background:   'var(--neu-well)',
+          boxShadow:    'var(--neu-shadow-inset)',
         }}
       >
         {ordered.map(({ status, count }) => {
+          const fill = STATUS_FILL[status] ?? 'var(--color-neutral)';
           const segStyle = {
-            width:      `${(count / total) * 100}%`,
-            background: STATUS_FILL[status] ?? 'var(--color-neutral)',
-            minWidth:   '4px',
-            opacity:    0.9,
+            width:        `${(count / total) * 100}%`,
+            background:   `linear-gradient(180deg, color-mix(in srgb, ${fill} 72%, white), ${fill})`,
+            borderRadius: 999,
+            minWidth:     '4px',
+            opacity:      0.9,
           } as const;
           const title = `${LEAD_STATUS_LABELS[status as keyof typeof LEAD_STATUS_LABELS] ?? status}: ${count}`;
           return onSegmentClick ? (

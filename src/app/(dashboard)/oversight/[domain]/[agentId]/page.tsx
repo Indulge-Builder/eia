@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { redirect, notFound } from "next/navigation";
 import { getCurrentProfile } from "@/lib/services/profiles-service";
-import { getNotifications } from "@/lib/services/notifications-service";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { PageControls } from "@/components/layout/PageControls";
@@ -121,9 +120,7 @@ export default async function OversightAgentPage({
         </div>
         {TOP_BAR_ENABLED && (
           <PageControls
-            userId={profile.id}
             isPrivileged={profile.role !== "manager"}
-            notificationsPromise={getNotifications(profile.id)}
           />
         )}
       </div>

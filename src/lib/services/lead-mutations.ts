@@ -35,6 +35,7 @@ import { REDIS_KEYS } from "@/lib/constants/redis-keys";
 import { invalidateLeadCaches } from "@/lib/services/lead-cache";
 import { getOpenRevivedTask } from "@/lib/services/revival-service";
 import { createNotification } from "@/lib/services/notifications-service";
+import { getDomainDecisionMakers } from "@/lib/services/profiles-service";
 import {
   scheduleSlaTimersForLead,
   cancelSlaTimersForLead,
@@ -57,6 +58,10 @@ import {
 } from "@/lib/constants/revival";
 import { scheduleTaskReminder } from "@/trigger/task-reminders";
 import type { LeadAssignedNotifyInput } from "@/lib/services/lead-assignment-notify";
+import {
+  emitActivityEvent,
+  emitLeadActivityEvent,
+} from "@/lib/services/activity-events";
 import type { UserRole } from "@/lib/types";
 import type { AppDomain, CallOutcome, LeadStatus, Task } from "@/lib/types/database";
 
@@ -86,8 +91,7 @@ export async function addLeadNoteCore(
   const admin = createAdminClient();
   const now = new Date().toISOString();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rpcResult, error: rpcError } = await (admin as any).rpc(
+  const { data: rpcResult, error: rpcError } = await admin.rpc(
     "add_lead_plain_note",
     {
       p_lead_id: input.leadId,
@@ -107,7 +111,14 @@ export async function addLeadNoteCore(
     { notes: true, activities: true },
   );
 
-  return { ok: true, noteId: rpcResult.note_id as string };
+  // Activity stream (mobile-ops §8) — best-effort, never fails the write.
+  await emitLeadActivityEvent({
+    leadId: input.leadId,
+    actorId: actor.userId,
+    eventType: "note_added",
+  });
+
+  return { ok: true, noteId: (rpcResult as { note_id: string }).note_id };
 }
 
 // ─────────────────────────────────────────────
@@ -135,8 +146,7 @@ export async function addLeadCallNoteCore(
   const admin = createAdminClient();
   const now = new Date().toISOString();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rpcResult, error: rpcError } = await (admin as any).rpc(
+  const { data: rpcResult, error: rpcError } = await admin.rpc(
     "add_lead_call_note",
     {
       p_lead_id: input.leadId,
@@ -169,6 +179,14 @@ export async function addLeadCallNoteCore(
     { leadId: input.leadId, slug: ctx.slug, domain: ctx.domain },
     { row: true, notes: true, activities: true, lists: true },
   );
+
+  // Activity stream (mobile-ops §8) — best-effort, never fails the write.
+  await emitLeadActivityEvent({
+    leadId: input.leadId,
+    actorId: actor.userId,
+    eventType: "call_logged",
+    meta: { outcome: input.callOutcome },
+  });
 
   // SLA cadence chain (fire-and-forget, non-fatal) — byte-identical to the action.
   const postStatus = didAutoAdvance ? "touched" : oldStatus;
@@ -233,8 +251,7 @@ export async function createLeadTaskCore(
 
   const admin = createAdminClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rows, error: rpcError } = await (admin as any).rpc(
+  const { data: rows, error: rpcError } = await admin.rpc(
     "create_lead_gia_task",
     {
       p_lead_id: input.leadId,
@@ -242,9 +259,11 @@ export async function createLeadTaskCore(
       p_created_by: actor.userId,
       p_task_type: input.taskType,
       p_title: title,
-      p_description: input.description,
+      // Explicit nulls (not undefined) are intentional — PostgREST sends SQL NULL;
+      // the generated optional-arg types only admit undefined, hence the assertions.
+      p_description: input.description as string | undefined,
       p_priority: input.priority,
-      p_due_at: input.dueAt ? new Date(input.dueAt).toISOString() : null,
+      p_due_at: (input.dueAt ? new Date(input.dueAt).toISOString() : null) as string | undefined,
     },
   );
 
@@ -272,6 +291,14 @@ export async function createLeadTaskCore(
   } catch (e) {
     console.warn("[lead-mutations] redis del failed on createLeadTaskCore", e);
   }
+
+  // Activity stream (mobile-ops §8) — best-effort, never fails the write.
+  await emitLeadActivityEvent({
+    leadId: input.leadId,
+    actorId: actor.userId,
+    eventType: "task_created",
+    meta: { task_type: input.taskType, priority: input.priority },
+  });
 
   return { ok: true, task };
 }
@@ -361,14 +388,14 @@ export async function updateLeadStatusCore(
   const admin = createAdminClient();
   const now = new Date().toISOString();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rpcResult, error: rpcError } = await (admin as any).rpc(
+  const { data: rpcResult, error: rpcError } = await admin.rpc(
     "update_lead_status",
     {
       p_lead_id: input.leadId,
       p_actor_id: actor.userId,
       p_status: input.status,
-      p_reason: input.reason,
+      // Explicit null (not undefined) is intentional — PostgREST sends SQL NULL.
+      p_reason: input.reason as string | undefined,
       p_now: now,
     },
   );
@@ -399,6 +426,18 @@ export async function updateLeadStatusCore(
 
   const { assigned_to: assignedTo, domain, first_name, last_name } = result;
 
+  // Activity stream (mobile-ops §8) — the RPC already returned domain + name,
+  // so emit directly (no resolve read). Best-effort, never fails the write.
+  await emitActivityEvent({
+    domain: (domain as AppDomain) ?? null,
+    actorId: actor.userId,
+    subjectType: "lead",
+    subjectId: input.leadId,
+    eventType: "status_changed",
+    title: [first_name, last_name].filter(Boolean).join(" ") || null,
+    meta: { from: result.old_status ?? null, to: result.new_status ?? null },
+  });
+
   // Won: notify all active managers/admins/founders in the domain (context-free).
   // Identical to updateLeadStatus — ordering preserved (won fan-out BEFORE SLA branch).
   if (input.status === "won") {
@@ -406,14 +445,11 @@ export async function updateLeadStatusCore(
       ? `${first_name ?? "A lead"} ${last_name}`
       : (first_name ?? "A lead");
 
-    const { data: managers } = await admin
-      .from("profiles")
-      .select("id")
-      .eq("domain", (domain as AppDomain) ?? actor.domain)
-      .in("role", ["manager", "admin", "founder"])
-      .eq("is_active", true);
+    const managers = await getDomainDecisionMakers(
+      ((domain as AppDomain) ?? actor.domain) as string,
+    );
 
-    if (managers && managers.length > 0) {
+    if (managers.length > 0) {
       await Promise.all(
         managers.map((m: { id: string }) =>
           createNotification({
@@ -558,6 +594,17 @@ export async function recordDealCore(
   }
   const dealId = (inserted as { id: string }).id;
 
+  // Activity stream (mobile-ops §8) — best-effort, never fails the write.
+  await emitActivityEvent({
+    domain: lead.domain as AppDomain,
+    actorId: actor.userId,
+    subjectType: "deal",
+    subjectId: dealId,
+    eventType: "deal_logged",
+    title: contactName,
+    meta: { amount: input.deal_amount, deal_type: resolved.shape.deal_type },
+  });
+
   // Step 2: flip the lead to Won via the shared status core (inherits the lead_won
   // fan-out + terminal-SLA cancel + cache invalidation). A no-op flip (already Won)
   // still leaves a valid deal row — wonChanged just reflects whether the row moved.
@@ -660,6 +707,17 @@ export async function assignLeadCore(
   const leadName = existingLead.last_name
     ? `${existingLead.first_name} ${existingLead.last_name}`
     : (existingLead.first_name ?? "A lead");
+
+  // Activity stream (mobile-ops §8) — best-effort, never fails the write.
+  await emitActivityEvent({
+    domain: existingLead.domain as AppDomain,
+    actorId: actor.userId,
+    subjectType: "lead",
+    subjectId: input.leadId,
+    eventType: "lead_assigned",
+    title: leadName,
+    meta: { assigned_to: input.agentId, agent_name: assignedAgentName },
+  });
 
   return {
     ok: true,

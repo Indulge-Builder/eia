@@ -23,7 +23,7 @@
 // recording flag; most just mount this and let it hide itself.
 
 import { Mic, Square, X } from 'lucide-react';
-import { Spinner } from '@/components/ui/Spinner';
+import { SeedMandala } from '@/components/ui/SeedMandala';
 import { transcribeAudioAction } from '@/lib/actions/transcription';
 import {
   useAudioRecorder,
@@ -115,6 +115,7 @@ export function DictationButton({
       {recorder.isRecording && (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)' }}>
           <span
+            className="serene-neu-listening"
             style={{
               width: '8px',
               height: '8px',
@@ -136,7 +137,14 @@ export function DictationButton({
         </span>
       )}
 
-      {isTranscribing && <Spinner size="sm" />}
+      {isTranscribing && (
+        <SeedMandala
+          size={16}
+          variant="currentColor"
+          spin={3.5}
+          style={{ color: 'var(--theme-accent)' }}
+        />
+      )}
 
       {recorder.isRecording && (
         <button
@@ -177,21 +185,24 @@ export function DictationButton({
           width: sq,
           height: sq,
           borderRadius: isComposer ? 'var(--radius-sm)' : 'var(--radius-md)',
+          // Recording is an active state: it floats on the rose wash with the
+          // chip shadow — never marked by a coloured border.
           border: isComposer
             ? 'none'
             : recorder.isRecording
-              ? '1px solid color-mix(in srgb, var(--color-danger) 40%, transparent)'
+              ? '1px solid var(--neu-edge)'
               : '1px solid color-mix(in srgb, var(--theme-accent) 30%, transparent)',
           background: recorder.isRecording
             ? 'var(--color-danger-light)'
             : 'transparent',
+          boxShadow: recorder.isRecording ? 'var(--neu-shadow-chip)' : 'none',
           color: recorder.isRecording
             ? 'var(--color-danger-text)'
             : 'var(--theme-accent)',
           cursor: startBlocked && !recorder.isRecording ? 'not-allowed' : 'pointer',
           opacity: startBlocked && !recorder.isRecording ? 0.45 : 1,
           flexShrink: 0,
-          transition: 'opacity 150ms, background 150ms, border-color 150ms',
+          transition: 'opacity 150ms, background 150ms, border-color 150ms, box-shadow 150ms',
         }}
       >
         {recorder.isRecording ? (

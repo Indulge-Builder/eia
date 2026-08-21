@@ -46,12 +46,12 @@ export function LeadDealCard({ deal }: LeadDealCardProps) {
         gap:            'var(--space-5)',
         flexWrap:       'wrap',
         padding:        'var(--space-5) var(--space-6)',
-        background:     'var(--theme-paper-subtle)',
+        background:     'var(--theme-paper)',
         border:         '1px solid var(--theme-paper-border)',
-        borderRadius:   'var(--radius-lg)',
+        borderRadius:   'var(--neu-radius-card)',
         boxShadow:      'var(--shadow-1)',
         textDecoration: 'none',
-        transition:     'background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out)',
+        transition:     'background var(--duration-fast) var(--ease-in-out), box-shadow var(--duration-fast) var(--ease-in-out), transform var(--duration-fast) var(--ease-in-out)',
       }}
     >
       {/* Left zone — trophy + "Closed Deal" label */}
@@ -111,9 +111,8 @@ export function LeadDealCard({ deal }: LeadDealCardProps) {
             padding:      '2px 10px',
             borderRadius: 'var(--radius-full)',
             background:   isMembership ? 'var(--theme-accent-surface)' : 'var(--theme-paper)',
-            border:       isMembership
-              ? '1px solid color-mix(in srgb, var(--theme-accent) 25%, transparent)'
-              : '1px solid var(--theme-paper-border)',
+            border:       '1px solid var(--neu-edge)',
+            boxShadow:    isMembership ? 'var(--neu-shadow-chip)' : undefined,
             fontFamily:   'var(--font-sans)',
             fontSize:     'var(--text-xs)',
             fontWeight:   'var(--weight-medium)',
@@ -171,13 +170,20 @@ export function LeadDealCard({ deal }: LeadDealCardProps) {
       </span>
 
       <style>{`
-        .lead-deal-card:hover {
-          background: var(--theme-paper);
-          box-shadow: var(--shadow-2);
+        @media (hover: hover) and (pointer: fine) {
+          .lead-deal-card:hover {
+            box-shadow: var(--neu-shadow-hover);
+            transform: translateY(-1px);
+          }
+          .lead-deal-card:hover .lead-deal-card__link {
+            color: var(--theme-accent);
+            text-decoration: underline;
+          }
         }
-        .lead-deal-card:hover .lead-deal-card__link {
-          color: var(--theme-accent);
-          text-decoration: underline;
+        @media (prefers-reduced-motion: reduce) {
+          .lead-deal-card:hover {
+            transform: none;
+          }
         }
       `}</style>
     </Link>

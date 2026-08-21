@@ -126,14 +126,18 @@ export function CreateLeadTaskModal({
               fontFamily:   'var(--font-sans)',
               fontSize:     'var(--text-sm)',
               color:        'var(--theme-text-primary)',
-              background:   'var(--theme-paper-subtle)',
-              border:       '1px solid var(--theme-paper-border)',
-              borderRadius: 'var(--radius-md)',
+              background:   'var(--neu-input-bg)',
+              border:       '1px solid var(--neu-input-edge)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow:    'var(--neu-shadow-input)',
               padding:      'var(--space-3)',
               resize:       'vertical',
               outline:      'none',
               caretColor:   'var(--theme-accent)',
+              transition:   'box-shadow var(--duration-fast) var(--ease-in-out)',
             }}
+            onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 1px var(--theme-accent), var(--neu-shadow-input)'; }}
+            onBlur={(e)  => { e.currentTarget.style.boxShadow = 'var(--neu-shadow-input)'; }}
           />
         </div>
 

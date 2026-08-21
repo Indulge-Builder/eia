@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Circle } from 'lucide-react';
 
 export interface TaskCompletionCircleProps {
@@ -14,6 +14,10 @@ export interface TaskCompletionCircleProps {
 /**
  * Radio-style completion control — hollow circle when open, accent check when done.
  * Caller must stopPropagation on the row click handler; this button does not.
+ *
+ * Polish §03: completing emits ONE 700ms accent ring pulse
+ * (`.serene-ring-pulse` — user toggles only, never on mount; skipped under
+ * reduced motion). Square checklist tiles compose `ui/CheckTile` instead.
  */
 export function TaskCompletionCircle({
   checked,
@@ -26,6 +30,25 @@ export function TaskCompletionCircle({
   const showHollow = canInteract && !checked;
   const showRing = showHollow && (highlighted || hovered);
 
+  // One-shot ring pulse when the user flips it to done after mount.
+  const mountedRef = useRef(false);
+  const prevChecked = useRef(checked);
+  const [pulse, setPulse] = useState(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      prevChecked.current = checked;
+      return;
+    }
+    if (checked && !prevChecked.current) {
+      setPulse(true);
+      const t = setTimeout(() => setPulse(false), 900); // 700ms + 150ms delay
+      prevChecked.current = checked;
+      return () => clearTimeout(t);
+    }
+    prevChecked.current = checked;
+  }, [checked]);
+
   return (
     <button
       type="button"
@@ -34,6 +57,7 @@ export function TaskCompletionCircle({
       aria-label={checked ? 'Reopen task' : 'Mark complete'}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className={pulse ? 'serene-ring-pulse' : undefined}
       style={{
         width:        'var(--space-6)',
         height:       'var(--space-6)',

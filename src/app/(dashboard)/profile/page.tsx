@@ -6,6 +6,7 @@ import { signOutUser } from "@/lib/actions/profiles";
 import { ProfileAvatarSection } from "@/components/profile/ProfileAvatarSection";
 import { ProfileDetailsForm }   from "@/components/profile/ProfileDetailsForm";
 import { ThemeSelector }         from "@/components/profile/ThemeSelector";
+import { AppearanceSelector }     from "@/components/profile/AppearanceSelector";
 import { IconSelector }           from "@/components/profile/IconSelector";
 import { InstallPrompt }          from "@/components/profile/InstallPrompt";
 import { PasswordChangeForm }    from "@/components/profile/PasswordChangeForm";
@@ -15,6 +16,7 @@ import { ElayaPersonaSettings } from "@/components/profile/ElayaPersonaSettings"
 import { SectionCard } from "@/components/ui/SectionCard";
 import { Button } from "@/components/ui/Button";
 import { ROLE_LABELS } from "@/lib/constants/roles";
+import { DEFAULT_APPEARANCE, isAppearanceKey } from "@/lib/constants/appearance";
 import { DOMAIN_LABELS } from "@/lib/constants/domains";
 import { formatDate } from "@/lib/utils/dates";
 
@@ -65,7 +67,26 @@ export default async function ProfilePage() {
             title="Appearance"
             description="Choose the visual theme for your workspace."
           >
-            <ThemeSelector currentTheme={profile.theme} profileId={profile.id} />
+            {/* Light · Dark · Auto (dark-mode handoff) — separated from the
+                theme swatches by the labelled-datum-group rule below. */}
+            <AppearanceSelector
+              currentAppearance={
+                isAppearanceKey(profile.appearance)
+                  ? profile.appearance
+                  : DEFAULT_APPEARANCE
+              }
+              profileId={profile.id}
+            />
+
+            <div
+              style={{
+                marginTop:  "var(--space-5)",
+                paddingTop: "var(--space-5)",
+                borderTop:  "1px solid var(--theme-paper-border)",
+              }}
+            >
+              <ThemeSelector currentTheme={profile.theme} profileId={profile.id} />
+            </div>
 
             {/* Home-screen icon picker — separated by a full-width rule
                 (the labelled-datum-group convention). */}

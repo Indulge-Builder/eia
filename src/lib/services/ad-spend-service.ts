@@ -45,8 +45,7 @@ export async function getBudgetSummary(
 ): Promise<BudgetCampaignRow[]> {
   const supabase = createAdminClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("get_budget_summary", {
+  const { data, error } = await supabase.rpc("get_budget_summary", {
     p_date_from: dateFrom,
     p_date_to:   dateTo,
   });
@@ -93,8 +92,11 @@ export async function getBudgetSummary(
 /**
  * Scope budget rows to one domain via the campaign-prefix → domain map
  * (ad_spend_daily has no domain column — domain is derived from the campaign
- * key exactly like lead ingestion does). Used by the manager dashboard budget
- * widget; the /budget page itself stays admin/founder (all domains).
+ * key exactly like lead ingestion does). Used by the mobile budget path, the
+ * manager dashboard budget widget, AND the /budget page's manager view (a
+ * manager sees only their own domain's SPEND). Admin/founder see all domains +
+ * the recharge/balance plane, which is NEVER domain-filtered (recharges carry
+ * no domain — scoping them would misstate finance).
  */
 export function filterBudgetRowsByDomain(
   rows: BudgetCampaignRow[],
@@ -115,8 +117,7 @@ export async function getExistingSpendKeys(
   if (campaignKeys.length === 0) return new Set();
   const supabase = createAdminClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from("ad_spend_daily")
     .select("campaign_key, spend_date")
     .eq("source", "meta_csv")
@@ -174,8 +175,7 @@ export async function getAccountRecharges(
   const fromDate = dateFrom.slice(0, 10);
   const toDate   = dateTo.slice(0, 10);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await supabase
     .from("ad_account_recharges")
     // Explicit FK-constraint embed (the leads/deals service convention) — the
     // bare `profiles:done_by(...)` shorthand can be ambiguous to PostgREST.
@@ -363,15 +363,30 @@ export function buildAccountReport(
 // ─────────────────────────────────────────────────────────────────────────
 
 export type BudgetGaugeSummary = {
-  /** INR recharged across all accounts in the period (the full tank). */
-  recharged:   number;
+  /**
+   * 'org' = the full org-wide tank (admin/founder, both planes).
+   * 'domain' = a manager's domain-scoped SPEND plane only: every
+   * recharge-derived field below (recharged / remaining / consumed) is null,
+   * because recharges carry no domain and scoping them would misstate finance.
+   * The widget hides the gauge arc + tank trio when scope === 'domain'.
+   */
+  scope:       'org' | 'domain';
+  /**
+   * INR recharged across all accounts in the period (the full tank).
+   * null in 'domain' scope (recharges are org-wide, not domain-derivable).
+   */
+  recharged:   number | null;
   /** INR Meta spend across all accounts in the period (fuel burned). */
   spent:       number;
-  /** recharged − spent (INR only). Negative = overspent past recharge. */
-  remaining:   number;
+  /**
+   * recharged − spent (INR only). Negative = overspent past recharge.
+   * null in 'domain' scope (there is no domain-scoped recharge to subtract).
+   */
+  remaining:   number | null;
   /**
    * Fraction of the tank consumed, 0–1+ (spent / recharged). null when there
-   * is no recharge to measure against (render "no recharge yet", never ÷0).
+   * is no recharge to measure against (render "no recharge yet", never ÷0)
+   * AND in 'domain' scope (no recharge plane for a manager).
    * Can exceed 1 when overspent — the widget clamps the BAR but shows the raw %.
    */
   consumed:    number | null;
@@ -418,6 +433,7 @@ export function buildBudgetGaugeSummary(
   }
 
   return {
+    scope:         'org',
     recharged,
     spent,
     remaining:     recharged - spent,
@@ -429,5 +445,43 @@ export function buildBudgetGaugeSummary(
     roas:          spent > 0 ? dealRevenue / spent : null,
     campaignCount: campaignRows.length,
     hasNonInr:     report.hasNonInr,
+  };
+}
+
+/**
+ * Collapse ALREADY-domain-filtered spend rows into a domain-scoped SPEND gauge
+ * for a manager (scope 'domain'). Pure (no IO). Every recharge-derived field
+ * (recharged / remaining / consumed) is null — recharges carry no domain, so a
+ * per-domain "remaining" would misstate finance; the widget hides the gauge arc
+ * and the tank trio in this scope and shows spend + campaigns + CPL only. The
+ * caller MUST pass rows already narrowed via filterBudgetRowsByDomain.
+ */
+export function buildDomainSpendGaugeSummary(
+  domainRows: BudgetCampaignRow[],
+): BudgetGaugeSummary {
+  let spent = 0;
+  let leadCount = 0;
+  let dealCount = 0;
+  let dealRevenue = 0;
+  for (const r of domainRows) {
+    spent       += r.totalSpend;
+    leadCount   += r.leadCount;
+    dealCount   += r.dealCount;
+    dealRevenue += r.dealRevenue;
+  }
+
+  return {
+    scope:         'domain',
+    recharged:     null,
+    spent,
+    remaining:     null,
+    consumed:      null,
+    leadCount,
+    dealCount,
+    dealRevenue,
+    costPerLead:   leadCount > 0 ? spent / leadCount : null,
+    roas:          spent > 0 ? dealRevenue / spent : null,
+    campaignCount: domainRows.length,
+    hasNonInr:     false,
   };
 }

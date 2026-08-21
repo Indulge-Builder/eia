@@ -72,7 +72,7 @@ export function ServiceInterestCard({ interests, cases, hooks, domain }: Props) 
       style={{
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-md)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    'var(--shadow-1)',
         padding:      'var(--space-5)',
         display:       'flex',
@@ -100,6 +100,18 @@ export function ServiceInterestCard({ interests, cases, hooks, domain }: Props) 
         aria-label="Search delivery history"
       />
 
+      {/* Scrollable body — capped like the sibling dossier cards (WhatsApp
+          message list 300px, tasks list 220px); the header, search bar, and
+          footer link stay pinned while cases/hooks scroll internally. */}
+      <div
+        style={{
+          maxHeight:     '300px',
+          overflowY:     'auto',
+          display:       'flex',
+          flexDirection: 'column',
+          gap:           'var(--space-4)',
+        }}
+      >
       {searching ? (
         /* ── Search view — full library, client-filtered ─────────────── */
         library === null && !libraryError ? (
@@ -194,6 +206,7 @@ export function ServiceInterestCard({ interests, cases, hooks, domain }: Props) 
           )}
         </>
       )}
+      </div>
 
       <Link
         href={helpdeskHref}

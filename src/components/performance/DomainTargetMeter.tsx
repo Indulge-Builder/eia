@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 import { useChartTokens } from '@/components/ui/charts/useChartTokens';
 import { formatCount } from '@/lib/utils/numbers';
 
@@ -98,7 +99,7 @@ export function DomainTargetMeter({ value, target }: Props) {
             lineHeight: 1,
           }}
         >
-          {formatCount(value)}
+          <AnimatedNumber value={formatCount(value)} />
         </span>
         <span
           style={{

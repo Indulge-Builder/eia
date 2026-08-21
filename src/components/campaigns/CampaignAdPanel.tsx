@@ -4,8 +4,9 @@ import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { m as motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
-import { EASE_OUT_EXPO } from '@/lib/constants/motion';
+import { EASE_OUT_EXPO, SLOW_DURATION } from '@/lib/constants/motion';
 import { SectionCard } from '@/components/ui/SectionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { AdCreativeCarousel } from './AdCreativeCarousel';
 import type { AdCreative } from '@/lib/types/database';
 
@@ -51,7 +52,7 @@ export function CampaignAdPanel({ adCreatives, campaignKey, canUpload }: Campaig
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: EASE_OUT_EXPO }}
+      transition={{ duration: SLOW_DURATION, ease: EASE_OUT_EXPO }}
     >
       <SectionCard
         title="AD CREATIVE"
@@ -104,8 +105,9 @@ function EmptyAdTile({ canUpload, onAdd }: { canUpload: boolean; onAdd: () => vo
     aspectRatio:    '9 / 16',
     maxHeight:      '480px',
     borderRadius:   'var(--radius-md)',
-    background:     'var(--theme-paper-subtle)',
-    border:         '1px dashed var(--theme-paper-border)',
+    background:     'var(--neu-surface)',
+    border:         '1px dashed var(--neu-edge-strong)',
+    boxShadow:      'var(--neu-shadow-raised-sm)',
     display:        'flex',
     flexDirection:  'column',
     alignItems:     'center',
@@ -119,18 +121,7 @@ function EmptyAdTile({ canUpload, onAdd }: { canUpload: boolean; onAdd: () => vo
   if (!canUpload) {
     return (
       <div style={sharedTileStyle}>
-        <p
-          style={{
-            fontFamily: 'var(--font-serif)',
-            fontStyle:  'italic',
-            fontSize:   'var(--text-base)',
-            fontWeight: 'var(--weight-light)',
-            color:      'var(--theme-text-tertiary)',
-            margin:     0,
-          }}
-        >
-          No video yet.
-        </p>
+        <EmptyState title="No video yet." size="lg" style={{ padding: 0 }} />
       </div>
     );
   }
@@ -147,7 +138,7 @@ function EmptyAdTile({ canUpload, onAdd }: { canUpload: boolean; onAdd: () => vo
         e.currentTarget.style.color = 'var(--theme-text-secondary)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--theme-paper-border)';
+        e.currentTarget.style.borderColor = 'var(--neu-edge-strong)';
         e.currentTarget.style.color = 'var(--theme-text-tertiary)';
       }}
     >

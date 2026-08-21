@@ -13,7 +13,12 @@
    3.  [data-theme="air"]
    4.  [data-theme="water"]
    5.  [data-theme="fire"]
-   6.  [data-theme="cosmos"]
+   6.  [data-theme="rose"]     (added 2026-07-03)
+   6b. [data-theme="candy"]    (added 2026-07-02)
+   6b-2. [data-theme="moss"]   (added 2026-07-03)
+   6b-3. [data-theme="lilac"]  (added 2026-07-03)
+       (cosmos / coffee / macha retired 2026-07-02 — migration 0156;
+        martini retired 2026-07-03 — migration 0157 moved it to lilac)
    7.  Semantic colour overrides per theme
    8.  Global tokens (typography, spacing, radius, shadow, motion)
    9.  Z-index scale
@@ -287,43 +292,183 @@
 
 
 /* ================================================================
-   6. COSMOS THEME
+   6. ROSE THEME (added 2026-07-03, neumorphic final revision)
+   English rose — the soft-UI system's reference accent. Registered
+   as a full block (the neumorphic bridge overrides surfaces/text at
+   runtime; these values keep the block coherent for the revert path).
+   (martini was retired 2026-07-03 — migration 0157 moved any
+   profiles on it to lilac.)
    ================================================================ */
 
-[data-theme="cosmos"] {
-  --theme-canvas:            #07060f;
-  --theme-canvas-glow:       rgba(134, 106, 224, 0.09);
-  --theme-canvas-text:       rgba(255, 255, 255, 0.88);
-  /* Canvas atmosphere — flat per DNA §3.5 until Cosmos's own washes are designed (H-02). */
+[data-theme="rose"] {
+  --theme-canvas:            #130c0d;
+  --theme-canvas-glow:       rgba(217, 160, 165, 0.08);
+  --theme-canvas-text:       rgba(255, 248, 249, 0.87);
+  /* Canvas atmosphere — flat per DNA §3.5 (the H-02 `none` rule). */
   --theme-canvas-grain-opacity: 0.055;
   --theme-canvas-gradient-1: none;
   --theme-canvas-gradient-2: none;
   --theme-canvas-gradient-3: none;
 
-  --theme-paper:             #f8f7fe;
-  --theme-paper-subtle:      #f0eefb;
-  --theme-paper-border:      #dddaf4;
+  --theme-paper:             #fdf9f9;
+  --theme-paper-subtle:      #f8eeef;
+  --theme-paper-border:      #f0dbdd;
 
-  --theme-accent:            #7a5fc0;
-  --theme-accent-hover:      #624aa4;
-  --theme-accent-muted:      #615484;
-  --theme-accent-surface:    rgba(122, 95, 192, 0.10);
-  --theme-accent-fg:         #ffffff;
+  --theme-accent:            #D68891; /* 2026-08-10 retune (was #D9A0A5) */
+  --theme-accent-hover:      color-mix(in srgb, #D68891 86%, black);
+  --theme-accent-muted:      #915B61; /* text-safe on cream (AA 4.65:1; was #B57F84 at 2.84:1) */
+  --theme-accent-surface:    rgba(214, 136, 145, 0.16);
+  --theme-accent-fg:         #45272A; /* rosewood ink — rose cannot hold white */
 
-  --theme-text-primary:      #0f0d1a;
-  --theme-text-secondary:    #6b6485;
-  --theme-text-tertiary:     #a89ec0;
-  --theme-text-inverse:      #f8f7fe;
+  --theme-text-primary:      #251a1b;
+  --theme-text-secondary:    #746064;
+  --theme-text-tertiary:     #baa5a8;
+  --theme-text-inverse:      #fdf9f9;
 
-  --theme-sidebar-bg:              #07060f;
-  --theme-sidebar-border:          #14102a;
-  --theme-sidebar-text:            rgba(220, 215, 255, 0.42);
-  --theme-sidebar-active:          #ab95e4;
-  --theme-sidebar-hover-bg:        rgba(122, 95, 192, 0.07);
-  --theme-sidebar-active-bg:       rgba(122, 95, 192, 0.14);
-  --theme-sidebar-active-pill:     #7a5fc0;
+  --theme-sidebar-bg:              #130c0d;
+  --theme-sidebar-border:          #291a1c;
+  --theme-sidebar-text:            rgba(255, 235, 238, 0.48);
+  --theme-sidebar-active:          #D68891;
+  --theme-sidebar-hover-bg:        rgba(214, 136, 145, 0.06);
+  --theme-sidebar-active-bg:       rgba(214, 136, 145, 0.13);
+  --theme-sidebar-active-pill:     #D68891;
 
-  --shadow-color: 8 6 18;
+  --shadow-color: 16 10 11;
+}
+
+
+/* ================================================================
+   6B-2. MOSS THEME (added 2026-07-03, neumorphic final revision)
+   Matcha sage. Caveat: neighbours the semantic success sage —
+   acceptable since status chips are semantic-fixed, but review
+   screens where both appear side by side.
+   ================================================================ */
+
+[data-theme="moss"] {
+  --theme-canvas:            #0d100b;
+  --theme-canvas-glow:       rgba(169, 196, 160, 0.08);
+  --theme-canvas-text:       rgba(250, 255, 248, 0.87);
+  /* Canvas atmosphere — flat per DNA §3.5 (the H-02 `none` rule). */
+  --theme-canvas-grain-opacity: 0.055;
+  --theme-canvas-gradient-1: none;
+  --theme-canvas-gradient-2: none;
+  --theme-canvas-gradient-3: none;
+
+  --theme-paper:             #fafcf8;
+  --theme-paper-subtle:      #eff4ec;
+  --theme-paper-border:      #dde8d8;
+
+  --theme-accent:            #8DB181; /* 2026-08-10 retune (was #A9C4A0) */
+  --theme-accent-hover:      color-mix(in srgb, #8DB181 86%, black);
+  --theme-accent-muted:      #56714D; /* text-safe on cream (AA 4.66:1; was #6F8A66 at 3.27:1) */
+  --theme-accent-surface:    rgba(141, 177, 129, 0.16);
+  --theme-accent-fg:         #26301F; /* forest ink — sage cannot hold white */
+
+  --theme-text-primary:      #1c231a;
+  --theme-text-secondary:    #64705f;
+  --theme-text-tertiary:     #a4b29e;
+  --theme-text-inverse:      #fafcf8;
+
+  --theme-sidebar-bg:              #0d100b;
+  --theme-sidebar-border:          #1c2419;
+  --theme-sidebar-text:            rgba(240, 250, 236, 0.48);
+  --theme-sidebar-active:          #8DB181;
+  --theme-sidebar-hover-bg:        rgba(141, 177, 129, 0.06);
+  --theme-sidebar-active-bg:       rgba(141, 177, 129, 0.13);
+  --theme-sidebar-active-pill:     #8DB181;
+
+  --shadow-color: 10 14 8;
+}
+
+
+/* ================================================================
+   6B-3. LILAC THEME (added 2026-07-03, neumorphic final revision)
+   Light lilac — the single purple in the lineup. Migration 0157
+   moved retired-martini profiles here.
+   ================================================================ */
+
+[data-theme="lilac"] {
+  --theme-canvas:            #0e0c14;
+  --theme-canvas-glow:       rgba(201, 192, 228, 0.08);
+  --theme-canvas-text:       rgba(250, 248, 255, 0.87);
+  /* Canvas atmosphere — flat per DNA §3.5 (the H-02 `none` rule). */
+  --theme-canvas-grain-opacity: 0.055;
+  --theme-canvas-gradient-1: none;
+  --theme-canvas-gradient-2: none;
+  --theme-canvas-gradient-3: none;
+
+  --theme-paper:             #fbfafd;
+  --theme-paper-subtle:      #f1eff8;
+  --theme-paper-border:      #e2def0;
+
+  --theme-accent:            #A99BCF; /* 2026-08-10 retune (was #C9C0E4) */
+  --theme-accent-hover:      color-mix(in srgb, #A99BCF 86%, black);
+  --theme-accent-muted:      #6E6297; /* text-safe on cream (AA 4.67:1; was #8E83B8 at 2.96:1) */
+  --theme-accent-surface:    rgba(169, 155, 207, 0.16);
+  --theme-accent-fg:         #2E2840; /* deep violet ink — lilac cannot hold white */
+
+  --theme-text-primary:      #201c2b;
+  --theme-text-secondary:    #67617a;
+  --theme-text-tertiary:     #a9a2bd;
+  --theme-text-inverse:      #fbfafd;
+
+  --theme-sidebar-bg:              #0e0c14;
+  --theme-sidebar-border:          #1e1a2c;
+  --theme-sidebar-text:            rgba(242, 238, 255, 0.48);
+  --theme-sidebar-active:          #A99BCF;
+  --theme-sidebar-hover-bg:        rgba(169, 155, 207, 0.06);
+  --theme-sidebar-active-bg:       rgba(169, 155, 207, 0.13);
+  --theme-sidebar-active-pill:     #A99BCF;
+
+  --shadow-color: 12 10 20;
+}
+
+
+/* ================================================================
+   6B. CANDY THEME
+   Spring sweetshop. Pink accent over calm paper, with the pastel
+   rainbow in the chips. Palette anchor (2026-07-02): #f9b2d7 pink
+   — the accent, exact. The rainbow layers live in the semantic
+   chips (#daf9de success · #cfecf3 info · #f6ffdc warning) — the
+   Air pattern: paper stays near-white (blush whisper), the palette
+   does the work in the enhancement layer. Canvas is dark plum;
+   accent-fg is dark plum ink (pastel accent, Earth precedent).
+   ================================================================ */
+
+[data-theme="candy"] {
+  --theme-canvas:            #130a12;
+  --theme-canvas-glow:       rgba(249, 178, 215, 0.08);
+  --theme-canvas-text:       rgba(255, 248, 250, 0.87);
+  /* Canvas atmosphere — flat per DNA §3.5 (the H-02 `none` rule). */
+  --theme-canvas-grain-opacity: 0.055;
+  --theme-canvas-gradient-1: none;
+  --theme-canvas-gradient-2: none;
+  --theme-canvas-gradient-3: none;
+
+  --theme-paper:             #fdf9fb;
+  --theme-paper-subtle:      #f8eef4;
+  --theme-paper-border:      #f0dbe7;
+
+  --theme-accent:            #f9b2d7;
+  --theme-accent-hover:      #ef92c5;
+  --theme-accent-muted:      #a34878;
+  --theme-accent-surface:    rgba(249, 178, 215, 0.16);
+  --theme-accent-fg:         #2b1420; /* dark plum ink — candy pink cannot hold white */
+
+  --theme-text-primary:      #251a21;
+  --theme-text-secondary:    #74606b;
+  --theme-text-tertiary:     #baa5b1;
+  --theme-text-inverse:      #fdf9fb;
+
+  --theme-sidebar-bg:              #130a12;
+  --theme-sidebar-border:          #291a28;
+  --theme-sidebar-text:            rgba(255, 235, 245, 0.48);
+  --theme-sidebar-active:          #f9b2d7; /* the pink, exact — glows on plum */
+  --theme-sidebar-hover-bg:        rgba(249, 178, 215, 0.06);
+  --theme-sidebar-active-bg:       rgba(249, 178, 215, 0.13);
+  --theme-sidebar-active-pill:     #f9b2d7;
+
+  --shadow-color: 16 8 14;
 }
 
 
@@ -475,17 +620,35 @@
   --color-neutral-text:   #5a3a28;
 }
 
-/* Cosmos semantic overrides */
-[data-theme="cosmos"] {
-  --color-success-light:  #e8f0f4;
-  --color-success:        #3a7a6a;
-  --color-danger-light:   #f4eaf2;
-  --color-info-light:     #ece8fb;
-  --color-info:           #6858b8;
-  --color-info-text:      #4a3a9a;
-  --color-neutral-light:  #eeecf8;
-  --color-neutral:        #6b6485;
-  --color-neutral-text:   #4a4268;
+/* Rose / Moss / Lilac semantic overrides — neutral tier matches each
+   theme's paper-subtle tone (martini's block retired 2026-07-03). */
+[data-theme="rose"] {
+  --color-neutral-light:  #f8eeef;
+  --color-neutral:        #746064;
+  --color-neutral-text:   #524245;
+}
+[data-theme="moss"] {
+  --color-neutral-light:  #eff4ec;
+  --color-neutral:        #64705f;
+  --color-neutral-text:   #454f41;
+}
+[data-theme="lilac"] {
+  --color-neutral-light:  #f1eff8;
+  --color-neutral:        #67617a;
+  --color-neutral-text:   #484357;
+}
+
+/* Candy semantic overrides — paper is a blush-whisper white (Air pattern);
+   the pastel rainbow lives HERE: mint success, powder-blue info, lemon
+   warning. Danger-light shifts pink. */
+[data-theme="candy"] {
+  --color-success-light:  #e3f5e6; /* the mint (#daf9de), whispered */
+  --color-warning-light:  #f8f5da; /* the lemon (#f6ffdc), barely deepened */
+  --color-info-light:     #e5f2f6; /* the powder blue (#cfecf3), whispered */
+  --color-danger-light:   #fbe6ee;
+  --color-neutral-light:  #f8eef4; /* matches paper-subtle tone */
+  --color-neutral:        #74606b;
+  --color-neutral-text:   #52424b;
 }
 
 
@@ -747,7 +910,10 @@
   --z-modal-overlay: 61; /* backdrop of a nested modal stacked above --z-modal */
   --z-modal-nested:  62; /* nested modal panel stacked above its own backdrop */
   --z-toast:         70;
+  --z-tooltip:       75; /* charcoal hover pill — above toasts, below cursor */
   --z-cursor:        80;
+  --z-veil:          90; /* route-transition veil — covers the whole shell */
+  --z-boot:          95; /* app boot screen — above everything, incl. the veil */
 }
 
 
@@ -792,6 +958,118 @@
 @keyframes serene-spin {
   from { transform: rotate(0deg);   }
   to   { transform: rotate(360deg); }
+}
+
+/* ── Seed-mandala logo motion (design_handoff_logo_loading_motion) ──
+   One boot sequence (draw → breathe → turn → glow) is the source of
+   truth; every waiting state quotes it. Spin speeds are FIXED per
+   consumer (boot 90s · spinners/veil/buttons 3.5s · Elaya 8s ·
+   watermark 40s) — never faster than 3.5s/rev. */
+
+/* Each circle traces itself in (pathLength=1, dasharray 1). */
+@keyframes serene-logo-trace {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* Breathe — wraps the spin (two nested elements) so transforms compose. */
+@keyframes serene-logo-breathe {
+  0%, 100% { transform: scale(1);     }
+  50%       { transform: scale(1.035); }
+}
+
+/* Ambient radial wash behind the boot mark — in phase with the breath. */
+@keyframes serene-logo-glow {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 0.6;  }
+}
+
+/* Boot wordmark — letter-spacing opens as it fades in. */
+@keyframes serene-word-in {
+  from { opacity: 0; letter-spacing: 0.1em;  }
+  to   { opacity: 1; letter-spacing: 0.42em; }
+}
+
+/* Boot tagline — fade up 8px. */
+@keyframes serene-tagline-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none;            }
+}
+
+/* Skeleton sheen — left→right background sweep (replaces the opacity
+   pulse; consumers set the 200%-wide gradient background). */
+@keyframes serene-shimmer-sweep {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0;  }
+}
+
+/* SeedMandala hooks — class-based so prefers-reduced-motion can kill
+   them (inline animations are unreachable from the media query). The
+   per-instance speed arrives via the --serene-logo-spin custom prop. */
+.serene-logo-spin {
+  animation: serene-spin var(--serene-logo-spin, 3.5s) linear infinite;
+}
+.serene-logo-draw circle {
+  animation: serene-logo-trace 1.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Reduced motion: the mark rests finished and still (dashoffset attribute
+   default is 0 → full circles), never mid-draw or spinning. */
+@media (prefers-reduced-motion: reduce) {
+  .serene-logo-spin,
+  .serene-logo-draw circle {
+    animation: none;
+  }
+}
+
+/* ── Polish layer (design_handoff_polish_layer, global rules) ──────
+   Fixed durations: check draw 400–450ms · ring pulse 700ms ·
+   petal fall 1.6–2.7s (randomised per petal). Consumers pair each
+   class with the matching end-state inline style (dashoffset 0,
+   checked tile fill) so reduced-motion jumps straight to done. */
+
+/* Check draw-in — consumer path carries pathLength=1 + dasharray 1. */
+@keyframes serene-check-draw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+.serene-check-draw {
+  animation: serene-check-draw 400ms var(--ease-spring) both;
+}
+
+/* One-shot completion ring — accent halo expanding to 20px, once. */
+@keyframes serene-ring-pulse {
+  from { box-shadow: 0 0 0 0    color-mix(in srgb, var(--neu-accent) 45%, transparent); }
+  to   { box-shadow: 0 0 0 20px color-mix(in srgb, var(--neu-accent) 0%, transparent); }
+}
+.serene-ring-pulse {
+  animation: serene-ring-pulse 700ms ease-out 150ms;
+}
+
+/* Deal-won petal fall — transform/opacity only; per-petal duration
+   and delay arrive inline. Reserved exclusively for Won. */
+@keyframes serene-petal-fall {
+  0%   { transform: translateY(-12px) rotate(0deg); opacity: 0; }
+  12%  { opacity: 0.9; }
+  100% { transform: translateY(230px) rotate(220deg); opacity: 0; }
+}
+.serene-petal {
+  animation-name: serene-petal-fall;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  animation-fill-mode: forwards;
+}
+
+/* Reduced motion: celebration/confirmation flourishes are skipped
+   entirely (petals never render motion; check + ring rest at done). */
+@media (prefers-reduced-motion: reduce) {
+  .serene-check-draw,
+  .serene-ring-pulse {
+    animation: none;
+  }
+  .serene-petal {
+    animation: none;
+    opacity: 0;
+  }
 }
 
 @keyframes serene-subtask-pulse {

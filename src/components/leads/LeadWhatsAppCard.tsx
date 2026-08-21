@@ -41,7 +41,6 @@ function dateSeparatorLabel(iso: string): string {
 export function LeadWhatsAppCard({
   leadId,
   leadPhone,
-  leadName,
   callerProfile,
   initialConversation,
   initialMessages,
@@ -188,7 +187,7 @@ export function LeadWhatsAppCard({
         style={{
           background:   "var(--theme-paper)",
           border:       "1px solid var(--theme-paper-border)",
-          borderRadius: "var(--radius-lg)",
+          borderRadius: "var(--neu-radius-card)",
           boxShadow:    "var(--shadow-1)",
           overflow:     "hidden",
         }}
@@ -224,7 +223,7 @@ export function LeadWhatsAppCard({
         style={{
           background:   "var(--theme-paper)",
           border:       "1px solid var(--theme-paper-border)",
-          borderRadius: "var(--radius-lg)",
+          borderRadius: "var(--neu-radius-card)",
           boxShadow:    "var(--shadow-1)",
           overflow:     "hidden",
         }}
@@ -287,7 +286,7 @@ export function LeadWhatsAppCard({
       style={{
         background:   "var(--theme-paper)",
         border:       "1px solid var(--theme-paper-border)",
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         boxShadow:    "var(--shadow-1)",
         overflow:     "hidden",
       }}
@@ -412,13 +411,12 @@ function StatusPill({ status }: { status: "open" | "resolved" }) {
         letterSpacing: "0.04em",
         background:    isOpen
           ? "var(--color-success-light)"
-          : "var(--theme-paper-border)",
+          : "var(--neu-chip-neutral-bg)",
         color:         isOpen
-          ? "var(--color-success-dark-text)"
-          : "var(--theme-text-secondary)",
-        border:        isOpen
-          ? "1px solid var(--color-success)"
-          : "1px solid var(--theme-paper-border)",
+          ? "var(--color-success-text)"
+          : "var(--neu-chip-neutral-fg)",
+        border:        "1px solid var(--neu-edge)",
+        boxShadow:     "var(--neu-shadow-chip)",
       }}
     >
       {isOpen ? "Open" : "Resolved"}

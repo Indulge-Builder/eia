@@ -142,11 +142,24 @@ export function HelpdeskSearch({
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState
-          variant="inline"
-          title="Nothing matches. Try a different keyword."
-          style={{ padding: 'var(--space-10) var(--space-4)' }}
-        />
+        initialCases.length === 0 ? (
+          // §08 brand empty — the library itself is bare. Elaya draws on these
+          // delivery examples when she helps, so name her. No action here: cases
+          // are authored via the +Suggestion CTA in the page header (admin only).
+          <EmptyState
+            brand
+            title="The library is still being written."
+            description="As delivery stories are added here, Elaya will lean on them to help the team answer well."
+            minHeight="320px"
+          />
+        ) : (
+          // A search/category miss — not a bare library. Keep it quiet and inline.
+          <EmptyState
+            variant="inline"
+            title="Nothing matches. Try a different keyword."
+            style={{ padding: 'var(--space-10) var(--space-4)' }}
+          />
+        )
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
           <AnimatePresence mode="popLayout">

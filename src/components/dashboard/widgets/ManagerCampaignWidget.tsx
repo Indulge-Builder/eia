@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BarChart } from "@/components/ui/charts/BarChart";
 import type { BarChartSeries } from "@/components/ui/charts/BarChart";
 import { getLeadsByCampaignAction } from "@/lib/actions/dashboard";
@@ -104,7 +105,7 @@ export function ManagerCampaignWidget({
   return (
     <div
       style={{
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         border: "1px solid var(--theme-paper-border)",
         background: "var(--theme-paper)",
         boxShadow: "var(--shadow-1)",
@@ -155,22 +156,16 @@ export function ManagerCampaignWidget({
 
       {/* Chart — fills remaining space */}
       {loaded && campaigns.length === 0 ? (
-        <p
+        <EmptyState
+          title="Leads with UTM campaign data will appear here."
           style={{
-            fontFamily: "var(--font-serif)",
-            fontStyle: "italic",
-            fontSize: "var(--text-sm)",
-            color: "var(--theme-text-tertiary)",
-            textAlign: "center",
-            margin: 0,
             flex: 1,
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
           }}
-        >
-          Leads with UTM campaign data will appear here.
-        </p>
+        />
       ) : loaded ? (
         <div
           style={{
@@ -212,7 +207,7 @@ export function ManagerCampaignWidget({
                 fontSize: "var(--text-xs)",
                 color: "var(--theme-text-primary)",
               },
-              cursor: { fill: "var(--theme-paper-subtle)" },
+              cursor: { fill: "color-mix(in srgb, var(--theme-accent) 8%, transparent)" },
             }}
             style={{ background: "transparent", borderRadius: 0 }}
           />
@@ -239,6 +234,7 @@ export function ManagerCampaignWidget({
                 background:   STATUS_BG[s],
                 border:       "1px solid var(--theme-paper-border)",
                 borderRadius: "var(--radius-full)",
+                boxShadow:    "var(--neu-shadow-chip)",
                 padding:      "3px 8px 3px 6px",
               }}
             >

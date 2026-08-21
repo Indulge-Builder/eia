@@ -33,7 +33,7 @@ export function ElayaPresenceCard(_props: WidgetProps) {
         height: "100%",
         background: "var(--theme-paper)",
         border: "1px solid var(--theme-paper-border)",
-        borderRadius: "var(--radius-lg)",
+        borderRadius: "var(--neu-radius-card)",
         boxShadow: "var(--shadow-1)",
         overflow: "hidden",
       }}

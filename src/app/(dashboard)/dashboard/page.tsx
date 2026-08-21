@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getCurrentProfile } from "@/lib/services/profiles-service";
+import { isMobileUserAgent } from "@/lib/utils/device";
+import { FORCE_DESKTOP_COOKIE } from "@/lib/constants/mobile-rooms";
 import {
   getDashboardSummary,
   getLeadVolumeByRange,
@@ -13,11 +15,10 @@ import {
   getAccountRecharges,
   filterBudgetRowsByDomain,
   buildBudgetGaugeSummary,
+  buildDomainSpendGaugeSummary,
 } from "@/lib/services/ad-spend-service";
-import { getNotifications } from "@/lib/services/notifications-service";
 import { GIA_DOMAINS } from "@/lib/constants/domains";
 import { resolveDomainParam } from "@/lib/utils/domain-scope";
-import { TOP_BAR_ENABLED } from "@/lib/constants/feature-flags";
 import { DashboardCanvas } from "@/components/dashboard/DashboardCanvas";
 import { pickDashboardGreeting } from "@/lib/constants/dashboard-greetings";
 import type { AppDomain, UserRole } from "@/lib/types/database";
@@ -40,6 +41,22 @@ export default async function DashboardPage({
   if (!profile) redirect("/login");
 
   const sp = await searchParams;
+
+  // Mobile Ops: an admin/founder landing on the desktop dashboard from a phone
+  // is sent to the pocket /m surface (their rooms are fully built). Manager/agent
+  // stay here until their room sets ship, and every desktop browser is untouched.
+  // Authorization is unaffected — this only picks which fully-functional surface
+  // loads; the "View desktop site" drawer link sets FORCE_DESKTOP_COOKIE to opt out.
+  // Gated on a bare landing (no query params) so a shared /dashboard?… deep link
+  // or a back-nav from within the dashboard is never hijacked mid-flow.
+  if (
+    (profile.role === "admin" || profile.role === "founder") &&
+    Object.keys(sp).length === 0 &&
+    (await cookies()).get(FORCE_DESKTOP_COOKIE)?.value !== "1" &&
+    (await isMobileUserAgent())
+  ) {
+    redirect("/m");
+  }
 
   // ── Resolve active date range from URL params ──────────────────────────────
   // dash_preset: 'today' | 'week' | 'month' | 'quarter' | 'custom'
@@ -82,8 +99,11 @@ export default async function DashboardPage({
   let initialData: DashboardSummary;
 
   const isManagerPlus = role === "manager" || role === "admin" || role === "founder";
-  // Budget is admin/founder only (mirrors the /budget page + the budget widget's
-  // roles) — managers no longer seed or render any budget data.
+  // Budget widget is manager+ (mirrors the /budget page + the budget widget's
+  // roles). Admin/founder seed the ORG-WIDE gauge (spend + org recharges); a
+  // MANAGER seeds a domain-scoped SPEND gauge (spend filtered to profile.domain,
+  // no recharges — recharges carry no domain). Only admin/founder fetch recharges
+  // and the legacy per-domain budget_summary campaign seed.
   const isAdminFounder = role === "admin" || role === "founder";
 
   // Admin/founder seed scope: the chosen Gia domain, or undefined for the
@@ -123,8 +143,10 @@ export default async function DashboardPage({
       adminFounderMultiVolume
         ? getLeadVolumeByDomains([...GIA_DOMAINS], dateRange)
         : Promise.resolve(null),
-      // Budget widget seed (admin/founder only) — date-filtered like campaigns.
-      isAdminFounder
+      // Budget widget spend seed (manager+) — date-filtered like campaigns.
+      // Managers get the same spend rows; they are filtered to profile.domain
+      // below (a manager can never see another domain's spend).
+      isManagerPlus
         ? getBudgetSummary(dateRange.from, dateRange.to)
         : Promise.resolve(null),
       // Fuel-gauge recharges (admin/founder only) — the gauge is ALWAYS org-wide
@@ -134,8 +156,9 @@ export default async function DashboardPage({
         ? getAccountRecharges(dateRange.from, dateRange.to)
         : Promise.resolve(null),
     ]);
-    // Budget pre-filter (admin/founder only — managers have no budgetRows):
-    // the scoped domain, or null for the all-domains view (full rows).
+    // Budget pre-filter for the LEGACY per-domain budget_summary campaign seed
+    // (admin/founder only — the scoped domain, or null for all-domains full rows).
+    // Managers never seed budget_summary (they have no org-wide budget consumer).
     const budgetFilterDomain: AppDomain | null = scopeDomain ?? null;
     initialData = {
       ...rpcData,
@@ -147,14 +170,21 @@ export default async function DashboardPage({
       // Manager → own single-domain seed; admin/founder scoped → single seed.
       lead_volume:       isManager ? managerVolume : adminSingleVolume,
       lead_volume_multi: adminMultiVolume,
-      budget_summary:    budgetRows && budgetFilterDomain
-        ? filterBudgetRowsByDomain(budgetRows, budgetFilterDomain)
-        : budgetRows,
-      // Fuel gauge — org-wide (UNFILTERED spend + recharges); recharges have no
-      // domain, so this is the same tank for every admin/founder viewer.
-      budget_gauge:      budgetRows
-        ? buildBudgetGaugeSummary(budgetRows, budgetRecharges ?? [])
-        : null,
+      // Legacy per-domain campaign seed — admin/founder only (managers null).
+      budget_summary:    !isAdminFounder
+        ? null
+        : budgetRows && budgetFilterDomain
+          ? filterBudgetRowsByDomain(budgetRows, budgetFilterDomain)
+          : budgetRows,
+      // Fuel gauge seed. Manager → domain-scoped SPEND gauge (spend filtered to
+      // their own domain, no recharge). Admin/founder → the org-wide tank
+      // (UNFILTERED spend + org recharges; recharges carry no domain, so the same
+      // tank for every admin/founder viewer).
+      budget_gauge:      !budgetRows
+        ? null
+        : isManager
+          ? buildDomainSpendGaugeSummary(filterBudgetRowsByDomain(budgetRows, domain))
+          : buildBudgetGaugeSummary(budgetRows, budgetRecharges ?? []),
     };
   } catch (e) {
     console.error(
@@ -191,7 +221,6 @@ export default async function DashboardPage({
         fromParam={fromParam}
         toParam={toParam}
         dateRange={dateRange}
-        notificationsPromise={TOP_BAR_ENABLED ? getNotifications(profile.id) : undefined}
       />
     </main>
   );

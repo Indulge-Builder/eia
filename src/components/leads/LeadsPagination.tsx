@@ -92,7 +92,7 @@ export function LeadsPagination({ page, pageSize, totalCount }: LeadsPaginationP
           onClick={() => goToPage(page - 1)}
           style={{ ...btnBase, ...(isPrevDisabled ? disabledStyle : {}) }}
           onMouseEnter={(e) => {
-            if (!isPrevDisabled) (e.currentTarget as HTMLElement).style.background = 'var(--theme-paper-subtle)';
+            if (!isPrevDisabled) (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--theme-accent) 5%, transparent)';
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLElement).style.background = 'transparent';
@@ -123,7 +123,7 @@ export function LeadsPagination({ page, pageSize, totalCount }: LeadsPaginationP
           onClick={() => goToPage(page + 1)}
           style={{ ...btnBase, ...(isNextDisabled ? disabledStyle : {}) }}
           onMouseEnter={(e) => {
-            if (!isNextDisabled) (e.currentTarget as HTMLElement).style.background = 'var(--theme-paper-subtle)';
+            if (!isNextDisabled) (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--theme-accent) 5%, transparent)';
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLElement).style.background = 'transparent';

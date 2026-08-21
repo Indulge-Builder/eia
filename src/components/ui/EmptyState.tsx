@@ -4,6 +4,7 @@ import React from 'react';
 import { m as motion } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import { ENTER_DURATION, EASE_OUT_EXPO } from '@/lib/constants/motion';
+import { SeedMandala } from './SeedMandala';
 
 /**
  * THE canonical empty state. Makes the design rule structural:
@@ -18,6 +19,13 @@ import { ENTER_DURATION, EASE_OUT_EXPO } from '@/lib/constants/motion';
  *
  * `framed` adds the paper-subtle bordered surface; `ambient` adds the accent
  * radial wash (decorative, aria-hidden). Both are hero-variant options.
+ *
+ * `brand` (polish handoff §08; simplified 2026-07-06) is the mark-rests-here
+ * composition: a single 240px watermark mandala CENTERED behind the content
+ * (gradient, opacity .08, one revolution per 120s) with the title/description
+ * resting over it — no foreground glyph, no icon tile. Pair with exactly ONE
+ * primary action in `action`, per-module copy (calm, one poetic touch, mention
+ * Elaya where relevant).
  */
 
 export interface EmptyStateProps {
@@ -26,6 +34,8 @@ export interface EmptyStateProps {
   /** Lucide icon — renders the 64px hero tile and implies variant="hero". */
   icon?: LucideIcon;
   variant?: 'hero' | 'inline';
+  /** Hero: the §08 brand composition — 76px SeedMandala + corner watermark. */
+  brand?: boolean;
   /** Hero only: wrap in a paper-subtle bordered card surface. */
   framed?: boolean;
   /** Hero only: accent radial wash behind the content (requires framed). */
@@ -44,6 +54,7 @@ export function EmptyState({
   description,
   icon: Icon,
   variant,
+  brand = false,
   framed = false,
   ambient = false,
   size = 'sm',
@@ -52,7 +63,7 @@ export function EmptyState({
   className,
   style,
 }: EmptyStateProps) {
-  const resolved = variant ?? (Icon ? 'hero' : 'inline');
+  const resolved = variant ?? (Icon || brand ? 'hero' : 'inline');
 
   if (resolved === 'inline') {
     return (
@@ -111,9 +122,34 @@ export function EmptyState({
               overflow:     'hidden',
             }
           : {}),
+        // The watermark bleeds off the corner — clip it even when unframed.
+        ...(brand ? { overflow: 'hidden' } : {}),
         ...style,
       }}
     >
+      {/* §08 watermark — 240px mandala CENTERED behind the content, one turn
+          every 2 minutes (class-driven spin → reduced-motion rests it). It is
+          the sole brand mark now (the crisp 76px foreground glyph was removed
+          2026-07-06 — the text rests over the faint watermark alone). */}
+      {brand && (
+        <div
+          aria-hidden="true"
+          style={{
+            position:       'absolute',
+            inset:          0,
+            display:        'flex',
+            alignItems:     'center',
+            justifyContent: 'center',
+            // 0.08 on cream; rises to 0.10 under [data-neu="dark"] — gold
+            // carries further on charcoal (dark-mode handoff §mandala).
+            opacity:        'var(--neu-watermark-opacity, 0.08)',
+            pointerEvents:  'none',
+          }}
+        >
+          <SeedMandala size={240} variant="gradient" spin={120} />
+        </div>
+      )}
+
       {ambient && (
         <div
           aria-hidden="true"
@@ -129,7 +165,7 @@ export function EmptyState({
         />
       )}
 
-      {Icon && (
+      {!brand && Icon && (
         <div
           style={{
             position:       'relative',

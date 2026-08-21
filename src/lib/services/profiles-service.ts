@@ -4,7 +4,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canonicalizePhone } from "@/lib/utils/phone";
-import type { Profile, UserRole, AppDomain } from "@/lib/types/database";
+import type { Database, Profile, UserRole, AppDomain } from "@/lib/types/database";
 import type { AssignableUser } from "@/lib/types";
 
 /**
@@ -126,47 +126,6 @@ export async function getAllProfiles(): Promise<Profile[]> {
   return data as Profile[];
 }
 
-/** Fetch profiles filtered by domain. */
-export async function getProfilesByDomain(domain: AppDomain): Promise<Profile[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("domain", domain)
-    .order("full_name", { ascending: true });
-
-  if (error || !data) return [];
-  return data as Profile[];
-}
-
-/** Fetch profiles filtered by role. */
-export async function getProfilesByRole(role: UserRole): Promise<Profile[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("role", role)
-    .order("full_name", { ascending: true });
-
-  if (error || !data) return [];
-  return data as Profile[];
-}
-
-/** Fetch active agents in a given domain (used for round-robin). */
-export async function getActiveAgentsByDomain(domain: AppDomain): Promise<Profile[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("domain", domain)
-    .eq("role", "agent")
-    .eq("is_active", true)
-    .order("full_name", { ascending: true });
-
-  if (error || !data) return [];
-  return data as Profile[];
-}
-
 /** Check if a username is already taken. */
 export async function isUsernameTaken(
   username: string,
@@ -212,6 +171,7 @@ export async function updateProfileFields(
     | 'job_title'
     | 'theme'
     | 'app_icon'
+    | 'appearance'
     | 'timezone'
     | 'is_on_leave'
     | 'avatar_url'
@@ -220,7 +180,10 @@ export async function updateProfileFields(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .update(fields)
+    // `appearance` (migration 0158) is absent from the generated Update type
+    // until the next database.ts regen — the cast bridges the seam, same
+    // interim posture as the documented post-migration RPC casts.
+    .update(fields as Database["public"]["Tables"]["profiles"]["Update"])
     .eq("id", id)
     .select()
     .single();
@@ -268,6 +231,29 @@ export async function setProfileActive(
 
   if (error) return { data: null, error: error.message };
   return { data: data as Profile, error: null };
+}
+
+/** THE domain decision-maker fan-out read (dry-audit S3): active profiles of the
+ *  given roles in a domain, admin client (cross-user read — RLS would scope to
+ *  the caller). Callers pick the column subset via `select`. */
+export async function getDomainDecisionMakers<T = { id: string }>(
+  domain: string,
+  roles: string[] = ["manager", "admin", "founder"],
+  select = "id",
+): Promise<T[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("profiles")
+    .select(select)
+    .eq("domain", domain as AppDomain)
+    .in("role", roles as UserRole[])
+    .eq("is_active", true);
+
+  if (error) {
+    console.warn("[profiles-service] getDomainDecisionMakers failed:", error.message);
+    return [];
+  }
+  return (data ?? []) as T[];
 }
 
 /**

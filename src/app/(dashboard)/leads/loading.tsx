@@ -19,10 +19,10 @@ export default function LeadsLoading() {
       {/* Table */}
       <div
         style={{
-          background:   'var(--theme-paper)',
+          background:   'var(--neu-surface-high)',
           border:       '1px solid var(--theme-paper-border)',
-          borderRadius: 'var(--radius-md)',
-          boxShadow:    'var(--shadow-1)',
+          borderRadius: 'var(--neu-radius-card)',
+          boxShadow:    'var(--neu-shadow-raised)',
           overflow:     'hidden',
         }}
       >
@@ -34,7 +34,7 @@ export default function LeadsLoading() {
             gap:          'var(--space-4)',
             padding:      'var(--space-3) var(--space-5)',
             borderBottom: '1px solid var(--theme-paper-border)',
-            background:   'var(--theme-paper-subtle)',
+            background:   'transparent',
           }}
         >
           {[120, 80, 100, 80, 96, 80].map((w, i) => (

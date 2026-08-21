@@ -2,9 +2,9 @@ import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import type { SearchParams } from 'next/dist/server/request/search-params';
 import { getCurrentProfile } from '@/lib/services/profiles-service';
-import { getNotifications } from '@/lib/services/notifications-service';
 import { TOP_BAR_ENABLED } from '@/lib/constants/feature-flags';
 import { PageControls } from '@/components/layout/PageControls';
+import { CondensingPageHeader } from '@/components/layout/CondensingPageHeader';
 import { AddTaskButton } from '@/components/tasks/AddTaskButton';
 import { CompletedTasksButton } from '@/components/tasks/CompletedTasksButton';
 import { TasksCreateProvider } from '@/components/tasks/TasksCreateContext';
@@ -38,38 +38,32 @@ export default async function TasksPage({
   return (
     <main className="flex-1 p-4 sm:p-6 lg:p-8">
       <TasksCreateProvider>
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <h1 className="type-page-title m-0">
-            Tasks<span className="page-title-dot">.</span>
-          </h1>
-          <div className="flex items-center gap-3">
-            <CompletedTasksButton
-              currentUser={{
-                id: profile.id,
-                full_name: profile.full_name,
-                role: profile.role,
-                domain: profile.domain,
-              }}
+        {/* Sticky header — condenses past 24px scroll (polish §07) */}
+        <CondensingPageHeader title="Tasks">
+          <CompletedTasksButton
+            currentUser={{
+              id: profile.id,
+              full_name: profile.full_name,
+              role: profile.role,
+              domain: profile.domain,
+            }}
+          />
+          <AddTaskButton activeTab={tab} validTabs={validTabs} />
+          {TOP_BAR_ENABLED && (
+            <PageControls
+              isPrivileged={false}
             />
-            <AddTaskButton activeTab={tab} validTabs={validTabs} />
-            {TOP_BAR_ENABLED && (
-              <PageControls
-                userId={profile.id}
-                isPrivileged={false}
-                notificationsPromise={getNotifications(profile.id)}
-              />
-            )}
-          </div>
-        </div>
+          )}
+        </CondensingPageHeader>
 
         <Suspense fallback={<TasksSkeleton tab={tab} />}>
           <TasksAsync
             tab={tab}
             validTabs={validTabs}
-            userId={profile.id}
             callerRole={profile.role}
             callerDomain={profile.domain}
             callerName={profile.full_name}
+            userId={profile.id}
           />
         </Suspense>
       </TasksCreateProvider>

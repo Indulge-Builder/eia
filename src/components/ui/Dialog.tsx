@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useId } from 'react';
+import React, { useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, m as motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import {
@@ -10,6 +11,7 @@ import {
   EASE_IN_EXPO,
   EASE_IN_OUT,
 } from '@/lib/constants/motion';
+import { lockBodyScroll } from '@/lib/utils/scroll';
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
@@ -58,6 +60,7 @@ export function Dialog({
   const titleId = useId();
   const descId = useId();
   const isFull = size === 'full';
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -68,7 +71,29 @@ export function Dialog({
     return () => document.removeEventListener('keydown', handleKey);
   }, [open, onClose]);
 
-  return (
+  // Lock body scroll while open — stops the scrollbar disappear/reappear that
+  // shifts the page one frame as the fixed overlay mounts (the Called-modal
+  // jitter). lockBodyScroll is re-entrant, so nested dialogs stay correct.
+  useEffect(() => {
+    if (!open) return;
+    return lockBodyScroll();
+  }, [open]);
+
+  // Take focus on the panel itself (not a field) so no input paints its accent
+  // ring mid scale-in, and preventScroll stops the animating panel scroll-jump.
+  useEffect(() => {
+    if (open) panelRef.current?.focus({ preventScroll: true });
+  }, [open]);
+
+  // SSR guard — after the hooks so hook order stays stable (ConfirmDialog pattern).
+  if (typeof document === 'undefined') return null;
+
+  // Portaled to document.body (2026-07-02): a CSS transform on any ancestor —
+  // every Framer entrance animation — would re-anchor these fixed elements and
+  // trap their z-index in that ancestor's stacking context. The portal makes
+  // every Dialog consumer transform-safe by construction, matching
+  // ConfirmDialog / FloatingPanel / NotificationPanel. z tokens unchanged.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -90,13 +115,19 @@ export function Dialog({
             style={{
               position:   'fixed',
               inset:      0,
-              backgroundColor: 'color-mix(in srgb, var(--theme-canvas) 72%, transparent)',
+              // Neumorphic scrim — warm umber (README modal recipe; the
+              // sanctioned scrim treatment for this design system). No
+              // backdrop-filter: it is not sanctioned on modal overlays (V-06)
+              // and its per-frame recompute caused the open-animation shimmer.
+              backgroundColor: 'var(--neu-scrim)',
               zIndex:     ('var(--z-overlay)' as React.CSSProperties['zIndex']),
             }}
           >
             {/* Panel */}
             <motion.div
               key="dialog-panel"
+              ref={panelRef}
+              tabIndex={-1}
               role="dialog"
               aria-modal="true"
               aria-labelledby={title ? titleId : undefined}
@@ -119,9 +150,11 @@ export function Dialog({
                 .filter(Boolean)
                 .join(' ')}
               style={{
-                background:   'var(--theme-paper)',
-                boxShadow:    'var(--shadow-4)',
+                background:   'var(--neu-surface-high)',
+                border:       '1px solid var(--neu-edge)',
+                boxShadow:    'var(--neu-shadow-modal)',
                 overflow:     'hidden',
+                outline:      'none', // programmatic panel focus draws no ring
                 display:      'flex',
                 flexDirection:'column',
                 zIndex:       ('var(--z-modal)' as React.CSSProperties['zIndex']),
@@ -130,9 +163,10 @@ export function Dialog({
                   : { width: '100%', maxWidth: maxWidth ? undefined : MAX_WIDTH[size as keyof typeof MAX_WIDTH] }),
               }}
             >
-              {/* Header */}
+              {/* Header — same <md gutter tightening as the body */}
               {(title || !hideCloseButton) && (
                 <div
+                  className="max-md:px-4!"
                   style={{
                     display:        'flex',
                     alignItems:     'center',
@@ -202,8 +236,11 @@ export function Dialog({
                 </div>
               )}
 
-              {/* Body */}
+              {/* Body — the <md bottom sheet drops to the space-4 inset (the
+                  desktop space-6 gutters eat ~13% of a 360px sheet and read
+                  as fields floating in a void); md+ keeps the classic inset. */}
               <div
+                className={bodyPadding ? 'max-md:px-4! max-md:py-4!' : undefined}
                 style={{
                   flex:       1,
                   overflow:   'auto',
@@ -219,9 +256,10 @@ export function Dialog({
                 {children}
               </div>
 
-              {/* Footer */}
+              {/* Footer — same <md gutter tightening as the body */}
               {footer && (
                 <div
+                  className="max-md:px-4!"
                   style={{
                     display:        'flex',
                     justifyContent: 'flex-end',
@@ -238,6 +276,7 @@ export function Dialog({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

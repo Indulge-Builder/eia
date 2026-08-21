@@ -1,4 +1,5 @@
 import { MessageSquare } from 'lucide-react';
+import { CardHeader } from '@/components/leads/CardHeader';
 import { CALL_OUTCOME_LABELS } from '@/lib/constants/call-outcomes';
 import { formatDate } from '@/lib/utils/dates';
 import type { LeadNoteWithAuthor } from '@/lib/services/leads-service';
@@ -21,53 +22,27 @@ export function LeadNotesSection({ notes }: Props) {
       style={{
         background:   'var(--theme-paper)',
         border:       '1px solid var(--theme-paper-border)',
-        borderRadius: 'var(--radius-lg)',
+        borderRadius: 'var(--neu-radius-card)',
         boxShadow:    'var(--shadow-1)',
         overflow:     'hidden',
       }}
     >
       {/* Header */}
-      <div
-        style={{
-          display:      'flex',
-          alignItems:   'center',
-          gap:          'var(--space-2)',
-          padding:      'var(--space-4) var(--space-5)',
-          borderBottom: '1px solid var(--theme-paper-border)',
-          background:   'var(--theme-paper-subtle)',
-        }}
-      >
-        <MessageSquare
-          style={{
-            width:       '0.875rem',
-            height:      '0.875rem',
-            color:       'var(--theme-text-tertiary)',
-            strokeWidth: 1.5,
-            flexShrink:  0,
-          }}
-        />
-        <span
-          style={{
-            fontFamily:    'var(--font-sans)',
-            fontSize:      'var(--text-2xs)',
-            fontWeight:    'var(--weight-semibold)',
-            letterSpacing: 'var(--tracking-widest)',
-            textTransform: 'uppercase',
-            color:         'var(--theme-text-tertiary)',
-          }}
-        >
-          Notes
-        </span>
-        <span
-          style={{
-            marginLeft: 'auto',
-            fontSize:   'var(--text-xs)',
-            color:      'var(--theme-text-tertiary)',
-          }}
-        >
-          {notes.length} note{notes.length !== 1 ? 's' : ''}
-        </span>
-      </div>
+      <CardHeader
+        icon={MessageSquare}
+        label="Notes"
+        right={
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontSize:   'var(--text-xs)',
+              color:      'var(--theme-text-tertiary)',
+            }}
+          >
+            {notes.length} note{notes.length !== 1 ? 's' : ''}
+          </span>
+        }
+      />
 
       {/* Timeline */}
       {notes.length === 0 ? (
@@ -127,7 +102,8 @@ export function LeadNotesSection({ notes }: Props) {
                       background:   'var(--theme-paper)',
                       border:       '2px solid var(--theme-paper-border)',
                       flexShrink:   0,
-                      marginTop:    'var(--space-1)',
+                      // center the 15px dot on the card header's first text line (12px pad + ~19px line)
+                      marginTop:    'calc(var(--space-3) + 2px)',
                     }}
                   />
                   {/* Connector line */}
