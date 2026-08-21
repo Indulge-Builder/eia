@@ -54,11 +54,20 @@ const credentialField = z
   .optional()
   .transform((v) => (v && v.length ? v : null));
 
-// Password is TRI-STATE (encrypted at rest, migration 0157). No transform — the
+// Password is TRI-STATE (encrypted at rest, migration 0166). No transform — the
 // three states are preserved through to the action: `undefined` = leave the stored
 // password unchanged (edit), `null` = clear it, a string = set/replace it (the
 // trigger encrypts on write). The modal maps a blank edit field → undefined.
 const passwordField = z.string().max(300, "Must be 300 characters or fewer.").nullable().optional();
+
+// Tool/vendor name — groups accounts under one tool (migration 0168). Optional;
+// dedup happens server-side on lower(trim(name)).
+const toolNameField = z
+  .string()
+  .max(120, "Tool name must be 120 characters or fewer.")
+  .nullable()
+  .optional()
+  .transform((v) => (v && v.trim() ? sanitizeText(v) : null));
 
 const notesField = z
   .string()
@@ -92,6 +101,7 @@ export const CreateSubscriptionSchema = z.object({
   login: credentialField,
   password: passwordField,
   notes: notesField,
+  tool_name: toolNameField,
 });
 export type CreateSubscriptionInput = z.infer<typeof CreateSubscriptionSchema>;
 

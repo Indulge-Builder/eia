@@ -35,14 +35,24 @@ function clampDay(year: number, month0: number, day: number): number {
 /**
  * The current cycle's due date as 'YYYY-MM-DD' (IST), or null for top_up.
  *   monthly / other → the due_day applied to the current IST month (clamped to month length)
- *   yearly          → the stored due_date
+ *   yearly          → the occurrence in the current IST year (same month/day as due_date,
+ *                     clamped), never earlier than the stored first cycle — so a yearly
+ *                     bill rolls over each year instead of matching its first payment forever
  */
 export function currentDueDateISO(
   sub: Pick<SubscriptionRow, "type" | "due_day" | "due_date">,
   now: Date,
 ): string | null {
   if (sub.type === "top_up") return null;
-  if (sub.type === "yearly") return sub.due_date ?? null;
+  if (sub.type === "yearly") {
+    if (!sub.due_date) return null;
+    const { year } = toIst(now);
+    const [, dueMonth, dueDay] = sub.due_date.split("-").map(Number);
+    const day = clampDay(year, dueMonth - 1, dueDay);
+    const thisYears = `${year}-${pad2(dueMonth)}-${pad2(day)}`;
+    // A bill created for a future first cycle must not project an earlier year.
+    return thisYears >= sub.due_date ? thisYears : sub.due_date;
+  }
   if (sub.due_day == null) return null;
   const { year, month } = toIst(now); // month 0-indexed
   const day = clampDay(year, month, sub.due_day);

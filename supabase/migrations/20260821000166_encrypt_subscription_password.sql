@@ -10,7 +10,7 @@
 -- decrypt_subscription_password (service_role only), surfaced via an explicit
 -- reveal action — never in list/detail row payloads.
 --
--- No backfill: this runs on the greenfield subscriptions table (0154, no prod
+-- No backfill: this runs on the greenfield subscriptions table (0163, no prod
 -- rows yet). A BEFORE INSERT/UPDATE trigger encrypts on write transparently.
 -- ════════════════════════════════════════════════════════════════════════════
 
@@ -107,7 +107,7 @@ grant execute on function public.decrypt_subscription_password(text) to service_
 
 comment on column public.subscriptions.password is
   'Service credential, ENCRYPTED AT REST (pgcrypto pgp_sym_encrypt → base64) with a Vault-stored '
-  'key (migration 0157). Encrypted transparently on write by the encrypt_subscriptions_password '
+  'key (migration 0166). Encrypted transparently on write by the encrypt_subscriptions_password '
   'trigger; decrypted only by decrypt_subscription_password() (SECURITY DEFINER, service_role only) '
   'via revealSubscriptionPasswordAction on an explicit reveal. NEVER selected into list/detail '
   'row payloads.';

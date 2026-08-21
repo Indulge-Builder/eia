@@ -12,6 +12,53 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-21 — Subscriptions PR merge review: staleness fixes, yearly rollover, reveal audit, the tool entity
+
+**Why:** the Subscriptions tracker (PR #2) was reviewed for merge. The branch was cut 8 weeks before
+merge and main had moved: it imported two components main deleted (`Spinner`, `DonutChart`) and
+`buildCSV`, which main no longer exported, so the merged tree failed to compile even though git
+auto-merged everything cleanly. The review also found a silent data bug (yearly cycles never roll
+over), an audit gap (password reveals left no trace), and one vision gap worth closing before any
+data lands: no tool entity, so the "one tool, many accounts" case (Claude: 2 tech accounts + 1
+concierge) had no home in the schema.
+
+**Merge/staleness fixes:**
+
+- `RenewalPickerModal` — the deleted arc `Spinner` → `LogoSpinner` (the consolidation rule).
+- `SpendingOverview` — the deleted `DonutChart` wrapper → new page-local
+  `components/subscriptions/SpendDonut.tsx` on raw Recharts + `useChartTokens` (R-04: the shared
+  wrapper stays deleted; consumers compose Recharts directly). Also swapped the hand-rolled
+  `StatCard` for the mandated `StatTile` (number-font rule).
+- `utils/export.ts` — `buildCSV` exported again (the generic CSV builder the subscriptions export
+  composes; main had it private).
+- Migrations renumbered **0154–0157 → 0163–0166** with today's date: the old numbers collided with
+  the applied theme migrations and timestamp-sorted before prod's latest applied migration
+  (out-of-order apply). All code and doc references updated.
+
+**Yearly cycle rollover (bug fix):** `currentDueDateISO` returned the stored `due_date` forever, so a
+yearly bill paid once matched its first payment every year after ("paid" forever), while the Calendar
+projected the browsed year and disagreed. Yearly current cycle is now the occurrence in the current
+IST year (clamped, never earlier than the stored first cycle) in `utils/subscription-status.ts`.
+
+**Reveal audit (migration 0167):** new append-only `subscription_password_reveals` ledger. The reveal
+action inserts the audit row before the plaintext is returned and fails closed if the insert fails.
+SELECT is admin/founder only.
+
+**The tool entity (migration 0168):** `subscription_tools` (unique `name_key = lower(trim(name))`) +
+nullable `subscriptions.tool_id`. Each subscription row is an account of a tool; the Add/Edit modal
+gained an optional Tool field (datalist of tools in use), the list shows the tool under the account
+name, and the actions resolve the tool by insert-if-missing (`resolveToolId`). Added now, while the
+tables are empty, so per-tool identity never depends on free-text name matching and no backfill is
+ever needed. Per-tool rollups and domain-scoped overview stay open as follow-ups.
+
+**Files:** `supabase/migrations/2026082100016{3..8}_*.sql`, `lib/actions/subscriptions.ts`,
+`lib/services/subscriptions-service.ts`, `lib/validations/subscription-schema.ts`,
+`lib/types/subscription.ts`, `lib/utils/subscription-status.ts`, `lib/utils/export.ts`,
+`components/subscriptions/{SpendDonut,SpendingOverview,RenewalPickerModal,AddEditSubscriptionModal,SubscriptionsTable}.tsx`,
+`docs/modules/subscriptions.md`, `supabase/migrations/CLAUDE.md`.
+
+---
+
 ## 2026-08-21 — Fix: `check:tokens` on Windows + an undefined `--space-9`
 
 **`scripts/check-tokens.mjs`** resolved `ROOT` via `new URL('..', import.meta.url).pathname`, which on
@@ -100,7 +147,7 @@ RLS-protected only — flagged in the feature entry below as a known tradeoff. T
 `password` column so it is encrypted at rest and the plaintext is only ever produced on an explicit
 reveal.
 
-**How (migration 0157):** pgcrypto `pgp_sym_encrypt` (→ base64) with a 256-bit key generated at
+**How (migration 0166):** pgcrypto `pgp_sym_encrypt` (→ base64) with a 256-bit key generated at
 migration-run time and stored in **Supabase Vault** (`subscription_password_key`) — the supported
 replacement for the deprecated pgsodium transparent column encryption. The key never appears in the
 migration file and never leaves the DB. `encrypt_subscription_password()` / `decrypt_subscription_password()`
@@ -121,7 +168,7 @@ trigger encrypts on write transparently and re-encrypts on UPDATE only when the 
   modal no longer pre-fills the password (it's not sent to the client).
 
 `login` stays plaintext (a username, low sensitivity). **Requires the `pgcrypto` + `supabase_vault`
-extensions** (standard on Supabase). Typecheck clean (0 errors). Files: `migration 0157`,
+extensions** (standard on Supabase). Typecheck clean (0 errors). Files: `migration 0166`,
 `actions/subscriptions.ts`, `services/subscriptions-service.ts`, `validations/subscription-schema.ts`,
 `components/subscriptions/{AddEditSubscriptionModal,SubscriptionHistoryModal}.tsx`.
 
@@ -134,18 +181,18 @@ extensions** (standard on Supabase). Typecheck clean (0 errors). Files: `migrati
 `/subscriptions` section for those two departments (admin/founder reach it globally). Phase 1 is the
 core tracker only — **no reminders, no WhatsApp notifications, nothing background.**
 
-**Data model (migrations 0154–0156):**
+**Data model (migrations 0163–0165):**
 
-- `subscriptions` (0154) — `name`, `departments text[]` (multi-select over `app_domain`; `<@` CHECK
+- `subscriptions` (0163) — `name`, `departments text[]` (multi-select over `app_domain`; `<@` CHECK
   mirrors `APP_DOMAINS`), `type` (`monthly`/`yearly`/`top_up`/`other`), `currency` (`INR`/`USD`/`EUR`),
   `amount`, and a due-date shape enforced by CHECK: monthly/other → `due_day` (1–31), yearly →
   `due_date`, top_up → neither. `login`/`password` (RLS-protected credential fields), `notes`,
   `is_archived` (soft delete), `created_by`, timestamps + `update_updated_at` trigger. Same file
   provisions the **PRIVATE `subscription-invoices` storage bucket** (insert-own-prefix + staff-read
   RLS; rows store the storage path, reads mint signed urls).
-- `subscription_payments` (0155) — append-only payment history (`due_date`, `paid_at`, `rate` in
+- `subscription_payments` (0164) — append-only payment history (`due_date`, `paid_at`, `rate` in
   original currency, `paid_amount_inr` manual, `invoice_path`, `notes`). RLS SELECT mirrors the parent.
-- `subscription_topups` (0156) — append-only top-up history (`topped_up_at`, `amount`, `currency`,
+- `subscription_topups` (0165) — append-only top-up history (`topped_up_at`, `amount`, `currency`,
   `paid_amount_inr`, `invoice_path`, `notes`). Same RLS shape.
 
 All three follow the deals convention: **no user write RLS** — writes go through the admin client in
@@ -172,14 +219,14 @@ export (CSV / XLSX for a picked month).
 - **Password storage tradeoff (flagged → hardened same day):** login/password round-trip exactly
   (never sanitized — that would corrupt them). As first shipped they were stored reversibly,
   RLS-protected only. **This was hardened the same day — see the "encrypt `subscriptions.password` at
-  rest" entry above (migration 0157): the `password` column is now pgcrypto-encrypted with a
+  rest" entry above (migration 0166): the `password` column is now pgcrypto-encrypted with a
   Vault-stored key, never sent to the client except on explicit reveal.** `login` stays plaintext
   (a username).
 
 **Shared-util extensions (reuse-first):** `formatCurrency`/`formatCurrencyCompact` gained `EUR`;
 `export.ts` gained a generic `buildSingleSheetXLSX` (the lead workbook stayed lead-specific).
 
-**Files:** `supabase/migrations/2026080600015{4,5,6}_*.sql`; `src/lib/constants/subscription-constants.ts`,
+**Files:** `supabase/migrations/2026082100016{3,4,5}_*.sql`; `src/lib/constants/subscription-constants.ts`,
 `src/lib/types/subscription.ts`, `src/lib/utils/subscription-status.ts`,
 `src/lib/validations/subscription-schema.ts`, `src/lib/services/subscriptions-service.ts`,
 `src/lib/actions/subscriptions.ts`; `src/components/subscriptions/*` (12 components);

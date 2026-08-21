@@ -3,7 +3,7 @@ import { APP_DOMAINS, DOMAIN_LABELS } from "./domains";
 
 // ─────────────────────────────────────────────
 // Subscriptions & Bills Tracker — vocabulary (Phase 1).
-// The SQL CHECK constraints in migrations 0154–0156 mirror these id lists —
+// The SQL CHECK constraints in migrations 0163–0165 mirror these id lists —
 // extending a set = a new migration that DROPs + re-ADDs the named constraint.
 // ─────────────────────────────────────────────
 
@@ -98,7 +98,7 @@ export const INVOICE_ACCEPT_ATTR = ".pdf,.png,.jpg,.jpeg,application/pdf,image/p
 // resolveSubscriptionShape — THE type → {amount, due_day, due_date} normaliser.
 //
 // The due-date/amount shape is DERIVED from the billing type, mirroring the
-// migration-0154 CHECK constraints (the resolveDealShapeForDomain pattern):
+// migration-0163 CHECK constraints (the resolveDealShapeForDomain pattern):
 //   monthly/other → amount + due_day (1–31), due_date null
 //   yearly        → amount + due_date, due_day null
 //   top_up        → amount/due_day/due_date all null

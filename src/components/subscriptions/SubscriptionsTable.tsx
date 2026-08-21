@@ -50,6 +50,10 @@ export function SubscriptionsTable({
   const toast = useToast;
   const router = useRouter();
 
+  const toolOptions = Array.from(
+    new Set(subscriptions.map((s) => s.toolName).filter((t): t is string => t != null)),
+  ).sort();
+
   const [modal, setModal] = useState<{ type: ActionType; sub: SubscriptionListItem } | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [confirmSub, setConfirmSub] = useState<SubscriptionListItem | null>(null);
@@ -135,7 +139,21 @@ export function SubscriptionsTable({
                     (e.currentTarget as HTMLElement).style.background = "transparent";
                   }}
                 >
-                  <td style={{ ...tdStyle, fontWeight: "var(--weight-medium)" }}>{sub.name}</td>
+                  <td style={{ ...tdStyle, fontWeight: "var(--weight-medium)" }}>
+                    {sub.name}
+                    {sub.toolName && sub.toolName !== sub.name && (
+                      <span
+                        style={{
+                          display: "block",
+                          fontSize: "var(--text-xs)",
+                          fontWeight: "var(--weight-normal)",
+                          color: "var(--theme-text-tertiary)",
+                        }}
+                      >
+                        {sub.toolName}
+                      </span>
+                    )}
+                  </td>
                   <td style={tdStyle}>
                     <DepartmentPills departments={sub.departments} />
                   </td>
@@ -205,6 +223,7 @@ export function SubscriptionsTable({
               open={modalOpen}
               onClose={() => setModalOpen(false)}
               subscription={modal.sub}
+              toolOptions={toolOptions}
             />
           )}
           {modal.type === "history" && (

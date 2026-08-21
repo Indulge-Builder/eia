@@ -48,7 +48,7 @@ export async function getSubscriptions(
 
   let query = supabase
     .from("subscriptions")
-    .select("*")
+    .select("*, tool:subscription_tools(name)")
     .eq("is_archived", archived)
     .order("created_at", { ascending: false });
 
@@ -67,7 +67,7 @@ export async function getSubscriptions(
     if (error) console.error("[subscriptions-service] getSubscriptions error:", error);
     return [];
   }
-  const subs = data as unknown as SubscriptionRow[];
+  const subs = data as unknown as (SubscriptionRow & { tool: { name: string } | null })[];
   if (subs.length === 0) return [];
 
   const ids = subs.map((s) => s.id);
@@ -117,9 +117,11 @@ export async function getSubscriptions(
       }
     }
 
+    const { tool, ...subRow } = sub;
     return {
-      ...sub,
-      password: null, // encrypted at rest (0157) — never exposed in list payloads
+      ...subRow,
+      toolName: tool?.name ?? null,
+      password: null, // encrypted at rest (0166) — never exposed in list payloads
       status: computed.status,
       daysOverdue: computed.daysOverdue,
       currentDueDate: computed.currentDueDate,
@@ -139,18 +141,19 @@ export async function getSubscriptions(
 
 /**
  * One subscription + its full payment + top-up history (newest first). The password
- * is NEVER returned here (encrypted at rest, 0157) — `hasPassword` tells the UI
+ * is NEVER returned here (encrypted at rest, 0166) — `hasPassword` tells the UI
  * whether to offer a reveal; the plaintext comes only from revealSubscriptionPasswordAction.
  */
 export async function getSubscriptionDetail(id: string): Promise<{
   subscription: SubscriptionRow;
+  toolName: string | null;
   hasPassword: boolean;
   payments: SubscriptionPaymentRow[];
   topups: SubscriptionTopupRow[];
 } | null> {
   const supabase = (await createClient()) as AnyClient;
   const [subRes, paymentsRes, topupsRes] = await Promise.all([
-    supabase.from("subscriptions").select("*").eq("id", id).maybeSingle(),
+    supabase.from("subscriptions").select("*, tool:subscription_tools(name)").eq("id", id).maybeSingle(),
     supabase
       .from("subscription_payments")
       .select("*")
@@ -163,9 +166,12 @@ export async function getSubscriptionDetail(id: string): Promise<{
       .order("topped_up_at", { ascending: false }),
   ]);
   if (subRes.error || !subRes.data) return null;
-  const raw = subRes.data as unknown as SubscriptionRow;
+  const { tool: rawTool, ...raw } = subRes.data as unknown as SubscriptionRow & {
+    tool: { name: string } | null;
+  };
   return {
     subscription: { ...raw, password: null },
+    toolName: rawTool?.name ?? null,
     hasPassword: raw.password != null,
     payments: (paymentsRes.data ?? []) as unknown as SubscriptionPaymentRow[],
     topups: (topupsRes.data ?? []) as unknown as SubscriptionTopupRow[],

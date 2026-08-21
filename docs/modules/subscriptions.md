@@ -25,15 +25,17 @@ department, carries a billing type (`monthly` / `yearly` / `top_up` / `other`), 
   in `lib/actions/subscriptions.ts`; the `requireProfile()` gate + `canManageSubscriptions()` (admin/
   founder OR finance/tech domain) + route access are the trust boundary.
 
-## Data model (migrations 0154–0157)
+## Data model (migrations 0163–0168)
 
 | Object | Migration | Notes |
 | --- | --- | --- |
-| `subscriptions` | 0154 | Parent. `departments text[]` (`<@` CHECK mirrors `APP_DOMAINS`), `type`/`currency` CHECKs, `amount`, a due-date shape CHECK (monthly/other → `due_day` 1–31; yearly → `due_date`; top_up → neither), `login`/`password`, `notes`, `is_archived` (soft delete), `created_by`, timestamps + `update_updated_at` trigger. |
-| `subscription-invoices` bucket | 0154 | **PRIVATE** storage bucket. Client uploads under `{uid}/` prefix (insert-own-prefix RLS); reads mint short-lived signed urls (admin client). Rows store the **path**, never a url. |
-| `subscription_payments` | 0155 | Append-only payment history (`due_date`, `paid_at`, `rate` in original currency, `paid_amount_inr` manual, `invoice_path`, `notes`). SELECT-only RLS. |
-| `subscription_topups` | 0156 | Append-only top-up history (`topped_up_at`, `amount`+`currency` per event, `paid_amount_inr` manual, `invoice_path`, `notes`). SELECT-only RLS. |
-| password encryption | 0157 | See **Password encryption** below. |
+| `subscriptions` | 0163 | Parent. `departments text[]` (`<@` CHECK mirrors `APP_DOMAINS`), `type`/`currency` CHECKs, `amount`, a due-date shape CHECK (monthly/other → `due_day` 1–31; yearly → `due_date`; top_up → neither), `login`/`password`, `notes`, `is_archived` (soft delete), `created_by`, timestamps + `update_updated_at` trigger. |
+| `subscription-invoices` bucket | 0163 | **PRIVATE** storage bucket. Client uploads under `{uid}/` prefix (insert-own-prefix RLS); reads mint short-lived signed urls (admin client). Rows store the **path**, never a url. |
+| `subscription_payments` | 0164 | Append-only payment history (`due_date`, `paid_at`, `rate` in original currency, `paid_amount_inr` manual, `invoice_path`, `notes`). SELECT-only RLS. |
+| `subscription_topups` | 0165 | Append-only top-up history (`topped_up_at`, `amount`+`currency` per event, `paid_amount_inr` manual, `invoice_path`, `notes`). SELECT-only RLS. |
+| password encryption | 0166 | See **Password encryption** below. |
+| `subscription_password_reveals` | 0167 | Append-only audit of password reveals (who, which subscription, when). One row is written by the admin client before the plaintext is returned; the action fails closed if the insert fails. SELECT is admin/founder only. |
+| `subscription_tools` + `subscriptions.tool_id` | 0168 | The tool entity: one tool (for example Claude) has many subscription rows (accounts), each with its own credentials, billing shape and departments. `name_key = lower(trim(name))` is the dedup identity; tools are created implicitly from the optional Tool field on the subscription form. `tool_id` is nullable, so standalone bills need no tool. |
 
 The generated `database.ts` does not yet include these tables — the service/actions use `(… as any).from(...)`
 casts + the hand-declared row types in `lib/types/subscription.ts` (the revival/elaya interim pattern
@@ -56,7 +58,14 @@ manually-entered `paid_amount_inr` are stored + shown separately. All spending a
 figure only. `formatCurrency` / `formatCurrencyCompact` (`utils/numbers.ts`) were extended to accept
 `EUR` alongside INR/USD.
 
-## Password encryption (migration 0157)
+## Cycle semantics
+
+A yearly subscription's current cycle is the occurrence in the **current IST year** (same month/day as
+its stored `due_date`, clamped, never earlier than the stored first cycle). A payment settles the cycle
+whose year it carries, so a yearly bill rolls over every year instead of matching its first payment
+forever. Monthly/other cycles match by year-month, as before.
+
+## Password encryption (migration 0166)
 
 The stored account `password` is **encrypted at rest** — pgcrypto `pgp_sym_encrypt` (→ base64) with a
 256-bit key generated at migration-run time and held in **Supabase Vault** (`subscription_password_key`;
@@ -81,10 +90,12 @@ never leaves the DB.
 `/subscriptions?view=list|calendar|overview` (default `list`); the list has `?tab=active|archived`.
 
 - **List** (`SubscriptionsTable`) — dense table (md+) / cards (mobile): Name, Departments, Type, Amount,
-  INR Paid (latest), Due, Status. Row menu (⋯): Record Payment / Log Top-up, View history, Edit,
-  Archive/Unarchive. Filters (`SubscriptionFilters`): Department / Type / Status (URL-driven) + Active/
+  INR Paid (latest), Due, Status. The tool name shows under the account name when they differ.
+  Row menu (⋯): View history, Edit, Archive/Unarchive. Recording a payment or top-up lives on the
+  header New / Renewal flow, not in the row menu. Filters (`SubscriptionFilters`): Department / Type / Status (URL-driven) + Active/
   Archived tab.
-- **Add / Edit** (`AddEditSubscriptionModal`) — conditional fields by type; password reveal toggle.
+- **Add / Edit** (`AddEditSubscriptionModal`) — conditional fields by type; password reveal toggle;
+  optional Tool field (datalist of tools already in use) that groups accounts under one tool.
 - **Record Payment** (`RecordPaymentModal`) / **Log Top-up** (`LogTopupModal`) — rate + manual INR (two
   columns, never converted), dates, client-side invoice upload, notes.
 - **History** (`SubscriptionHistoryModal`) — summary (with on-demand password reveal) + payment/top-up
@@ -100,7 +111,7 @@ never leaves the DB.
 ## File map
 
 ```text
-supabase/migrations/2026080600015{4,5,6,7}_*.sql   ← tables + bucket + RLS + password encryption
+supabase/migrations/2026082100016{3..8}_*.sql      ← tables + bucket + RLS + encryption + reveal audit + tools
 src/lib/constants/subscription-constants.ts        ← types/currencies/statuses/departments + resolveSubscriptionShape
 src/lib/types/subscription.ts                      ← hand-declared row types (interim)
 src/lib/utils/subscription-status.ts               ← computed status + cycle/lateness math (IST)
@@ -117,7 +128,7 @@ Shared utils extended (reuse-first): `utils/numbers.ts` (`EUR`), `utils/export.t
 
 Phase 1 is code-complete and typechecks clean, but it is **not live until the migrations are applied**:
 
-1. Apply migrations **0154–0157** to the Supabase project. **0157 needs the `pgcrypto` + `supabase_vault`
+1. Apply migrations **0163–0168** to the Supabase project. **0166 needs the `pgcrypto` + `supabase_vault`
    extensions** (standard on Supabase; the migration enables them via `create extension if not exists`).
 2. (Recommended) regenerate `database.ts` (`supabase gen types typescript --local`) to drop the interim
    `as any` table casts.

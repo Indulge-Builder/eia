@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { SearchBar } from "@/components/ui/SearchBar";
-import { Spinner } from "@/components/ui/Spinner";
+import { LogoSpinner } from "@/components/ui/LogoSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { toast } from "@/lib/toast";
 import { listActiveSubscriptionsAction } from "@/lib/actions/subscriptions";
@@ -98,7 +98,7 @@ export function RenewalPickerModal({ open, onClose, onSelect }: Props) {
                 padding: "var(--space-8)",
               }}
             >
-              <Spinner size="md" />
+              <LogoSpinner size="md" />
             </div>
           ) : filtered.length === 0 ? (
             <EmptyState

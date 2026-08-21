@@ -8,14 +8,15 @@ import dynamic from "next/dynamic";
 import type { CSSProperties } from "react";
 import { TrendingUp } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { StatTile } from "@/components/ui/StatTile";
 import { ChartSkeleton } from "@/components/ui/charts/ChartSkeleton";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/utils/numbers";
 import { SUBSCRIPTION_TYPE_LABELS } from "@/lib/constants/subscription-constants";
 import { DOMAIN_LABELS } from "@/lib/constants/domains";
 import type { SpendingOverview as SpendingOverviewData } from "@/lib/services/subscriptions-service";
 
-const DonutChart = dynamic(
-  () => import("@/components/ui/charts/DonutChart").then((m) => m.DonutChart),
+const SpendDonut = dynamic(
+  () => import("@/components/subscriptions/SpendDonut").then((m) => m.SpendDonut),
   { ssr: false, loading: () => <ChartSkeleton height={240} /> },
 );
 const BarChart = dynamic(() => import("@/components/ui/charts/BarChart").then((m) => m.BarChart), {
@@ -45,9 +46,9 @@ export function SpendingOverview({ data }: { data: SpendingOverviewData }) {
           gap: "var(--space-4)",
         }}
       >
-        <StatCard label="Spent This Month" value={formatCurrency(data.monthToDateInr, "INR")} />
-        <StatCard label="Spent This Year" value={formatCurrency(data.yearToDateInr, "INR")} />
-        <StatCard label="Active Subscriptions" value={String(data.activeCount)} />
+        <StatTile label="Spent This Month" value={formatCurrency(data.monthToDateInr, "INR")} />
+        <StatTile label="Spent This Year" value={formatCurrency(data.yearToDateInr, "INR")} />
+        <StatTile label="Active Subscriptions" value={String(data.activeCount)} />
       </div>
 
       {!hasData ? (
@@ -69,14 +70,14 @@ export function SpendingOverview({ data }: { data: SpendingOverviewData }) {
           >
             <ChartCard title="By Billing Type">
               {typeData.length > 0 ? (
-                <DonutChart data={typeData} height={240} />
+                <SpendDonut data={typeData} height={240} />
               ) : (
                 <EmptyState variant="inline" title="No data yet." />
               )}
             </ChartCard>
             <ChartCard title="By Department">
               {deptData.length > 0 ? (
-                <DonutChart data={deptData} height={240} />
+                <SpendDonut data={deptData} height={240} />
               ) : (
                 <EmptyState variant="inline" title="No data yet." />
               )}
@@ -102,26 +103,6 @@ export function SpendingOverview({ data }: { data: SpendingOverviewData }) {
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={cardStyle}>
-      <p className="label-micro" style={{ margin: "0 0 var(--space-2)" }}>
-        {label}
-      </p>
-      <p
-        style={{
-          margin: 0,
-          fontSize: "var(--text-2xl)",
-          fontWeight: "var(--weight-semibold)",
-          color: "var(--theme-text-primary)",
-          fontFamily: "var(--font-sans)",
-        }}
-      >
-        {value}
-      </p>
-    </div>
-  );
-}
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (

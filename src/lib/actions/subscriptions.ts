@@ -50,6 +50,38 @@ function canManageSubscriptions(profile: { role: string; domain: string }): bool
   );
 }
 
+/**
+ * Insert-if-missing on subscription_tools keyed by name_key = lower(trim(name))
+ * (migration 0168), then return the tool's id. Two admin-client queries: an
+ * ignore-duplicates upsert (race-safe under the unique name_key constraint)
+ * followed by the id read. Null name → null (standalone bill, no tool).
+ */
+async function resolveToolId(
+  admin: AnyClient,
+  toolName: string | null | undefined,
+  callerId: string,
+): Promise<{ ok: true; toolId: string | null } | { ok: false }> {
+  if (!toolName) return { ok: true, toolId: null };
+  const key = toolName.trim().toLowerCase();
+  const { error: upsertErr } = await admin
+    .from("subscription_tools")
+    .upsert({ name: toolName.trim(), created_by: callerId }, { onConflict: "name_key", ignoreDuplicates: true });
+  if (upsertErr) {
+    console.error("[subscriptions] tool upsert error:", upsertErr);
+    return { ok: false };
+  }
+  const { data, error } = await admin
+    .from("subscription_tools")
+    .select("id")
+    .eq("name_key", key)
+    .maybeSingle();
+  if (error || !data) {
+    console.error("[subscriptions] tool lookup error:", error);
+    return { ok: false };
+  }
+  return { ok: true, toolId: (data as { id: string }).id };
+}
+
 // ── Create ────────────────────────────────────────────────────────────────────
 export async function createSubscriptionAction(
   input: unknown,
@@ -74,10 +106,14 @@ export async function createSubscriptionAction(
   if (!shape.ok) return { data: null, error: shape.error };
 
   const admin = createAdminClient() as AnyClient;
+  const tool = await resolveToolId(admin, fields.tool_name, caller.id);
+  if (!tool.ok) return { data: null, error: formErrors.subscriptionSaveFailed };
+
   const { data, error } = await admin
     .from("subscriptions")
     .insert({
       name: fields.name,
+      tool_id: tool.toolId,
       departments: fields.departments,
       type: fields.type,
       currency: fields.currency,
@@ -85,7 +121,7 @@ export async function createSubscriptionAction(
       due_day: shape.shape.due_day,
       due_date: shape.shape.due_date,
       login: fields.login,
-      // Plaintext on write — the encrypt_subscriptions_password trigger (0157)
+      // Plaintext on write — the encrypt_subscriptions_password trigger (0166)
       // encrypts it at rest. undefined/null → no stored password.
       password: fields.password ?? null,
       notes: fields.notes,
@@ -124,8 +160,13 @@ export async function updateSubscriptionAction(
   });
   if (!shape.ok) return { data: null, error: shape.error };
 
+  const admin = createAdminClient() as AnyClient;
+  const tool = await resolveToolId(admin, fields.tool_name, auth.profile.id);
+  if (!tool.ok) return { data: null, error: formErrors.subscriptionSaveFailed };
+
   const updatePayload: Record<string, unknown> = {
     name: fields.name,
+    tool_id: tool.toolId,
     departments: fields.departments,
     type: fields.type,
     currency: fields.currency,
@@ -136,12 +177,11 @@ export async function updateSubscriptionAction(
     notes: fields.notes,
   };
   // Password is tri-state: undefined = leave the stored (encrypted) value
-  // untouched; null = clear; a string = replace (the 0157 trigger encrypts it).
+  // untouched; null = clear; a string = replace (the 0166 trigger encrypts it).
   if (fields.password !== undefined) {
     updatePayload.password = fields.password;
   }
 
-  const admin = createAdminClient() as AnyClient;
   const { data, error } = await admin
     .from("subscriptions")
     .update(updatePayload)
@@ -310,6 +350,7 @@ export async function signSubscriptionInvoiceAction(
 export async function getSubscriptionDetailAction(id: string): Promise<
   ActionResult<{
     subscription: SubscriptionRow;
+    toolName: string | null;
     hasPassword: boolean;
     payments: SubscriptionPaymentRow[];
     topups: SubscriptionTopupRow[];
@@ -343,7 +384,7 @@ export async function listActiveSubscriptionsAction(): Promise<
 
 // ── Reveal password (decrypt on demand) ─────────────────────────────────────────
 // The ONLY path that produces the plaintext credential — decrypts via the
-// service_role-only RPC (0157), called when the user clicks "reveal". Never bundled
+// service_role-only RPC (0166), called when the user clicks "reveal". Never bundled
 // into a list/detail payload.
 export async function revealSubscriptionPasswordAction(
   id: string,
@@ -365,6 +406,16 @@ export async function revealSubscriptionPasswordAction(
 
   const cipher = (row as { password: string | null }).password;
   if (cipher == null) return { data: { password: null }, error: null };
+
+  // Audit BEFORE the plaintext leaves the server (migration 0167, append-only).
+  // Fails CLOSED: no audit row, no reveal.
+  const { error: auditErr } = await admin
+    .from("subscription_password_reveals")
+    .insert({ subscription_id: id, revealed_by: auth.profile.id });
+  if (auditErr) {
+    console.error("[subscriptions] reveal audit insert failed — reveal denied:", auditErr);
+    return { data: null, error: formErrors.generic };
+  }
 
   const { data: decrypted, error: decErr } = await admin.rpc("decrypt_subscription_password", {
     p_ciphertext: cipher,

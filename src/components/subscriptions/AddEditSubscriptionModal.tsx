@@ -30,16 +30,19 @@ type Props = {
   open: boolean;
   onClose: () => void;
   /** Present → edit mode; absent → create mode. */
-  subscription?: SubscriptionRow;
+  subscription?: SubscriptionRow & { toolName?: string | null };
+  /** Existing tool names for the Tool field's datalist (dedup happens server-side). */
+  toolOptions?: string[];
   onSaved?: () => void;
 };
 
-export function AddEditSubscriptionModal({ open, onClose, subscription, onSaved }: Props) {
+export function AddEditSubscriptionModal({ open, onClose, subscription, toolOptions, onSaved }: Props) {
   const toast = useToast;
   const router = useRouter();
   const isEdit = !!subscription;
 
   const [name, setName] = useState(subscription?.name ?? "");
+  const [toolName, setToolName] = useState(subscription?.toolName ?? "");
   const [departments, setDepartments] = useState<AppDomain[]>(subscription?.departments ?? []);
   const [type, setType] = useState<SubscriptionType>(subscription?.type ?? "monthly");
   const [currency, setCurrency] = useState<SubscriptionCurrency>(subscription?.currency ?? "INR");
@@ -47,7 +50,7 @@ export function AddEditSubscriptionModal({ open, onClose, subscription, onSaved 
   const [dueDay, setDueDay] = useState(subscription?.due_day != null ? String(subscription.due_day) : "");
   const [dueDate, setDueDate] = useState(subscription?.due_date ?? "");
   const [login, setLogin] = useState(subscription?.login ?? "");
-  // Password is encrypted at rest (0157) and never sent to the client in a row —
+  // Password is encrypted at rest (0166) and never sent to the client in a row —
   // so the edit field starts BLANK. Blank on save = keep the stored password.
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -84,6 +87,7 @@ export function AddEditSubscriptionModal({ open, onClose, subscription, onSaved 
       // a value → set/replace (the DB trigger encrypts on write).
       password: password === "" ? (isEdit ? undefined : null) : password,
       notes: notes.trim() || null,
+      tool_name: toolName.trim() || null,
     };
 
     startTransition(async () => {
@@ -148,6 +152,31 @@ export function AddEditSubscriptionModal({ open, onClose, subscription, onSaved 
             style={INPUT_STYLE}
             autoFocus
           />
+        </div>
+
+        {/* Tool */}
+        <div>
+          <label className="label-micro" style={FIELD_LABEL_STYLE} htmlFor="sub-tool">
+            Tool (optional)
+          </label>
+          <input
+            id="sub-tool"
+            type="text"
+            value={toolName}
+            onChange={(e) => setToolName(e.target.value)}
+            disabled={isPending}
+            placeholder="Groups accounts of one tool — e.g. Claude"
+            maxLength={120}
+            list={toolOptions && toolOptions.length > 0 ? "sub-tool-options" : undefined}
+            style={INPUT_STYLE}
+          />
+          {toolOptions && toolOptions.length > 0 && (
+            <datalist id="sub-tool-options">
+              {toolOptions.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+          )}
         </div>
 
         {/* Departments */}

@@ -1,5 +1,5 @@
 // Subscriptions & Bills Tracker row types — hand-declared until `supabase gen
-// types typescript --local` is re-run after migrations 0154–0156 are applied.
+// types typescript --local` is re-run after migrations 0163–0165 are applied.
 // Shapes mirror the migrations EXACTLY. Types only — no runtime values.
 // The vocabulary (SubscriptionType/SubscriptionCurrency/SubscriptionStatus, labels,
 // badge config) lives in constants/subscription-constants.ts.
@@ -10,7 +10,7 @@ import type {
 } from "@/lib/constants/subscription-constants";
 import type { AppDomain } from "@/lib/types/database";
 
-/** public.subscriptions row (migration 0154). */
+/** public.subscriptions row (migration 0163). */
 export type SubscriptionRow = {
   id: string;
   name: string;
@@ -27,9 +27,19 @@ export type SubscriptionRow = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  tool_id: string | null;   // subscription_tools link (migration 0168) — null for standalone bills
 };
 
-/** public.subscription_payments row (migration 0155). Append-only. */
+/** public.subscription_tools row (migration 0168). One tool, many subscription rows. */
+export type SubscriptionToolRow = {
+  id: string;
+  name: string;
+  name_key: string;
+  created_by: string | null;
+  created_at: string;
+};
+
+/** public.subscription_payments row (migration 0164). Append-only. */
 export type SubscriptionPaymentRow = {
   id: string;
   subscription_id: string;
@@ -43,7 +53,7 @@ export type SubscriptionPaymentRow = {
   created_at: string;
 };
 
-/** public.subscription_topups row (migration 0156). Append-only. */
+/** public.subscription_topups row (migration 0165). Append-only. */
 export type SubscriptionTopupRow = {
   id: string;
   subscription_id: string;
@@ -68,6 +78,7 @@ export type SubscriptionListItem = SubscriptionRow & {
   paidCycleKeys: string[];          // settled cycles — 'YYYY-MM' (monthly/other) or 'YYYY' (yearly);
                                      // [] for top_up. Lets the Calendar compute a real Paid/Overdue
                                      // status for ANY month, not just the current cycle.
+  toolName: string | null;          // resolved subscription_tools.name (null when tool_id is null)
 };
 
 /** A payment row + its computed lateness (for Payment History). */
