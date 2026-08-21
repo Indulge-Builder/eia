@@ -37,9 +37,11 @@ export const DOMAIN_ROUTE_MAP: Record<AppDomain, string[]> = {
   ),
 
   // ── Non-Gia domains ───────────────────────────────────────────────────────
+  // /subscriptions is the Subscriptions & Bills Tracker — Finance + Tech own it
+  // (admin/founder reach it by bypassing this map in canAccessRoute).
   concierge: ['/tasks', '/whatsapp', '/settings'],
-  finance:   ['/tasks', '/settings'],
+  finance:   ['/tasks', '/subscriptions', '/settings'],
   marketing: ['/tasks', '/campaigns', '/settings'],
-  tech:      ['/tasks', '/settings'],
+  tech:      ['/tasks', '/subscriptions', '/settings'],
   b2b:       ['/tasks', '/leads', '/deals', '/campaigns', '/settings'],
 } as Record<AppDomain, string[]>;

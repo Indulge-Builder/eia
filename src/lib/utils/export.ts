@@ -152,3 +152,26 @@ export async function buildXLSXWorkbook(
 export function buildLeadsCSV(leads: LeadExportItem[]): string {
   return buildCSV(leads.map(leadToRow), LEAD_EXPORT_HEADERS);
 }
+
+// ─────────────────────────────────────────────
+// Generic single-sheet XLSX — any {rows, headers} (subscriptions monthly report,
+// future report exports). buildCSV already covers the CSV side generically.
+// ─────────────────────────────────────────────
+export async function buildSingleSheetXLSX(
+  rows: ExportRow[],
+  headers: ExportHeader[],
+  sheetName: string,
+): Promise<ArrayBuffer> {
+  const XLSX = await import("xlsx");
+  const headerRow = headers.map((h) => h.label);
+  const dataRows = rows.map((row) =>
+    headers.map((h) => {
+      const v = row[h.key];
+      return v == null ? "" : v;
+    }),
+  );
+  const ws = XLSX.utils.aoa_to_sheet([headerRow, ...dataRows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31)); // Excel caps sheet names at 31 chars
+  return XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+}

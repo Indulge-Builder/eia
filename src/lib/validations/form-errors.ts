@@ -66,6 +66,22 @@ export const formErrors = {
   passwordSameAsCurrent:    "New password must differ from your current password.",
   passwordConfirmMismatch:  "Passwords do not match.",
   passwordSessionExpired:   "Session expired. Please sign in again.",
+
+  // Subscriptions & Bills Tracker
+  subscriptionNameRequired:        "Please enter a subscription name.",
+  subscriptionDepartmentRequired:  "Please select at least one department.",
+  subscriptionTypeInvalid:         "Please select a billing type.",
+  subscriptionCurrencyInvalid:     "Please select a currency.",
+  subscriptionAmountInvalid:       "Please enter a valid amount.",
+  subscriptionDueDayInvalid:       "Please enter a day of the month between 1 and 31.",
+  subscriptionDueDateInvalid:      "Please select a due date.",
+  subscriptionRateInvalid:         "Please enter the amount in the original currency.",
+  subscriptionPaidAmountInvalid:   "Please enter the INR amount that was paid.",
+  subscriptionInvoiceTooLarge:     "Invoice must be 8 MB or smaller.",
+  subscriptionInvoiceInvalidType:  "Please attach a PDF, PNG, or JPG file.",
+  subscriptionInvoiceUploadFailed: "Invoice upload failed. Please check your connection and try again.",
+  subscriptionNotFound:            "Subscription not found.",
+  subscriptionSaveFailed:          "Couldn't save the subscription. Please try again.",
 } as const;
 
 export type FormError = (typeof formErrors)[keyof typeof formErrors];

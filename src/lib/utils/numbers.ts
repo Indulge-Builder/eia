@@ -96,30 +96,31 @@ export function formatPercent(
 
 /**
  * Compact currency — for stat cards and chart axes.
- * INR: ₹ + K/L/Cr (never M). USD: $ + K/M.
+ * INR: ₹ + K/L/Cr (never M). USD: $ + K/M. EUR: € + K/M.
  * null → "—"
  */
 export function formatCurrencyCompact(
   value: number | null | undefined,
-  currency: 'INR' | 'USD' = 'INR',
+  currency: 'INR' | 'USD' | 'EUR' = 'INR',
 ): string {
   if (value === null || value === undefined) return '—';
-  const symbol = currency === 'INR' ? '₹' : '$';
+  const symbol = currency === 'INR' ? '₹' : currency === 'EUR' ? '€' : '$';
   const magnitude =
     currency === 'INR' ? formatCompact(value) : formatCompactWestern(value);
   return `${symbol}${magnitude}`;
 }
 
 /**
- * Currency — INR uses Indian numbering (1,00,000). USD uses Western.
+ * Currency — INR uses Indian numbering (1,00,000). USD/EUR use Western.
  * Always shows the symbol. null → "—"
  */
 export function formatCurrency(
   value: number | null | undefined,
-  currency: 'INR' | 'USD' = 'INR',
+  currency: 'INR' | 'USD' | 'EUR' = 'INR',
 ): string {
   if (value === null || value === undefined) return '—';
-  const locale = currency === 'INR' ? 'en-IN' : 'en-US';
+  const locale =
+    currency === 'INR' ? 'en-IN' : currency === 'EUR' ? 'en-IE' : 'en-US';
   return new Intl.NumberFormat(locale, {
     style:                 'currency',
     currency,

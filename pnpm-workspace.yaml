@@ -1,5 +1,8 @@
 allowBuilds:
+  '@depot/cli': true
   esbuild: true
+  protobufjs: true
+  sharp: true
 onlyBuiltDependencies:
   - esbuild
   - protobufjs

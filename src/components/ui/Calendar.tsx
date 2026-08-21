@@ -15,6 +15,10 @@ export interface CalendarProps {
   rangeStart?: Date | null;
   rangeEnd?: Date | null;
   onSelect: (date: Date) => void;
+  /** Fired with the visible month (0-indexed) on mount and on every month change
+   *  (prev/next arrows or the year/month picker). Lets a parent project data —
+   *  e.g. recurring subscriptions — into whichever month the user navigates to. */
+  onMonthChange?: (year: number, month: number) => void;
   minDate?: Date;
   maxDate?: Date;
   taskDots?: Record<string, TaskDotMeta>;
@@ -235,6 +239,7 @@ export function Calendar({
   rangeStart,
   rangeEnd,
   onSelect,
+  onMonthChange,
   minDate,
   maxDate,
   taskDots,
@@ -251,13 +256,27 @@ export function Calendar({
   const [direction,  setDirection]  = React.useState<1 | -1>(1);
   const [pickerOpen, setPickerOpen] = React.useState(false);
 
+  // Sync the parent to the visible month once on mount (so it can project data
+  // into the initial month), then on every navigation below. Guarded to fire the
+  // mount sync a single time — the value never changes identity here.
+  const didSyncMonth = React.useRef(false);
+  React.useEffect(() => {
+    if (didSyncMonth.current) return;
+    didSyncMonth.current = true;
+    onMonthChange?.(current.getFullYear(), current.getMonth());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function navigate(delta: 1 | -1) {
     setDirection(delta);
-    setCurrent((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+    const next = new Date(current.getFullYear(), current.getMonth() + delta, 1);
+    setCurrent(next);
+    onMonthChange?.(next.getFullYear(), next.getMonth());
   }
 
   function handlePickerPick(y: number, m: number) {
     setCurrent(new Date(y, m, 1));
+    onMonthChange?.(y, m);
   }
 
   const year        = current.getFullYear();

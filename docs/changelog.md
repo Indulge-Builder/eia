@@ -12,6 +12,182 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-21 — Fix: `check:tokens` on Windows + an undefined `--space-9`
+
+**`scripts/check-tokens.mjs`** resolved `ROOT` via `new URL('..', import.meta.url).pathname`, which on
+Windows yields `/E:/Serene/` → `join()` → `\E:\Serene\src` → `ENOENT`. So `pnpm build` (which runs the
+token guard first) could never complete on Windows; POSIX/CI was unaffected. Now uses
+`fileURLToPath()` — cross-platform.
+
+With the guard running again it immediately caught a real violation: `AddEditSubscriptionModal`'s
+password field used **`var(--space-9)`**, which no token sheet defines (the scale skips 9: …7, 8, 10),
+so the browser silently dropped the `padding-right` and the text ran under the reveal eye. Changed to
+`--space-8` — the repo-wide convention for right-padded inputs.
+
+## 2026-08-21 — Subscriptions: Departments field is now a multi-select dropdown
+
+The Add/Edit Subscription modal's **Departments** field switched from a row of toggle chips to the
+canonical multi-select `FilterDropdown` (`multi`, `fullWidth`, `menuPortal`) over
+`SUBSCRIPTION_DEPARTMENT_OPTIONS`. Same state/validation (`departments: AppDomain[]`, still requires
+≥1); removed the local `toggleDepartment` + `chipStyle`.
+
+## 2026-08-21 — Subscriptions: New / Renewal menu on the Add Subscription button
+
+**Why:** Recording a payment was only reachable per-row (⋯ → Record Payment / Log Top-up). Added a
+faster top-level entry point and consolidated it there.
+
+**What:** The top-right **Add Subscription** button is now a two-item menu:
+
+- **New** → the existing Add Subscription create modal (unchanged).
+- **Renewal** → a searchable picker of all active subscriptions; choosing one opens **Record Payment**,
+  or **Log Top-up** if that subscription is a top-up (routed by `type`, mirroring the old row menu).
+
+**Row ⋯ menu:** "Record Payment" / "Log Top-up" **removed** — it now lives only in the Renewal flow.
+The row menu keeps View history, Edit, Archive; row click still opens history.
+
+**Reuse (no new primitives):** the menu is the canonical `usePortalAnchor` + `<FloatingPanel>`; the
+new `RenewalPickerModal` clones the `CompletedTasksModal` list-style modal shell + `SearchBar` +
+`useMemo` name filter, with rows from `SubscriptionBits`. The pick opens the **existing**
+`RecordPaymentModal` / `LogTopupModal` unchanged. New `listActiveSubscriptionsAction`
+(`lib/actions/subscriptions.ts`) wraps the existing `getSubscriptions({ archived:false })` behind the
+same `canManageSubscriptions` gate, since the header sits above the list's Suspense boundary.
+
+**Files:** `AddSubscriptionButton.tsx` (rework), `RenewalPickerModal.tsx` (new),
+`subscriptions.ts` (action), `SubscriptionsTable.tsx` (drop payment/top-up menu item + unused wiring).
+
+## 2026-08-14 — Subscriptions Calendar: recurring due dates + selected-day highlight
+
+**Why:** Two bugs on `/subscriptions?view=calendar`. (1) A **monthly** subscription showed only on
+its single stored due date (e.g. 10 Aug) instead of the 10th of **every** month, and a **yearly**
+one didn't project to the same date next year — navigating to another month showed nothing.
+(2) Clicking a date filtered the due-list correctly but the day cell never highlighted.
+
+**Root cause:** The calendar was built around each sub's single `currentDueDate` (the *current*
+cycle only) and was hardwired to the current IST month — the shared `<Calendar>` kept its displayed
+month in internal state and never told the parent when the user navigated, so `SubscriptionCalendar`
+could not project into other months. Separately, it never passed the selected day back to
+`<Calendar value>`, so the highlight branch (`isSelected = value ? isSameDay(...)`) was unreachable.
+
+**Fix:**
+
+- **Recurrence projection** — new `occurrenceInMonthISO(sub, year, month)` in
+  `src/lib/utils/subscription-status.ts` (reuses the existing `clampDay`): monthly/other recur every
+  month on `due_day`; yearly once a year on `due_date`'s month/day; top-ups never. The canonical
+  cycle-math home (H-7), so the projection can't drift from `currentDueDateISO`.
+- **Month awareness** — added an optional `onMonthChange(year, month)` callback to
+  `src/components/ui/Calendar.tsx` (fires on mount + every prev/next/picker change). Additive and
+  backward-compatible — `DatePicker` and `MyTasksCalendarView` don't pass it and are unaffected.
+- **Wiring** — `src/components/subscriptions/SubscriptionCalendar.tsx` now tracks the viewed month
+  and projects each subscription's occurrence into it, driving the dots and the due-list; navigating
+  months re-projects (and clears any stale selected day). The "This Week" card stays anchored to the
+  current IST week regardless of navigation.
+- **Real status on every month** — `SubscriptionListItem` now carries `paidCycleKeys` (the settled
+  cycles: `YYYY-MM` for monthly/other, `YYYY` for yearly), computed in `getSubscriptions` from the
+  payment history it *already* loads. New `statusForOccurrenceISO()` (same rules as
+  `computeSubscriptionStatus`, generalised off the current cycle) gives each occurrence a truthful
+  pill: settled cycle → **Paid**, past-unpaid → **Overdue** (with day count), today → **Due today**,
+  future → **Upcoming**. Occurrences before a subscription's `created_at` are not projected (no
+  phantom overdue history). The dot's urgency (red) now tracks that real per-month status too.
+- **Highlight** — derives a **local** `Date` from `selectedDay` (`new Date(y, m-1, d)`, not
+  `Date.UTC`, to match `Calendar`'s local-date `isSameDay`) and passes it as `value`.
+
+List/Calendar/Overview stay as three separate `?view=` toggles — no structural change.
+
+## 2026-08-06 — Subscriptions: encrypt `subscriptions.password` at rest (security follow-up)
+
+**Why:** Phase 1 shipped the subscription service-credential (`login`/`password`) in plaintext,
+RLS-protected only — flagged in the feature entry below as a known tradeoff. This hardens the
+`password` column so it is encrypted at rest and the plaintext is only ever produced on an explicit
+reveal.
+
+**How (migration 0157):** pgcrypto `pgp_sym_encrypt` (→ base64) with a 256-bit key generated at
+migration-run time and stored in **Supabase Vault** (`subscription_password_key`) — the supported
+replacement for the deprecated pgsodium transparent column encryption. The key never appears in the
+migration file and never leaves the DB. `encrypt_subscription_password()` / `decrypt_subscription_password()`
+are SECURITY DEFINER, **service_role only** (EXECUTE revoked from authenticated). A `BEFORE INSERT/UPDATE`
+trigger encrypts on write transparently and re-encrypts on UPDATE only when the value changed
+(`IS DISTINCT FROM OLD` — never double-encrypts an unchanged row).
+
+**App changes:**
+
+- The password is **never** selected into list/detail row payloads — `getSubscriptions` and
+  `getSubscriptionDetail` return `password: null`; the detail adds a `hasPassword` boolean so the UI
+  knows whether to offer a reveal.
+- New `revealSubscriptionPasswordAction(id)` is the **only** path that returns the plaintext (admin
+  client → decrypt RPC), called when the user clicks reveal in the history/detail modal.
+- The password field is now **tri-state** (`validations/subscription-schema.ts`): `undefined` = keep
+  the stored value (the edit modal maps a blank field → undefined, with "Leave blank to keep the
+  current password" copy), `null` = clear, a string = set/replace (the trigger encrypts). The edit
+  modal no longer pre-fills the password (it's not sent to the client).
+
+`login` stays plaintext (a username, low sensitivity). **Requires the `pgcrypto` + `supabase_vault`
+extensions** (standard on Supabase). Typecheck clean (0 errors). Files: `migration 0157`,
+`actions/subscriptions.ts`, `services/subscriptions-service.ts`, `validations/subscription-schema.ts`,
+`components/subscriptions/{AddEditSubscriptionModal,SubscriptionHistoryModal}.tsx`.
+
+---
+
+## 2026-08-06 — Feature: Subscriptions & Bills Tracker (Phase 1)
+
+**Why:** Finance and Tech had no first-class way to track recurring bills, memberships, and prepaid
+(top-up) accounts — renewals, what left the account in INR, and where invoices live. This adds a new
+`/subscriptions` section for those two departments (admin/founder reach it globally). Phase 1 is the
+core tracker only — **no reminders, no WhatsApp notifications, nothing background.**
+
+**Data model (migrations 0154–0156):**
+
+- `subscriptions` (0154) — `name`, `departments text[]` (multi-select over `app_domain`; `<@` CHECK
+  mirrors `APP_DOMAINS`), `type` (`monthly`/`yearly`/`top_up`/`other`), `currency` (`INR`/`USD`/`EUR`),
+  `amount`, and a due-date shape enforced by CHECK: monthly/other → `due_day` (1–31), yearly →
+  `due_date`, top_up → neither. `login`/`password` (RLS-protected credential fields), `notes`,
+  `is_archived` (soft delete), `created_by`, timestamps + `update_updated_at` trigger. Same file
+  provisions the **PRIVATE `subscription-invoices` storage bucket** (insert-own-prefix + staff-read
+  RLS; rows store the storage path, reads mint signed urls).
+- `subscription_payments` (0155) — append-only payment history (`due_date`, `paid_at`, `rate` in
+  original currency, `paid_amount_inr` manual, `invoice_path`, `notes`). RLS SELECT mirrors the parent.
+- `subscription_topups` (0156) — append-only top-up history (`topped_up_at`, `amount`, `currency`,
+  `paid_amount_inr`, `invoice_path`, `notes`). Same RLS shape.
+
+All three follow the deals convention: **no user write RLS** — writes go through the admin client in
+server actions (the `requireProfile` gate + route access are the trust boundary).
+
+**Access:** `/subscriptions` added to `DOMAIN_ROUTE_MAP` for `finance` + `tech`; admin/founder bypass.
+RLS SELECT + the action gate both resolve to "admin/founder OR finance/tech domain". Sidebar nav entry
+added to `MAIN_NAV` (self-filters via `canAccessRoute`).
+
+**Features:** list view (dense table + mobile cards, Active/Archived tabs, Department/Type/Status
+filters, computed status pills — Upcoming / Due Today / Overdue *N*d / Paid); Add/Edit modal (password
+reveal toggle); Record Payment + Log Top-up modals (client-side invoice upload to the private bucket);
+per-subscription history (payment/top-up entries with "Paid *N* days late" / "On time", invoice view);
+Calendar view (month grid with due-date dots + weekly summary); Spending Overview (INR month/year
+totals, by-type + by-department donuts, 12-month trend bar — all code-split Recharts); Monthly report
+export (CSV / XLSX for a picked month).
+
+**Key decisions:**
+
+- **Currency is never auto-converted** — `paid_amount_inr` is always the manually-entered INR; the
+  original-currency `rate`/`amount` is stored separately. All spending analytics use the INR figure.
+- **Status is computed, not stored** (`utils/subscription-status.ts`, IST-anchored via `ist.ts`).
+- **Departments reuse `app_domain`** (no new enum, R-01).
+- **Password storage tradeoff (flagged → hardened same day):** login/password round-trip exactly
+  (never sanitized — that would corrupt them). As first shipped they were stored reversibly,
+  RLS-protected only. **This was hardened the same day — see the "encrypt `subscriptions.password` at
+  rest" entry above (migration 0157): the `password` column is now pgcrypto-encrypted with a
+  Vault-stored key, never sent to the client except on explicit reveal.** `login` stays plaintext
+  (a username).
+
+**Shared-util extensions (reuse-first):** `formatCurrency`/`formatCurrencyCompact` gained `EUR`;
+`export.ts` gained a generic `buildSingleSheetXLSX` (the lead workbook stayed lead-specific).
+
+**Files:** `supabase/migrations/2026080600015{4,5,6}_*.sql`; `src/lib/constants/subscription-constants.ts`,
+`src/lib/types/subscription.ts`, `src/lib/utils/subscription-status.ts`,
+`src/lib/validations/subscription-schema.ts`, `src/lib/services/subscriptions-service.ts`,
+`src/lib/actions/subscriptions.ts`; `src/components/subscriptions/*` (12 components);
+`src/app/(dashboard)/subscriptions/{page,loading}.tsx`. Edited: `numbers.ts`, `export.ts`,
+`form-errors.ts`, `route-permissions.ts`, `Sidebar.tsx`. Typecheck clean (0 errors).
+
+---
+
 ## 2026-06-26 — Fix: new deal doesn't appear on /deals for a long time after creation
 
 **Why:** Recording a deal via the New Deal modal (and the lead→Won path) inserted the row, but

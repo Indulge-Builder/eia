@@ -28,6 +28,7 @@ import {
   Telescope,
   GraduationCap,
   NotebookPen,
+  Receipt,
 } from "lucide-react";
 import { signOutUser } from "@/lib/actions/profiles";
 import { useSuggestionFeedback } from "@/components/suggestions/SuggestionFeedbackProvider";
@@ -55,6 +56,7 @@ const MAIN_NAV: NavItem[] = [
   { href: "/leads",     label: "Leads",     icon: UserRound       },
   { href: "/deals",     label: "Deals",     icon: Trophy          },
   { href: "/tasks",     label: "Tasks",     icon: CheckSquare     },
+  { href: "/subscriptions", label: "Subscriptions", icon: Receipt },
   { href: "/whatsapp",  label: "WhatsApp",  icon: MessageCircle   },
   { href: "/helpdesk",  label: "Helpdesk",  icon: BookOpen        },
   { href: "/notes",     label: "Notes",     icon: NotebookPen     },

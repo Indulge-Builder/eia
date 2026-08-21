@@ -19,8 +19,12 @@
 
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname;
+// fileURLToPath, not .pathname — on Windows .pathname yields '/E:/Serene/',
+// which join() turns into '\E:\Serene\src' (→ 'E:\E:\Serene\src'). POSIX was
+// unaffected, so this only ever broke local Windows builds.
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const SRC = join(ROOT, 'src');
 
 const SCAN_EXTENSIONS = new Set(['.ts', '.tsx', '.css']);

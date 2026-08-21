@@ -1,0 +1,409 @@
+// subscriptions-service.ts — read-only DB queries for the Subscriptions & Bills
+// Tracker (Phase 1). Session client + RLS throughout (the SELECT policy scopes to
+// admin/founder + finance/tech). Writes live in actions/subscriptions.ts (admin
+// client). The generated Database type does not yet include these tables, so `.from`
+// is cast `as any` and results are cast to the hand-declared row types in
+// types/subscription.ts (the revival-service convention until `database.ts` regen).
+//
+// No Redis — internal-scale data (dozens of subscriptions); freshness via
+// revalidatePath('/subscriptions') on write.
+import { createClient } from "@/lib/supabase/server";
+import type { AppDomain } from "@/lib/types/database";
+import type {
+  SubscriptionType,
+  SubscriptionStatus,
+  SubscriptionCurrency,
+} from "@/lib/constants/subscription-constants";
+import type {
+  SubscriptionRow,
+  SubscriptionPaymentRow,
+  SubscriptionTopupRow,
+  SubscriptionListItem,
+} from "@/lib/types/subscription";
+import { computeSubscriptionStatus, istTodayISO } from "@/lib/utils/subscription-status";
+import { toIst } from "@/lib/utils/ist";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyClient = any;
+
+export type SubscriptionFilters = {
+  archived?: boolean; // false (default) = active tab; true = archived tab
+  departments?: AppDomain[];
+  types?: SubscriptionType[];
+  statuses?: SubscriptionStatus[]; // computed — filtered in JS
+  search?: string;
+};
+
+/**
+ * The subscription list for the tracker table. Fetches subscriptions (dept/type/
+ * archived filtered in SQL), then batch-fetches their payments + top-ups to compute
+ * each row's status + latest-INR-paid. The status filter is applied in JS because
+ * status is computed, not stored.
+ */
+export async function getSubscriptions(
+  filters: SubscriptionFilters = {},
+): Promise<SubscriptionListItem[]> {
+  const supabase = (await createClient()) as AnyClient;
+  const archived = filters.archived ?? false;
+
+  let query = supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("is_archived", archived)
+    .order("created_at", { ascending: false });
+
+  if (filters.departments && filters.departments.length > 0) {
+    query = query.overlaps("departments", filters.departments);
+  }
+  if (filters.types && filters.types.length > 0) {
+    query = query.in("type", filters.types);
+  }
+  if (filters.search && filters.search.trim()) {
+    query = query.ilike("name", `%${filters.search.trim()}%`);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) {
+    if (error) console.error("[subscriptions-service] getSubscriptions error:", error);
+    return [];
+  }
+  const subs = data as unknown as SubscriptionRow[];
+  if (subs.length === 0) return [];
+
+  const ids = subs.map((s) => s.id);
+  const [paymentsRes, topupsRes] = await Promise.all([
+    supabase.from("subscription_payments").select("*").in("subscription_id", ids),
+    supabase.from("subscription_topups").select("*").in("subscription_id", ids),
+  ]);
+  const payments = (paymentsRes.data ?? []) as unknown as SubscriptionPaymentRow[];
+  const topups = (topupsRes.data ?? []) as unknown as SubscriptionTopupRow[];
+
+  const paymentsBySub = groupBy(payments, (p) => p.subscription_id);
+  const topupsBySub = groupBy(topups, (t) => t.subscription_id);
+
+  const now = new Date();
+  let items: SubscriptionListItem[] = subs.map((sub) => {
+    const subPayments = paymentsBySub.get(sub.id) ?? [];
+    const subTopups = topupsBySub.get(sub.id) ?? [];
+    const computed = computeSubscriptionStatus(sub, subPayments, now);
+
+    // Cycles already settled by a payment — keyed the same way isCyclePaid matches
+    // (year-month for monthly/other, year for yearly). Powers the Calendar view's
+    // per-month status; [] for top_up (no due cycle).
+    const paidCycleKeys =
+      sub.type === "top_up"
+        ? []
+        : Array.from(
+            new Set(
+              subPayments.map((p) =>
+                sub.type === "yearly" ? p.due_date.slice(0, 4) : p.due_date.slice(0, 7),
+              ),
+            ),
+          );
+
+    let latestPaidInr: number | null = null;
+    let latestPaidAt: string | null = null;
+    if (sub.type === "top_up") {
+      const latest = maxBy(subTopups, (t) => t.topped_up_at);
+      if (latest) {
+        latestPaidInr = Number(latest.paid_amount_inr);
+        latestPaidAt = latest.topped_up_at;
+      }
+    } else {
+      const latest = maxBy(subPayments, (p) => p.paid_at);
+      if (latest) {
+        latestPaidInr = Number(latest.paid_amount_inr);
+        latestPaidAt = latest.paid_at;
+      }
+    }
+
+    return {
+      ...sub,
+      password: null, // encrypted at rest (0157) — never exposed in list payloads
+      status: computed.status,
+      daysOverdue: computed.daysOverdue,
+      currentDueDate: computed.currentDueDate,
+      latestPaidInr,
+      latestPaidAt,
+      paidCycleKeys,
+    };
+  });
+
+  if (filters.statuses && filters.statuses.length > 0) {
+    const wanted = new Set(filters.statuses);
+    items = items.filter((it) => it.status != null && wanted.has(it.status));
+  }
+
+  return items;
+}
+
+/**
+ * One subscription + its full payment + top-up history (newest first). The password
+ * is NEVER returned here (encrypted at rest, 0157) — `hasPassword` tells the UI
+ * whether to offer a reveal; the plaintext comes only from revealSubscriptionPasswordAction.
+ */
+export async function getSubscriptionDetail(id: string): Promise<{
+  subscription: SubscriptionRow;
+  hasPassword: boolean;
+  payments: SubscriptionPaymentRow[];
+  topups: SubscriptionTopupRow[];
+} | null> {
+  const supabase = (await createClient()) as AnyClient;
+  const [subRes, paymentsRes, topupsRes] = await Promise.all([
+    supabase.from("subscriptions").select("*").eq("id", id).maybeSingle(),
+    supabase
+      .from("subscription_payments")
+      .select("*")
+      .eq("subscription_id", id)
+      .order("due_date", { ascending: false }),
+    supabase
+      .from("subscription_topups")
+      .select("*")
+      .eq("subscription_id", id)
+      .order("topped_up_at", { ascending: false }),
+  ]);
+  if (subRes.error || !subRes.data) return null;
+  const raw = subRes.data as unknown as SubscriptionRow;
+  return {
+    subscription: { ...raw, password: null },
+    hasPassword: raw.password != null,
+    payments: (paymentsRes.data ?? []) as unknown as SubscriptionPaymentRow[],
+    topups: (topupsRes.data ?? []) as unknown as SubscriptionTopupRow[],
+  };
+}
+
+// ── Spending Overview ─────────────────────────────────────────────────────────
+export type SpendingOverview = {
+  monthToDateInr: number;
+  yearToDateInr: number;
+  activeCount: number;
+  byType: { type: SubscriptionType; inr: number }[];
+  byDepartment: { domain: AppDomain; inr: number }[];
+  monthlyTrend: { month: string; label: string; inr: number }[]; // last 12 IST months
+};
+
+/**
+ * INR outflow analytics (spending is always the manually-entered INR — never a
+ * currency conversion). Pies are year-to-date; the trend is the trailing 12 IST
+ * months. Department spend is split equally across a subscription's departments so
+ * the department pie still sums to the yearly total.
+ */
+export async function getSpendingOverview(): Promise<SpendingOverview> {
+  const supabase = (await createClient()) as AnyClient;
+  const [subsRes, paymentsRes, topupsRes] = await Promise.all([
+    supabase.from("subscriptions").select("id, type, departments, is_archived"),
+    supabase.from("subscription_payments").select("subscription_id, paid_at, paid_amount_inr").limit(10000),
+    supabase.from("subscription_topups").select("subscription_id, topped_up_at, paid_amount_inr").limit(10000),
+  ]);
+
+  const subs = (subsRes.data ?? []) as unknown as Pick<
+    SubscriptionRow,
+    "id" | "type" | "departments" | "is_archived"
+  >[];
+  const payments = (paymentsRes.data ?? []) as unknown as {
+    subscription_id: string;
+    paid_at: string;
+    paid_amount_inr: number;
+  }[];
+  const topups = (topupsRes.data ?? []) as unknown as {
+    subscription_id: string;
+    topped_up_at: string;
+    paid_amount_inr: number;
+  }[];
+
+  const subMap = new Map(subs.map((s) => [s.id, s]));
+  const now = new Date();
+  const todayISO = istTodayISO(now);
+  const curMonth = todayISO.slice(0, 7);
+  const curYear = todayISO.slice(0, 4);
+
+  const outflows = [
+    ...payments.map((p) => ({ subId: p.subscription_id, dateISO: p.paid_at, inr: Number(p.paid_amount_inr) })),
+    ...topups.map((t) => ({ subId: t.subscription_id, dateISO: t.topped_up_at, inr: Number(t.paid_amount_inr) })),
+  ];
+
+  let monthToDateInr = 0;
+  let yearToDateInr = 0;
+  const byTypeMap = new Map<SubscriptionType, number>();
+  const byDeptMap = new Map<AppDomain, number>();
+  const byMonth = new Map<string, number>();
+  const trendMonths = lastTwelveMonths(now);
+  for (const m of trendMonths) byMonth.set(m, 0);
+
+  for (const o of outflows) {
+    if (!Number.isFinite(o.inr)) continue;
+    const month = o.dateISO.slice(0, 7);
+    const year = o.dateISO.slice(0, 4);
+    if (month === curMonth) monthToDateInr += o.inr;
+    if (byMonth.has(month)) byMonth.set(month, (byMonth.get(month) ?? 0) + o.inr);
+
+    if (year !== curYear) continue;
+    yearToDateInr += o.inr;
+
+    const sub = subMap.get(o.subId);
+    if (!sub) continue;
+    byTypeMap.set(sub.type, (byTypeMap.get(sub.type) ?? 0) + o.inr);
+    const depts = sub.departments ?? [];
+    if (depts.length > 0) {
+      const share = o.inr / depts.length;
+      for (const d of depts) byDeptMap.set(d, (byDeptMap.get(d) ?? 0) + share);
+    }
+  }
+
+  return {
+    monthToDateInr: Math.round(monthToDateInr),
+    yearToDateInr: Math.round(yearToDateInr),
+    activeCount: subs.filter((s) => !s.is_archived).length,
+    byType: [...byTypeMap.entries()]
+      .map(([type, inr]) => ({ type, inr: Math.round(inr) }))
+      .sort((a, b) => b.inr - a.inr),
+    byDepartment: [...byDeptMap.entries()]
+      .map(([domain, inr]) => ({ domain, inr: Math.round(inr) }))
+      .sort((a, b) => b.inr - a.inr),
+    monthlyTrend: trendMonths.map((m) => ({
+      month: m,
+      label: monthLabel(m),
+      inr: Math.round(byMonth.get(m) ?? 0),
+    })),
+  };
+}
+
+// ── Monthly report (export data) ──────────────────────────────────────────────
+export type MonthlyReportRow = {
+  name: string;
+  departments: AppDomain[];
+  type: SubscriptionType;
+  currency: SubscriptionCurrency;
+  originalAmount: number; // payment.rate or topup.amount
+  inrPaid: number;
+  dueDate: string | null; // payment cycle date; null for a top-up
+  paidDate: string; // paid_at or topped_up_at
+};
+
+/**
+ * Every payment + top-up whose paid/top-up date falls in the given IST month
+ * ('YYYY-MM'), joined to its subscription's name/departments/type/currency — the
+ * flat rows the client turns into CSV/XLSX (buildCSV/buildXLSXWorkbook).
+ */
+export async function getSubscriptionMonthlyReport(month: string): Promise<MonthlyReportRow[]> {
+  const supabase = (await createClient()) as AnyClient;
+  const { start, endExclusive } = monthBounds(month);
+
+  const [subsRes, paymentsRes, topupsRes] = await Promise.all([
+    supabase.from("subscriptions").select("id, name, departments, type, currency"),
+    supabase
+      .from("subscription_payments")
+      .select("subscription_id, due_date, paid_at, rate, paid_amount_inr")
+      .gte("paid_at", start)
+      .lt("paid_at", endExclusive),
+    supabase
+      .from("subscription_topups")
+      .select("subscription_id, topped_up_at, amount, paid_amount_inr")
+      .gte("topped_up_at", start)
+      .lt("topped_up_at", endExclusive),
+  ]);
+
+  const subMap = new Map(
+    ((subsRes.data ?? []) as unknown as Pick<
+      SubscriptionRow,
+      "id" | "name" | "departments" | "type" | "currency"
+    >[]).map((s) => [s.id, s]),
+  );
+
+  const payments = (paymentsRes.data ?? []) as unknown as {
+    subscription_id: string;
+    due_date: string;
+    paid_at: string;
+    rate: number;
+    paid_amount_inr: number;
+  }[];
+  const topups = (topupsRes.data ?? []) as unknown as {
+    subscription_id: string;
+    topped_up_at: string;
+    amount: number;
+    paid_amount_inr: number;
+  }[];
+
+  const rows: MonthlyReportRow[] = [];
+  for (const p of payments) {
+    const sub = subMap.get(p.subscription_id);
+    if (!sub) continue;
+    rows.push({
+      name: sub.name,
+      departments: sub.departments,
+      type: sub.type,
+      currency: sub.currency,
+      originalAmount: Number(p.rate),
+      inrPaid: Number(p.paid_amount_inr),
+      dueDate: p.due_date,
+      paidDate: p.paid_at,
+    });
+  }
+  for (const t of topups) {
+    const sub = subMap.get(t.subscription_id);
+    if (!sub) continue;
+    rows.push({
+      name: sub.name,
+      departments: sub.departments,
+      type: sub.type,
+      currency: sub.currency,
+      originalAmount: Number(t.amount),
+      inrPaid: Number(t.paid_amount_inr),
+      dueDate: null,
+      paidDate: t.topped_up_at,
+    });
+  }
+  rows.sort((a, b) => (a.paidDate < b.paidDate ? -1 : a.paidDate > b.paidDate ? 1 : 0));
+  return rows;
+}
+
+// ── local helpers ─────────────────────────────────────────────────────────────
+function groupBy<T>(items: T[], keyFn: (item: T) => string): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const item of items) {
+    const key = keyFn(item);
+    const arr = map.get(key);
+    if (arr) arr.push(item);
+    else map.set(key, [item]);
+  }
+  return map;
+}
+
+function maxBy<T>(items: T[], keyFn: (item: T) => string): T | null {
+  let best: T | null = null;
+  let bestKey = "";
+  for (const item of items) {
+    const key = keyFn(item);
+    if (best === null || key > bestKey) {
+      best = item;
+      bestKey = key;
+    }
+  }
+  return best;
+}
+
+/** The trailing 12 IST months as 'YYYY-MM', oldest → newest (inclusive of now). */
+function lastTwelveMonths(now: Date): string[] {
+  const { year, month } = toIst(now); // month 0-indexed
+  const out: string[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(Date.UTC(year, month - i, 1));
+    out.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
+  }
+  return out;
+}
+
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+function monthLabel(ym: string): string {
+  const [y, m] = ym.split("-").map(Number);
+  return `${MONTH_NAMES[m - 1]} ${String(y).slice(2)}`;
+}
+
+/** { start: 'YYYY-MM-01', endExclusive: first day of next month } for a 'YYYY-MM'. */
+function monthBounds(month: string): { start: string; endExclusive: string } {
+  const [y, m] = month.split("-").map(Number); // m = 1..12
+  const start = `${month}-01`;
+  const next = new Date(Date.UTC(y, m, 1)); // m (0-idx) = next month
+  const endExclusive = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-01`;
+  return { start, endExclusive };
+}
