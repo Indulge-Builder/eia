@@ -6,6 +6,7 @@ import { requireProfile } from "@/lib/actions/_auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formErrors } from "@/lib/validations/form-errors";
 import type { ActionResult } from "@/lib/types";
+import type { Database } from "@/lib/types/database";
 import {
   CreateSubscriptionSchema,
   UpdateSubscriptionSchema,
@@ -31,9 +32,6 @@ import type {
   SubscriptionTopupRow,
 } from "@/lib/types/subscription";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyClient = any;
-
 const INVOICE_SIGNED_URL_TTL = 60 * 60; // 1 hour
 
 /**
@@ -57,7 +55,7 @@ function canManageSubscriptions(profile: { role: string; domain: string }): bool
  * followed by the id read. Null name → null (standalone bill, no tool).
  */
 async function resolveToolId(
-  admin: AnyClient,
+  admin: ReturnType<typeof createAdminClient>,
   toolName: string | null | undefined,
   callerId: string,
 ): Promise<{ ok: true; toolId: string | null } | { ok: false }> {
@@ -105,7 +103,7 @@ export async function createSubscriptionAction(
   });
   if (!shape.ok) return { data: null, error: shape.error };
 
-  const admin = createAdminClient() as AnyClient;
+  const admin = createAdminClient();
   const tool = await resolveToolId(admin, fields.tool_name, caller.id);
   if (!tool.ok) return { data: null, error: formErrors.subscriptionSaveFailed };
 
@@ -160,11 +158,11 @@ export async function updateSubscriptionAction(
   });
   if (!shape.ok) return { data: null, error: shape.error };
 
-  const admin = createAdminClient() as AnyClient;
+  const admin = createAdminClient();
   const tool = await resolveToolId(admin, fields.tool_name, auth.profile.id);
   if (!tool.ok) return { data: null, error: formErrors.subscriptionSaveFailed };
 
-  const updatePayload: Record<string, unknown> = {
+  const updatePayload: Database["public"]["Tables"]["subscriptions"]["Update"] = {
     name: fields.name,
     tool_id: tool.toolId,
     departments: fields.departments,
@@ -212,7 +210,7 @@ export async function archiveSubscriptionAction(
   if (!auth.ok) return auth.result;
   if (!canManageSubscriptions(auth.profile)) return { data: null, error: formErrors.unauthorized };
 
-  const admin = createAdminClient() as AnyClient;
+  const admin = createAdminClient();
   const { data, error } = await admin
     .from("subscriptions")
     .update({ is_archived: isArchived })
@@ -244,7 +242,7 @@ export async function addSubscriptionPaymentAction(
   const caller = auth.profile;
   if (!canManageSubscriptions(caller)) return { data: null, error: formErrors.unauthorized };
 
-  const admin = createAdminClient() as AnyClient;
+  const admin = createAdminClient();
   const { data: sub } = await admin
     .from("subscriptions")
     .select("id, type")
@@ -293,7 +291,7 @@ export async function addSubscriptionTopupAction(
   const caller = auth.profile;
   if (!canManageSubscriptions(caller)) return { data: null, error: formErrors.unauthorized };
 
-  const admin = createAdminClient() as AnyClient;
+  const admin = createAdminClient();
   const { data: sub } = await admin
     .from("subscriptions")
     .select("id, type")
@@ -396,7 +394,7 @@ export async function revealSubscriptionPasswordAction(
   if (!auth.ok) return auth.result;
   if (!canManageSubscriptions(auth.profile)) return { data: null, error: formErrors.unauthorized };
 
-  const admin = createAdminClient() as AnyClient;
+  const admin = createAdminClient();
   const { data: row, error } = await admin
     .from("subscriptions")
     .select("password")

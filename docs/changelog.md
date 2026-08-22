@@ -12,6 +12,43 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-22 — Subscriptions overview: per-tool spend, range + department filters, typed data layer
+
+**Why:** three follow-ups from the merge review, approved by the founder. The overview could not
+answer "how much did tech spend in July" or "what does Claude cost us in total", and the
+subscriptions data layer was still typed against hand casts because `database.ts` predated the
+new tables.
+
+**Per-tool spend (By Tool):** `getSpendingOverview` now returns `byTool` — spend grouped by the
+tool entity (0168), with untooled subscriptions ranked under their own name so the list always
+covers 100% of spend. Rendered as a ranked list with proportional accent tracks
+(`ToolRanking` in `SpendingOverview.tsx`, top 8 + a "+N more" line).
+
+**Overview filters:** new `OverviewFilters.tsx` composes the shared `FilterBar` (the Range preset
+panel + From/To Dates panel + a Department dropdown — the same chrome every list page uses; no
+fork). URL-driven (`department`, `date_from`, `date_to` — the house param names), so the RSC
+re-runs the aggregation server-side. Semantics in `getSpendingOverview(filters)`:
+
+- A department filter counts only the attributable share of shared bills (equal split), so
+  "tech" means tech's share, not the full amount of every shared subscription.
+- A date range scopes the tiles (the month/year tiles become "Spent in Range" + "Payments in
+  Range") and the By Type / By Department / By Tool breakdowns; the 12-month trend stays a
+  trailing window, department-filtered.
+
+**Typed data layer:** `database.ts` regenerated from the live schema (now includes
+`subscriptions`, `subscription_payments`, `subscription_topups`, `subscription_tools`,
+`subscription_password_reveals`). The whole-client `AnyClient = any` casts in
+`subscriptions-service.ts` and `actions/subscriptions.ts` are retired; the update payload is
+typed against the generated `Update` type (which immediately caught one untyped payload). Rows
+still narrow once per query to the union-typed rows in `types/subscription.ts` (the same posture
+as `Lead`).
+
+**Files:** `src/lib/types/database.ts` (regen), `lib/services/subscriptions-service.ts`,
+`lib/actions/subscriptions.ts`, `components/subscriptions/{OverviewFilters,SpendingOverview}.tsx`,
+`app/(dashboard)/subscriptions/page.tsx`, `docs/modules/subscriptions.md`.
+
+---
+
 ## 2026-08-21 — Subscriptions PR merge review: staleness fixes, yearly rollover, reveal audit, the tool entity
 
 **Why:** the Subscriptions tracker (PR #2) was reviewed for merge. The branch was cut 8 weeks before

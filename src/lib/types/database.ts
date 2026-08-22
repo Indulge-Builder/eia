@@ -12,33 +12,52 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      activity_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          domain: Database["public"]["Enums"]["app_domain"]
+          event_type: string
+          id: string
+          meta: Json
+          subject_id: string | null
+          subject_type: string
+          title: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          domain: Database["public"]["Enums"]["app_domain"]
+          event_type: string
+          id?: string
+          meta?: Json
+          subject_id?: string | null
+          subject_type: string
+          title?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          domain?: Database["public"]["Enums"]["app_domain"]
+          event_type?: string
+          id?: string
+          meta?: Json
+          subject_id?: string | null
+          subject_type?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ad_account_recharges: {
         Row: {
           ad_account: string
@@ -1047,6 +1066,7 @@ export type Database = {
       profiles: {
         Row: {
           app_icon: string
+          appearance: string
           avatar_url: string | null
           created_at: string
           domain: Database["public"]["Enums"]["app_domain"]
@@ -1067,6 +1087,7 @@ export type Database = {
         }
         Insert: {
           app_icon?: string
+          appearance?: string
           avatar_url?: string | null
           created_at?: string
           domain?: Database["public"]["Enums"]["app_domain"]
@@ -1087,6 +1108,7 @@ export type Database = {
         }
         Update: {
           app_icon?: string
+          appearance?: string
           avatar_url?: string | null
           created_at?: string
           domain?: Database["public"]["Enums"]["app_domain"]
@@ -1350,6 +1372,254 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      subscription_password_reveals: {
+        Row: {
+          id: string
+          revealed_at: string
+          revealed_by: string | null
+          subscription_id: string
+        }
+        Insert: {
+          id?: string
+          revealed_at?: string
+          revealed_by?: string | null
+          subscription_id: string
+        }
+        Update: {
+          id?: string
+          revealed_at?: string
+          revealed_by?: string | null
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_password_reveals_revealed_by_fkey"
+            columns: ["revealed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_password_reveals_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_payments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          invoice_path: string | null
+          notes: string | null
+          paid_amount_inr: number
+          paid_at: string
+          rate: number
+          subscription_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          invoice_path?: string | null
+          notes?: string | null
+          paid_amount_inr: number
+          paid_at: string
+          rate: number
+          subscription_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          invoice_path?: string | null
+          notes?: string | null
+          paid_amount_inr?: number
+          paid_at?: string
+          rate?: number
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_tools: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          name_key: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          name_key?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          name_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_tools_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_topups: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          invoice_path: string | null
+          notes: string | null
+          paid_amount_inr: number
+          subscription_id: string
+          topped_up_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          id?: string
+          invoice_path?: string | null
+          notes?: string | null
+          paid_amount_inr: number
+          subscription_id: string
+          topped_up_at: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          invoice_path?: string | null
+          notes?: string | null
+          paid_amount_inr?: number
+          subscription_id?: string
+          topped_up_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_topups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_topups_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          amount: number | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          departments: string[]
+          due_date: string | null
+          due_day: number | null
+          id: string
+          is_archived: boolean
+          login: string | null
+          name: string
+          notes: string | null
+          password: string | null
+          tool_id: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency: string
+          departments?: string[]
+          due_date?: string | null
+          due_day?: number | null
+          id?: string
+          is_archived?: boolean
+          login?: string | null
+          name: string
+          notes?: string | null
+          password?: string | null
+          tool_id?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          departments?: string[]
+          due_date?: string | null
+          due_day?: number | null
+          id?: string
+          is_archived?: boolean
+          login?: string | null
+          name?: string
+          notes?: string | null
+          password?: string | null
+          tool_id?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_tool_id_fkey"
+            columns: ["tool_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_tools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suggestions: {
         Row: {
@@ -2103,6 +2373,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      business_minutes_between: {
+        Args: { p_from: string; p_to: string }
+        Returns: number
+      }
       can_access_wa_conversation: {
         Args: { p_lead_id: string }
         Returns: boolean
@@ -2145,6 +2419,14 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      decrypt_subscription_password: {
+        Args: { p_ciphertext: string }
+        Returns: string
+      }
+      encrypt_subscription_password: {
+        Args: { p_plaintext: string }
+        Returns: string
       }
       generate_lead_slug: {
         Args: { p_first_name: string; p_last_name: string; p_phone: string }
@@ -2387,6 +2669,21 @@ export type Database = {
           total_deals: number
           total_leads: number
           total_revenue: number
+        }[]
+      }
+      get_domain_task_summary: {
+        Args: {
+          p_domain: Database["public"]["Enums"]["app_domain"]
+          p_from: string
+          p_to: string
+        }
+        Returns: {
+          agent_id: string
+          agent_name: string
+          completed_count: number
+          created_count: number
+          open_count: number
+          overdue_count: number
         }[]
       }
       get_gia_tasks: {
@@ -2750,9 +3047,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_domain: [

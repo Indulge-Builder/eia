@@ -1,9 +1,8 @@
 // subscriptions-service.ts — read-only DB queries for the Subscriptions & Bills
-// Tracker (Phase 1). Session client + RLS throughout (the SELECT policy scopes to
+// Tracker. Session client + RLS throughout (the SELECT policy scopes to
 // admin/founder + finance/tech). Writes live in actions/subscriptions.ts (admin
-// client). The generated Database type does not yet include these tables, so `.from`
-// is cast `as any` and results are cast to the hand-declared row types in
-// types/subscription.ts (the revival-service convention until `database.ts` regen).
+// client). database.ts includes these tables (regen 2026-08-22); rows are narrowed
+// once per query to the hand-declared union-typed rows in types/subscription.ts.
 //
 // No Redis — internal-scale data (dozens of subscriptions); freshness via
 // revalidatePath('/subscriptions') on write.
@@ -23,9 +22,6 @@ import type {
 import { computeSubscriptionStatus, istTodayISO } from "@/lib/utils/subscription-status";
 import { toIst } from "@/lib/utils/ist";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyClient = any;
-
 export type SubscriptionFilters = {
   archived?: boolean; // false (default) = active tab; true = archived tab
   departments?: AppDomain[];
@@ -43,7 +39,7 @@ export type SubscriptionFilters = {
 export async function getSubscriptions(
   filters: SubscriptionFilters = {},
 ): Promise<SubscriptionListItem[]> {
-  const supabase = (await createClient()) as AnyClient;
+  const supabase = await createClient();
   const archived = filters.archived ?? false;
 
   let query = supabase
@@ -151,7 +147,7 @@ export async function getSubscriptionDetail(id: string): Promise<{
   payments: SubscriptionPaymentRow[];
   topups: SubscriptionTopupRow[];
 } | null> {
-  const supabase = (await createClient()) as AnyClient;
+  const supabase = await createClient();
   const [subRes, paymentsRes, topupsRes] = await Promise.all([
     supabase.from("subscriptions").select("*, tool:subscription_tools(name)").eq("id", id).maybeSingle(),
     supabase
@@ -179,33 +175,54 @@ export async function getSubscriptionDetail(id: string): Promise<{
 }
 
 // ── Spending Overview ─────────────────────────────────────────────────────────
+export type SpendingOverviewFilters = {
+  /** Restrict to these departments — amounts count only the attributable share
+   *  (a [tech, concierge] bill filtered to tech contributes half). */
+  departments?: AppDomain[];
+  /** 'YYYY-MM-DD' inclusive. Either side may be open. When set, the tiles gain a
+   *  range total and the breakdowns cover the range instead of year-to-date. */
+  from?: string | null;
+  to?: string | null;
+};
+
 export type SpendingOverview = {
   monthToDateInr: number;
   yearToDateInr: number;
+  rangeInr: number | null;   // total inside the explicit from/to range; null when no range set
+  rangeCount: number | null; // payments + top-ups inside the range; null when no range set
   activeCount: number;
   byType: { type: SubscriptionType; inr: number }[];
   byDepartment: { domain: AppDomain; inr: number }[];
+  /** Per-tool ranking. Untooled subscriptions rank under their own name, so the
+   *  list always covers 100% of spend. */
+  byTool: { tool: string; inr: number }[];
   monthlyTrend: { month: string; label: string; inr: number }[]; // last 12 IST months
 };
 
 /**
  * INR outflow analytics (spending is always the manually-entered INR — never a
- * currency conversion). Pies are year-to-date; the trend is the trailing 12 IST
- * months. Department spend is split equally across a subscription's departments so
- * the department pie still sums to the yearly total.
+ * currency conversion). Department spend is split equally across a subscription's
+ * departments; a department filter counts only that attributable share, so
+ * "how much did tech spend" means tech's share of shared bills. Breakdowns cover
+ * the selected from/to range when one is set, year-to-date otherwise. The trend
+ * is always the trailing 12 IST months (department-filtered, range-independent).
  */
-export async function getSpendingOverview(): Promise<SpendingOverview> {
-  const supabase = (await createClient()) as AnyClient;
+export async function getSpendingOverview(
+  filters: SpendingOverviewFilters = {},
+): Promise<SpendingOverview> {
+  const supabase = await createClient();
   const [subsRes, paymentsRes, topupsRes] = await Promise.all([
-    supabase.from("subscriptions").select("id, type, departments, is_archived"),
+    supabase
+      .from("subscriptions")
+      .select("id, name, type, departments, is_archived, tool:subscription_tools(name)"),
     supabase.from("subscription_payments").select("subscription_id, paid_at, paid_amount_inr").limit(10000),
     supabase.from("subscription_topups").select("subscription_id, topped_up_at, paid_amount_inr").limit(10000),
   ]);
 
-  const subs = (subsRes.data ?? []) as unknown as Pick<
+  const subs = (subsRes.data ?? []) as unknown as (Pick<
     SubscriptionRow,
-    "id" | "type" | "departments" | "is_archived"
-  >[];
+    "id" | "name" | "type" | "departments" | "is_archived"
+  > & { tool: { name: string } | null })[];
   const payments = (paymentsRes.data ?? []) as unknown as {
     subscription_id: string;
     paid_at: string;
@@ -216,6 +233,15 @@ export async function getSpendingOverview(): Promise<SpendingOverview> {
     topped_up_at: string;
     paid_amount_inr: number;
   }[];
+
+  const deptFilter = filters.departments && filters.departments.length > 0
+    ? new Set<AppDomain>(filters.departments)
+    : null;
+  const from = filters.from ?? null;
+  const to = filters.to ?? null;
+  const hasRange = from != null || to != null;
+  const inRange = (dateISO: string) =>
+    (from == null || dateISO >= from) && (to == null || dateISO <= to);
 
   const subMap = new Map(subs.map((s) => [s.id, s]));
   const now = new Date();
@@ -230,41 +256,73 @@ export async function getSpendingOverview(): Promise<SpendingOverview> {
 
   let monthToDateInr = 0;
   let yearToDateInr = 0;
+  let rangeInr = 0;
+  let rangeCount = 0;
   const byTypeMap = new Map<SubscriptionType, number>();
   const byDeptMap = new Map<AppDomain, number>();
+  const byToolMap = new Map<string, number>();
   const byMonth = new Map<string, number>();
   const trendMonths = lastTwelveMonths(now);
   for (const m of trendMonths) byMonth.set(m, 0);
 
   for (const o of outflows) {
     if (!Number.isFinite(o.inr)) continue;
-    const month = o.dateISO.slice(0, 7);
-    const year = o.dateISO.slice(0, 4);
-    if (month === curMonth) monthToDateInr += o.inr;
-    if (byMonth.has(month)) byMonth.set(month, (byMonth.get(month) ?? 0) + o.inr);
-
-    if (year !== curYear) continue;
-    yearToDateInr += o.inr;
-
     const sub = subMap.get(o.subId);
     if (!sub) continue;
-    byTypeMap.set(sub.type, (byTypeMap.get(sub.type) ?? 0) + o.inr);
     const depts = sub.departments ?? [];
+
+    // The amount attributable to the selected departments (equal split).
+    let scoped = o.inr;
+    if (deptFilter) {
+      const matched = depts.filter((d) => deptFilter.has(d)).length;
+      if (matched === 0 || depts.length === 0) continue;
+      scoped = (o.inr / depts.length) * matched;
+    }
+
+    const month = o.dateISO.slice(0, 7);
+    const year = o.dateISO.slice(0, 4);
+    if (month === curMonth) monthToDateInr += scoped;
+    if (year === curYear) yearToDateInr += scoped;
+    if (byMonth.has(month)) byMonth.set(month, (byMonth.get(month) ?? 0) + scoped);
+    if (hasRange && inRange(o.dateISO)) {
+      rangeInr += scoped;
+      rangeCount += 1;
+    }
+
+    // Breakdowns cover the range when set, year-to-date otherwise.
+    const inScope = hasRange ? inRange(o.dateISO) : year === curYear;
+    if (!inScope) continue;
+    byTypeMap.set(sub.type, (byTypeMap.get(sub.type) ?? 0) + scoped);
+    const toolKey = sub.tool?.name ?? sub.name;
+    byToolMap.set(toolKey, (byToolMap.get(toolKey) ?? 0) + scoped);
     if (depts.length > 0) {
       const share = o.inr / depts.length;
-      for (const d of depts) byDeptMap.set(d, (byDeptMap.get(d) ?? 0) + share);
+      for (const d of depts) {
+        if (deptFilter && !deptFilter.has(d)) continue;
+        byDeptMap.set(d, (byDeptMap.get(d) ?? 0) + share);
+      }
     }
   }
+
+  const activeSubs = subs.filter((s) => !s.is_archived);
+  const activeCount = deptFilter
+    ? activeSubs.filter((s) => (s.departments ?? []).some((d) => deptFilter.has(d))).length
+    : activeSubs.length;
 
   return {
     monthToDateInr: Math.round(monthToDateInr),
     yearToDateInr: Math.round(yearToDateInr),
-    activeCount: subs.filter((s) => !s.is_archived).length,
+    rangeInr: hasRange ? Math.round(rangeInr) : null,
+    rangeCount: hasRange ? rangeCount : null,
+    activeCount,
     byType: [...byTypeMap.entries()]
       .map(([type, inr]) => ({ type, inr: Math.round(inr) }))
       .sort((a, b) => b.inr - a.inr),
     byDepartment: [...byDeptMap.entries()]
       .map(([domain, inr]) => ({ domain, inr: Math.round(inr) }))
+      .sort((a, b) => b.inr - a.inr),
+    byTool: [...byToolMap.entries()]
+      .map(([tool, inr]) => ({ tool, inr: Math.round(inr) }))
       .sort((a, b) => b.inr - a.inr),
     monthlyTrend: trendMonths.map((m) => ({
       month: m,
@@ -292,7 +350,7 @@ export type MonthlyReportRow = {
  * flat rows the client turns into CSV/XLSX (buildCSV/buildXLSXWorkbook).
  */
 export async function getSubscriptionMonthlyReport(month: string): Promise<MonthlyReportRow[]> {
-  const supabase = (await createClient()) as AnyClient;
+  const supabase = await createClient();
   const { start, endExclusive } = monthBounds(month);
 
   const [subsRes, paymentsRes, topupsRes] = await Promise.all([

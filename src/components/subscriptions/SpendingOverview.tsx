@@ -46,8 +46,17 @@ export function SpendingOverview({ data }: { data: SpendingOverviewData }) {
           gap: "var(--space-4)",
         }}
       >
-        <StatTile label="Spent This Month" value={formatCurrency(data.monthToDateInr, "INR")} />
-        <StatTile label="Spent This Year" value={formatCurrency(data.yearToDateInr, "INR")} />
+        {data.rangeInr != null ? (
+          <>
+            <StatTile label="Spent in Range" value={formatCurrency(data.rangeInr, "INR")} />
+            <StatTile label="Payments in Range" value={String(data.rangeCount ?? 0)} />
+          </>
+        ) : (
+          <>
+            <StatTile label="Spent This Month" value={formatCurrency(data.monthToDateInr, "INR")} />
+            <StatTile label="Spent This Year" value={formatCurrency(data.yearToDateInr, "INR")} />
+          </>
+        )}
         <StatTile label="Active Subscriptions" value={String(data.activeCount)} />
       </div>
 
@@ -84,6 +93,15 @@ export function SpendingOverview({ data }: { data: SpendingOverviewData }) {
             </ChartCard>
           </div>
 
+          {/* Per-tool ranking */}
+          <ChartCard title="By Tool">
+            {data.byTool.length > 0 ? (
+              <ToolRanking rows={data.byTool} />
+            ) : (
+              <EmptyState variant="inline" title="No data yet." />
+            )}
+          </ChartCard>
+
           {/* Trend */}
           <ChartCard title="Monthly Spend (last 12 months)">
             <BarChart
@@ -103,6 +121,86 @@ export function SpendingOverview({ data }: { data: SpendingOverviewData }) {
   );
 }
 
+
+const TOOL_RANKING_MAX = 8;
+
+/** Ranked per-tool spend list: name + INR + a proportional track. Static widths
+ *  (no width animation — Never-Do list applies to animation, not layout). */
+function ToolRanking({ rows }: { rows: { tool: string; inr: number }[] }) {
+  const top = rows.slice(0, TOOL_RANKING_MAX);
+  const rest = rows.slice(TOOL_RANKING_MAX);
+  const restInr = rest.reduce((sum, r) => sum + r.inr, 0);
+  const max = Math.max(...top.map((r) => r.inr), 1);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+      {top.map((r) => (
+        <div key={r.tool}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "baseline",
+              gap: "var(--space-3)",
+              marginBottom: "var(--space-1)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "var(--text-sm)",
+                color: "var(--theme-text-primary)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {r.tool}
+            </span>
+            <span
+              style={{
+                fontSize: "var(--text-sm)",
+                fontFamily: "var(--font-mono)",
+                fontVariantNumeric: "tabular-nums",
+                color: "var(--theme-text-secondary)",
+                flexShrink: 0,
+              }}
+            >
+              {formatCurrency(r.inr, "INR")}
+            </span>
+          </div>
+          <div
+            style={{
+              height: 6,
+              borderRadius: "var(--radius-full)",
+              background: "var(--theme-paper-subtle)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${Math.max((r.inr / max) * 100, 2)}%`,
+                height: "100%",
+                borderRadius: "var(--radius-full)",
+                background: "var(--theme-accent)",
+              }}
+            />
+          </div>
+        </div>
+      ))}
+      {rest.length > 0 && (
+        <p
+          style={{
+            margin: 0,
+            fontSize: "var(--text-xs)",
+            color: "var(--theme-text-tertiary)",
+          }}
+        >
+          + {rest.length} more {rest.length === 1 ? "tool" : "tools"} · {formatCurrency(restInr, "INR")}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (

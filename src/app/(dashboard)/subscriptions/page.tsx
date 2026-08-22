@@ -10,6 +10,7 @@ import { AddSubscriptionButton } from "@/components/subscriptions/AddSubscriptio
 import { SubscriptionExportButton } from "@/components/subscriptions/SubscriptionExportButton";
 import { SubscriptionViewTabs } from "@/components/subscriptions/SubscriptionViewTabs";
 import { SubscriptionFilters } from "@/components/subscriptions/SubscriptionFilters";
+import { OverviewFilters } from "@/components/subscriptions/OverviewFilters";
 import { SubscriptionsTable } from "@/components/subscriptions/SubscriptionsTable";
 import { SubscriptionCalendar } from "@/components/subscriptions/SubscriptionCalendar";
 import { SpendingOverview } from "@/components/subscriptions/SpendingOverview";
@@ -37,11 +38,26 @@ type ContentProps = {
   types: SubscriptionType[];
   statuses: SubscriptionStatus[];
   search: string | null;
+  dateFrom: string | null;
+  dateTo: string | null;
 };
 
-async function SubscriptionContent({ view, tab, departments, types, statuses, search }: ContentProps) {
+async function SubscriptionContent({
+  view,
+  tab,
+  departments,
+  types,
+  statuses,
+  search,
+  dateFrom,
+  dateTo,
+}: ContentProps) {
   if (view === "overview") {
-    const data = await getSpendingOverview();
+    const data = await getSpendingOverview({
+      departments: departments.length ? departments : undefined,
+      from: dateFrom,
+      to: dateTo,
+    });
     return <SpendingOverview data={data} />;
   }
   if (view === "calendar") {
@@ -105,8 +121,10 @@ export default async function SubscriptionsPage({
   const types = getMulti<SubscriptionType>(sp.type);
   const statuses = getMulti<SubscriptionStatus>(sp.status);
   const search = getStr(sp.search);
+  const dateFrom = getStr(sp.date_from);
+  const dateTo = getStr(sp.date_to);
 
-  const contentKey = JSON.stringify({ view, tab, departments, types, statuses, search });
+  const contentKey = JSON.stringify({ view, tab, departments, types, statuses, search, dateFrom, dateTo });
 
   return (
     <main className="flex-1 p-4 sm:p-6 lg:p-8">
@@ -126,10 +144,15 @@ export default async function SubscriptionsPage({
         <SubscriptionViewTabs />
       </div>
 
-      {/* Filter bar (list view only) */}
+      {/* Filter bar (list + overview views) */}
       {view === "list" && (
         <div className="px-5 py-4 mb-4 rounded-md border border-(--theme-paper-border) bg-(--theme-paper) shadow-(--shadow-1)">
           <SubscriptionFilters />
+        </div>
+      )}
+      {view === "overview" && (
+        <div className="px-5 py-4 mb-4 rounded-md border border-(--theme-paper-border) bg-(--theme-paper) shadow-(--shadow-1)">
+          <OverviewFilters />
         </div>
       )}
 
@@ -137,6 +160,8 @@ export default async function SubscriptionsPage({
         <SubscriptionContent
           view={view}
           tab={tab}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
           departments={departments}
           types={types}
           statuses={statuses}

@@ -100,6 +100,11 @@ never leaves the DB.
   columns, never converted), dates, client-side invoice upload, notes.
 - **History** (`SubscriptionHistoryModal`) — summary (with on-demand password reveal) + payment/top-up
   history ("Paid *N* days late" / "On time", invoice view).
+- **Overview** (`SpendingOverview` + `OverviewFilters`) — INR outflow tiles, By Billing Type /
+  By Department donuts, the By Tool ranked list (top 8 + rest), and the 12-month trend. Filterable
+  by department and date range via the shared `FilterBar` (Range presets + From/To). A department
+  filter counts the attributable share of shared bills; a date range rescopes the tiles and
+  breakdowns (the trend stays a trailing 12 months).
 - **Calendar** (`SubscriptionCalendar`) — month grid with a due-date dot per day + weekly summary; click
   a due item → history.
 - **Overview** (`SpendingOverview`) — INR month/year totals, by-type + by-department donuts, 12-month
@@ -130,8 +135,8 @@ Phase 1 is code-complete and typechecks clean, but it is **not live until the mi
 
 1. Apply migrations **0163–0168** to the Supabase project. **0166 needs the `pgcrypto` + `supabase_vault`
    extensions** (standard on Supabase; the migration enables them via `create extension if not exists`).
-2. (Recommended) regenerate `database.ts` (`supabase gen types typescript --local`) to drop the interim
-   `as any` table casts.
+2. `database.ts` was regenerated against the live schema on 2026-08-22 — the interim `as any`
+   table casts in the subscriptions service/actions are retired.
 
 ## Phase 2 (not built)
 
