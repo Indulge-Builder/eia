@@ -27,6 +27,7 @@ import {
   GraduationCap,
   NotebookPen,
   Receipt,
+  MessagesSquare,
 } from "lucide-react";
 import { signOutUser } from "@/lib/actions/profiles";
 import { useSuggestionFeedback } from "@/components/suggestions/SuggestionFeedbackProvider";
@@ -98,6 +99,7 @@ function getConfigurationNav(isPrivileged: boolean): NavItem[] {
 }
 
 const ADMIN_NAV: NavItem[] = [
+  { href: "/sia", label: "Sia", icon: MessagesSquare },
   { href: "/admin/users", label: "User Management", icon: Shield },
   { href: "/admin/usage", label: "Usage", icon: Activity },
   { href: "/admin/suggestions", label: "Suggestions", icon: MessageSquarePlus },
@@ -112,6 +114,7 @@ const MOBILE_TRIGGER_PATHS = new Set<string>([
   "/admin/ad-creatives",
   "/admin/elaya-training",
   "/settings",
+  "/sia",
   "/admin/users",
   "/admin/usage",
   "/admin/suggestions",

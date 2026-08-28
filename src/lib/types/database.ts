@@ -10,7 +10,32 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -2927,6 +2952,1169 @@ export type Database = {
       [_ in never]: never
     }
   }
+  sia: {
+    Tables: {
+      wag_auth_state: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      wag_contacts: {
+        Row: {
+          business_name: string | null
+          client_id: string | null
+          created_at: string
+          first_seen_at: string
+          jid: string
+          last_seen_at: string
+          lid: string | null
+          participant_role: string
+          phone: string | null
+          push_name: string | null
+          staff_profile_id: string | null
+          updated_at: string
+          vendor_id: string | null
+        }
+        Insert: {
+          business_name?: string | null
+          client_id?: string | null
+          created_at?: string
+          first_seen_at?: string
+          jid: string
+          last_seen_at?: string
+          lid?: string | null
+          participant_role?: string
+          phone?: string | null
+          push_name?: string | null
+          staff_profile_id?: string | null
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Update: {
+          business_name?: string | null
+          client_id?: string | null
+          created_at?: string
+          first_seen_at?: string
+          jid?: string
+          last_seen_at?: string
+          lid?: string | null
+          participant_role?: string
+          phone?: string | null
+          push_name?: string | null
+          staff_profile_id?: string | null
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Relationships: []
+      }
+      wag_group_members: {
+        Row: {
+          group_jid: string
+          joined_at: string
+          left_at: string | null
+          member_jid: string
+          role: string
+        }
+        Insert: {
+          group_jid: string
+          joined_at?: string
+          left_at?: string | null
+          member_jid: string
+          role?: string
+        }
+        Update: {
+          group_jid?: string
+          joined_at?: string
+          left_at?: string | null
+          member_jid?: string
+          role?: string
+        }
+        Relationships: []
+      }
+      wag_groups: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          description: string | null
+          group_jid: string
+          group_kind: string
+          is_active: boolean
+          member_count: number | null
+          owner_jid: string | null
+          subject: string | null
+          updated_at: string
+          vendor_id: string | null
+          watcher_joined_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          group_jid: string
+          group_kind?: string
+          is_active?: boolean
+          member_count?: number | null
+          owner_jid?: string | null
+          subject?: string | null
+          updated_at?: string
+          vendor_id?: string | null
+          watcher_joined_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          description?: string | null
+          group_jid?: string
+          group_kind?: string
+          is_active?: boolean
+          member_count?: number | null
+          owner_jid?: string | null
+          subject?: string | null
+          updated_at?: string
+          vendor_id?: string | null
+          watcher_joined_at?: string | null
+        }
+        Relationships: []
+      }
+      wag_media: {
+        Row: {
+          attempts: number
+          chat_jid: string
+          created_at: string
+          download_status: string
+          duration_seconds: number | null
+          id: string
+          last_attempt_at: string | null
+          media_type: string
+          mime: string | null
+          sender_jid: string
+          size_bytes: number | null
+          storage_path: string | null
+          thumbnail_path: string | null
+          wa_message_id: string
+        }
+        Insert: {
+          attempts?: number
+          chat_jid: string
+          created_at?: string
+          download_status?: string
+          duration_seconds?: number | null
+          id?: string
+          last_attempt_at?: string | null
+          media_type: string
+          mime?: string | null
+          sender_jid: string
+          size_bytes?: number | null
+          storage_path?: string | null
+          thumbnail_path?: string | null
+          wa_message_id: string
+        }
+        Update: {
+          attempts?: number
+          chat_jid?: string
+          created_at?: string
+          download_status?: string
+          duration_seconds?: number | null
+          id?: string
+          last_attempt_at?: string | null
+          media_type?: string
+          mime?: string | null
+          sender_jid?: string
+          size_bytes?: number | null
+          storage_path?: string | null
+          thumbnail_path?: string | null
+          wa_message_id?: string
+        }
+        Relationships: []
+      }
+      wag_messages: {
+        Row: {
+          chat_jid: string
+          edit_of_wa_message_id: string | null
+          from_me: boolean
+          id: string
+          is_forwarded: boolean
+          is_revoked: boolean
+          normalizer_version: number
+          quoted_sender_jid: string | null
+          quoted_wa_message_id: string | null
+          raw: Json | null
+          received_at: string
+          sender_jid: string
+          source: string
+          text: string | null
+          type: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Insert: {
+          chat_jid: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Update: {
+          chat_jid?: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid?: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id?: string
+          wa_timestamp?: string
+        }
+        Relationships: []
+      }
+      wag_messages_2026_08: {
+        Row: {
+          chat_jid: string
+          edit_of_wa_message_id: string | null
+          from_me: boolean
+          id: string
+          is_forwarded: boolean
+          is_revoked: boolean
+          normalizer_version: number
+          quoted_sender_jid: string | null
+          quoted_wa_message_id: string | null
+          raw: Json | null
+          received_at: string
+          sender_jid: string
+          source: string
+          text: string | null
+          type: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Insert: {
+          chat_jid: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Update: {
+          chat_jid?: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid?: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id?: string
+          wa_timestamp?: string
+        }
+        Relationships: []
+      }
+      wag_messages_2026_09: {
+        Row: {
+          chat_jid: string
+          edit_of_wa_message_id: string | null
+          from_me: boolean
+          id: string
+          is_forwarded: boolean
+          is_revoked: boolean
+          normalizer_version: number
+          quoted_sender_jid: string | null
+          quoted_wa_message_id: string | null
+          raw: Json | null
+          received_at: string
+          sender_jid: string
+          source: string
+          text: string | null
+          type: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Insert: {
+          chat_jid: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Update: {
+          chat_jid?: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid?: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id?: string
+          wa_timestamp?: string
+        }
+        Relationships: []
+      }
+      wag_messages_2026_10: {
+        Row: {
+          chat_jid: string
+          edit_of_wa_message_id: string | null
+          from_me: boolean
+          id: string
+          is_forwarded: boolean
+          is_revoked: boolean
+          normalizer_version: number
+          quoted_sender_jid: string | null
+          quoted_wa_message_id: string | null
+          raw: Json | null
+          received_at: string
+          sender_jid: string
+          source: string
+          text: string | null
+          type: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Insert: {
+          chat_jid: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Update: {
+          chat_jid?: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid?: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id?: string
+          wa_timestamp?: string
+        }
+        Relationships: []
+      }
+      wag_messages_2026_11: {
+        Row: {
+          chat_jid: string
+          edit_of_wa_message_id: string | null
+          from_me: boolean
+          id: string
+          is_forwarded: boolean
+          is_revoked: boolean
+          normalizer_version: number
+          quoted_sender_jid: string | null
+          quoted_wa_message_id: string | null
+          raw: Json | null
+          received_at: string
+          sender_jid: string
+          source: string
+          text: string | null
+          type: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Insert: {
+          chat_jid: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Update: {
+          chat_jid?: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid?: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id?: string
+          wa_timestamp?: string
+        }
+        Relationships: []
+      }
+      wag_messages_2026_12: {
+        Row: {
+          chat_jid: string
+          edit_of_wa_message_id: string | null
+          from_me: boolean
+          id: string
+          is_forwarded: boolean
+          is_revoked: boolean
+          normalizer_version: number
+          quoted_sender_jid: string | null
+          quoted_wa_message_id: string | null
+          raw: Json | null
+          received_at: string
+          sender_jid: string
+          source: string
+          text: string | null
+          type: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Insert: {
+          chat_jid: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Update: {
+          chat_jid?: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid?: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id?: string
+          wa_timestamp?: string
+        }
+        Relationships: []
+      }
+      wag_messages_2027_01: {
+        Row: {
+          chat_jid: string
+          edit_of_wa_message_id: string | null
+          from_me: boolean
+          id: string
+          is_forwarded: boolean
+          is_revoked: boolean
+          normalizer_version: number
+          quoted_sender_jid: string | null
+          quoted_wa_message_id: string | null
+          raw: Json | null
+          received_at: string
+          sender_jid: string
+          source: string
+          text: string | null
+          type: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Insert: {
+          chat_jid: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Update: {
+          chat_jid?: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid?: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id?: string
+          wa_timestamp?: string
+        }
+        Relationships: []
+      }
+      wag_messages_2027_02: {
+        Row: {
+          chat_jid: string
+          edit_of_wa_message_id: string | null
+          from_me: boolean
+          id: string
+          is_forwarded: boolean
+          is_revoked: boolean
+          normalizer_version: number
+          quoted_sender_jid: string | null
+          quoted_wa_message_id: string | null
+          raw: Json | null
+          received_at: string
+          sender_jid: string
+          source: string
+          text: string | null
+          type: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Insert: {
+          chat_jid: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Update: {
+          chat_jid?: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid?: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id?: string
+          wa_timestamp?: string
+        }
+        Relationships: []
+      }
+      wag_messages_2027_03: {
+        Row: {
+          chat_jid: string
+          edit_of_wa_message_id: string | null
+          from_me: boolean
+          id: string
+          is_forwarded: boolean
+          is_revoked: boolean
+          normalizer_version: number
+          quoted_sender_jid: string | null
+          quoted_wa_message_id: string | null
+          raw: Json | null
+          received_at: string
+          sender_jid: string
+          source: string
+          text: string | null
+          type: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Insert: {
+          chat_jid: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Update: {
+          chat_jid?: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid?: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id?: string
+          wa_timestamp?: string
+        }
+        Relationships: []
+      }
+      wag_messages_default: {
+        Row: {
+          chat_jid: string
+          edit_of_wa_message_id: string | null
+          from_me: boolean
+          id: string
+          is_forwarded: boolean
+          is_revoked: boolean
+          normalizer_version: number
+          quoted_sender_jid: string | null
+          quoted_wa_message_id: string | null
+          raw: Json | null
+          received_at: string
+          sender_jid: string
+          source: string
+          text: string | null
+          type: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Insert: {
+          chat_jid: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id: string
+          wa_timestamp: string
+        }
+        Update: {
+          chat_jid?: string
+          edit_of_wa_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          is_forwarded?: boolean
+          is_revoked?: boolean
+          normalizer_version?: number
+          quoted_sender_jid?: string | null
+          quoted_wa_message_id?: string | null
+          raw?: Json | null
+          received_at?: string
+          sender_jid?: string
+          source?: string
+          text?: string | null
+          type?: string
+          wa_message_id?: string
+          wa_timestamp?: string
+        }
+        Relationships: []
+      }
+      wag_pipeline_cursors: {
+        Row: {
+          consumer_name: string
+          last_event_id: number | null
+          last_processed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          consumer_name: string
+          last_event_id?: number | null
+          last_processed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          consumer_name?: string
+          last_event_id?: number | null
+          last_processed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wag_raw_events: {
+        Row: {
+          account_jid: string | null
+          event_type: string
+          id: number
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          account_jid?: string | null
+          event_type: string
+          id?: never
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          account_jid?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
+      wag_raw_events_2026_08: {
+        Row: {
+          account_jid: string | null
+          event_type: string
+          id: number
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          account_jid?: string | null
+          event_type: string
+          id?: never
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          account_jid?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
+      wag_raw_events_2026_09: {
+        Row: {
+          account_jid: string | null
+          event_type: string
+          id: number
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          account_jid?: string | null
+          event_type: string
+          id?: never
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          account_jid?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
+      wag_raw_events_2026_10: {
+        Row: {
+          account_jid: string | null
+          event_type: string
+          id: number
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          account_jid?: string | null
+          event_type: string
+          id?: never
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          account_jid?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
+      wag_raw_events_2026_11: {
+        Row: {
+          account_jid: string | null
+          event_type: string
+          id: number
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          account_jid?: string | null
+          event_type: string
+          id?: never
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          account_jid?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
+      wag_raw_events_2026_12: {
+        Row: {
+          account_jid: string | null
+          event_type: string
+          id: number
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          account_jid?: string | null
+          event_type: string
+          id?: never
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          account_jid?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
+      wag_raw_events_2027_01: {
+        Row: {
+          account_jid: string | null
+          event_type: string
+          id: number
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          account_jid?: string | null
+          event_type: string
+          id?: never
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          account_jid?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
+      wag_raw_events_2027_02: {
+        Row: {
+          account_jid: string | null
+          event_type: string
+          id: number
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          account_jid?: string | null
+          event_type: string
+          id?: never
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          account_jid?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
+      wag_raw_events_2027_03: {
+        Row: {
+          account_jid: string | null
+          event_type: string
+          id: number
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          account_jid?: string | null
+          event_type: string
+          id?: never
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          account_jid?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
+      wag_raw_events_default: {
+        Row: {
+          account_jid: string | null
+          event_type: string
+          id: number
+          payload: Json
+          received_at: string
+        }
+        Insert: {
+          account_jid?: string | null
+          event_type: string
+          id?: never
+          payload: Json
+          received_at?: string
+        }
+        Update: {
+          account_jid?: string | null
+          event_type?: string
+          id?: never
+          payload?: Json
+          received_at?: string
+        }
+        Relationships: []
+      }
+      wag_reactions: {
+        Row: {
+          chat_jid: string
+          emoji: string
+          reacted_at: string
+          reactor_jid: string
+          target_sender_jid: string
+          wa_message_id: string
+        }
+        Insert: {
+          chat_jid: string
+          emoji: string
+          reacted_at?: string
+          reactor_jid: string
+          target_sender_jid: string
+          wa_message_id: string
+        }
+        Update: {
+          chat_jid?: string
+          emoji?: string
+          reacted_at?: string
+          reactor_jid?: string
+          target_sender_jid?: string
+          wa_message_id?: string
+        }
+        Relationships: []
+      }
+      wag_receipts: {
+        Row: {
+          chat_jid: string
+          delivered_at: string | null
+          participant_jid: string
+          played_at: string | null
+          read_at: string | null
+          updated_at: string
+          wa_message_id: string
+        }
+        Insert: {
+          chat_jid: string
+          delivered_at?: string | null
+          participant_jid: string
+          played_at?: string | null
+          read_at?: string | null
+          updated_at?: string
+          wa_message_id: string
+        }
+        Update: {
+          chat_jid?: string
+          delivered_at?: string | null
+          participant_jid?: string
+          played_at?: string | null
+          read_at?: string | null
+          updated_at?: string
+          wa_message_id?: string
+        }
+        Relationships: []
+      }
+      wag_watcher_status: {
+        Row: {
+          account_jid: string | null
+          beat_at: string
+          connected: boolean
+          id: number
+          state: string
+          state_since: string
+        }
+        Insert: {
+          account_jid?: string | null
+          beat_at?: string
+          connected?: boolean
+          id?: number
+          state?: string
+          state_since?: string
+        }
+        Update: {
+          account_jid?: string | null
+          beat_at?: string
+          connected?: boolean
+          id?: number
+          state?: string
+          state_since?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      wag_add_month_partition: {
+        Args: { p_month: string; p_parent: string }
+        Returns: undefined
+      }
+      wag_group_activity: {
+        Args: never
+        Returns: {
+          chat_jid: string
+          last_from_me: boolean
+          last_is_revoked: boolean
+          last_message_at: string
+          last_sender_name: string
+          last_text: string
+          last_type: string
+          message_count: number
+        }[]
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
@@ -3047,6 +4235,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_domain: [
@@ -3070,6 +4261,9 @@ export const Constants = {
       task_module: ["gia", "sia", "core"],
       user_role: ["founder", "admin", "manager", "agent", "guest"],
     },
+  },
+  sia: {
+    Enums: {},
   },
 } as const
 

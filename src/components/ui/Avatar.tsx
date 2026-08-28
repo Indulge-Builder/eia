@@ -35,7 +35,7 @@ const FONT_SIZE: Record<AvatarSize, string> = {
  * 6 semantic token pairs for avatar fallback colours.
  * Index derived from a simple name hash — ensures consistent colour per name.
  */
-const AVATAR_COLOUR_PAIRS: [string, string][] = [
+export const AVATAR_COLOUR_PAIRS: [string, string][] = [
   ['var(--color-info-light)',    'var(--color-info-text)'],
   ['var(--color-success-light)', 'var(--color-success-text)'],
   ['var(--color-warning-light)', 'var(--color-warning-text)'],

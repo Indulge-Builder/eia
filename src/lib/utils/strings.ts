@@ -14,8 +14,18 @@
 export function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  if (parts.length === 1) return firstGlyph(parts[0]).toUpperCase();
+  return (firstGlyph(parts[0]) + firstGlyph(parts[parts.length - 1])).toUpperCase();
+}
+
+/**
+ * First code point of a word. charAt(0) slices an emoji's UTF-16 surrogate pair
+ * in half — a lone surrogate the server serializes as U+FFFD while the client
+ * keeps the raw half, so SSR hydration diverges (live case: a WhatsApp group
+ * named "… 💸"). Array.from iterates by code point, keeping the emoji whole.
+ */
+function firstGlyph(word: string): string {
+  return Array.from(word)[0] ?? '';
 }
 
 export function hashString(value: string): number {

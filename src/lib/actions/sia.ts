@@ -1,0 +1,169 @@
+"use server";
+
+import { requireProfile } from "@/lib/actions/_auth";
+import {
+  getSiaGroupInfo,
+  getSiaGroups,
+  getSiaHealth,
+  getSiaMediaPayload,
+  getSiaMessages,
+  searchSiaMessages,
+  updateSiaGroupMapping,
+  type SiaGroupInfo,
+  type SiaGroupKind,
+  type SiaGroupRow,
+  type SiaHealth,
+  type SiaMediaPayload,
+  type SiaMessageRow,
+  type SiaSearchHit,
+} from "@/lib/services/sia-service";
+import { formErrors } from "@/lib/validations/form-errors";
+import type { ActionResult } from "@/lib/types";
+
+// Sia is admin/founder only (client conversations — the most sensitive data Indulge
+// holds). Every action here gates on that role; identity comes from the verified
+// profile, never the client (A-01).
+const SIA_ROLES = ["admin", "founder"] as const;
+const GROUP_KINDS: readonly SiaGroupKind[] = ["client", "vendor", "internal", "unmapped"];
+
+function isGroupJid(v: unknown): v is string {
+  return typeof v === "string" && v.endsWith("@g.us");
+}
+
+function isIsoTimestamp(v: unknown): v is string {
+  return typeof v === "string" && !Number.isNaN(Date.parse(v));
+}
+
+// ── getSiaGroupsAction — rail refresh + the control modal's mapping list ──
+export async function getSiaGroupsAction(): Promise<ActionResult<SiaGroupRow[]>> {
+  const auth = await requireProfile(SIA_ROLES);
+  if (!auth.ok) return auth.result;
+  try {
+    return { data: await getSiaGroups(), error: null };
+  } catch (err) {
+    console.error("[sia-action] getSiaGroups failed:", err);
+    return { data: null, error: formErrors.generic };
+  }
+}
+
+// ── getSiaGroupInfoAction — the group profile panel (members, description, owner) ──
+export async function getSiaGroupInfoAction(groupJid: string): Promise<ActionResult<SiaGroupInfo>> {
+  const auth = await requireProfile(SIA_ROLES);
+  if (!auth.ok) return auth.result;
+  if (!isGroupJid(groupJid)) return { data: null, error: formErrors.generic };
+  try {
+    const info = await getSiaGroupInfo(groupJid);
+    if (!info) return { data: null, error: formErrors.generic };
+    return { data: info, error: null };
+  } catch (err) {
+    console.error("[sia-action] getSiaGroupInfo failed:", err);
+    return { data: null, error: formErrors.generic };
+  }
+}
+
+// ── getSiaMessagesAction — keyset pager (before) + the 4s live tail (after) ──
+export async function getSiaMessagesAction(
+  groupJid: string,
+  opts?: { before?: string; after?: string },
+): Promise<ActionResult<{ messages: SiaMessageRow[]; hasMore: boolean }>> {
+  const auth = await requireProfile(SIA_ROLES);
+  if (!auth.ok) return auth.result;
+  if (!isGroupJid(groupJid)) return { data: null, error: formErrors.generic };
+  const before = opts?.before;
+  const after = opts?.after;
+  if (before !== undefined && !isIsoTimestamp(before)) return { data: null, error: formErrors.generic };
+  if (after !== undefined && !isIsoTimestamp(after)) return { data: null, error: formErrors.generic };
+  try {
+    return { data: await getSiaMessages(groupJid, { before, after }), error: null };
+  } catch (err) {
+    console.error("[sia-action] getSiaMessages failed:", err);
+    return { data: null, error: formErrors.generic };
+  }
+}
+
+// ── getSiaMediaAction — one downloaded media file as a data: URL for the viewer ──
+export async function getSiaMediaAction(
+  chatJid: string,
+  waMessageId: string,
+  senderJid: string,
+): Promise<ActionResult<SiaMediaPayload>> {
+  const auth = await requireProfile(SIA_ROLES);
+  if (!auth.ok) return auth.result;
+  if (!isGroupJid(chatJid)) return { data: null, error: formErrors.generic };
+  if (typeof waMessageId !== "string" || waMessageId.length === 0 || waMessageId.length > 256) {
+    return { data: null, error: formErrors.generic };
+  }
+  if (typeof senderJid !== "string" || senderJid.length === 0 || senderJid.length > 256) {
+    return { data: null, error: formErrors.generic };
+  }
+  try {
+    const { payload, reason } = await getSiaMediaPayload(chatJid, waMessageId, senderJid);
+    if (!payload) {
+      const copy =
+        reason === "too_large"
+          ? "This file is too large to preview here."
+          : reason === "not_ready"
+            ? "This file hasn't finished downloading yet."
+            : "This file isn't available.";
+      return { data: null, error: copy };
+    }
+    return { data: payload, error: null };
+  } catch (err) {
+    console.error("[sia-action] getSiaMedia failed:", err);
+    return { data: null, error: formErrors.generic };
+  }
+}
+
+// ── searchSiaMessagesAction — FTS over message bodies (optionally one group) ──
+export async function searchSiaMessagesAction(
+  query: string,
+  groupJid?: string,
+): Promise<ActionResult<SiaSearchHit[]>> {
+  const auth = await requireProfile(SIA_ROLES);
+  if (!auth.ok) return auth.result;
+  if (typeof query !== "string") return { data: null, error: formErrors.generic };
+  if (groupJid !== undefined && !isGroupJid(groupJid)) return { data: null, error: formErrors.generic };
+  try {
+    return { data: await searchSiaMessages(query, groupJid), error: null };
+  } catch (err) {
+    console.error("[sia-action] searchSiaMessages failed:", err);
+    return { data: null, error: formErrors.generic };
+  }
+}
+
+// ── getSiaHealthAction — the "is the ear alive" panel ──
+export async function getSiaHealthAction(): Promise<ActionResult<SiaHealth>> {
+  const auth = await requireProfile(SIA_ROLES);
+  if (!auth.ok) return auth.result;
+  try {
+    return { data: await getSiaHealth(), error: null };
+  } catch (err) {
+    console.error("[sia-action] getSiaHealth failed:", err);
+    return { data: null, error: formErrors.generic };
+  }
+}
+
+// ── updateSiaGroupMappingAction — classify a group + hide/show it ──
+export async function updateSiaGroupMappingAction(
+  groupJid: string,
+  patch: { group_kind?: SiaGroupKind; is_active?: boolean },
+): Promise<ActionResult<{ saved: true }>> {
+  const auth = await requireProfile(SIA_ROLES);
+  if (!auth.ok) return auth.result;
+  if (!isGroupJid(groupJid)) return { data: null, error: formErrors.generic };
+
+  const clean: { group_kind?: SiaGroupKind; is_active?: boolean } = {};
+  if (patch.group_kind !== undefined) {
+    if (!GROUP_KINDS.includes(patch.group_kind)) return { data: null, error: formErrors.generic };
+    clean.group_kind = patch.group_kind;
+  }
+  if (patch.is_active !== undefined) {
+    if (typeof patch.is_active !== "boolean") return { data: null, error: formErrors.generic };
+    clean.is_active = patch.is_active;
+  }
+  if (Object.keys(clean).length === 0) return { data: null, error: formErrors.generic };
+
+  const ok = await updateSiaGroupMapping(groupJid, clean);
+  if (!ok) return { data: null, error: formErrors.generic };
+  return { data: { saved: true }, error: null };
+}

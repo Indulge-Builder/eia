@@ -101,7 +101,17 @@ export const REDIS_KEYS = {
   // within ~1 snapshot window of the user going idle/hidden.
   presence: (userId: string) =>
     `presence:${userId}`,
+
+  // Sia watcher alarm latches (audit P0-2, heartbeat rework 2026-08-27). One
+  // latch per alert kind ('down' | 'session_lost' | 'unreachable' | 'quiet');
+  // present while that condition has already been announced. 55min TTL → roughly
+  // hourly reminders during a long incident; recovery clears every kind and
+  // fires the "recovered" note once.
+  siaAlert: (kind: string) => `sia:alert:${kind}`,
 } as const;
+
+/** The alarm kinds sia-silence.ts latches on (used to clear all on recovery). */
+export const SIA_ALERT_KINDS = ['down', 'session_lost', 'unreachable', 'quiet'] as const;
 
 // The glob the snapshot job SCANs to enumerate live presence keys.
 export const PRESENCE_KEY_PATTERN = 'presence:*';
