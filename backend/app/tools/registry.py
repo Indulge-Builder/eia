@@ -118,6 +118,36 @@ async def _search_leads(principal: Any, args: dict[str, Any]) -> Any:
             "The search term was too short to match on — showing recent leads instead. "
             "Ask the user for the full name or phone number."
         )
+
+    # Owner hint (agents only — the Node searchLeads protocol): an own-scoped
+    # empty search may still match a TEAMMATE's lead in the agent's domain.
+    # Name + owner only (no slug/id/phone) — informative, never access-widening.
+    if principal.role == "agent" and not rows and term:
+        owners = await supa.select(
+            "leads",
+            {
+                "select": "first_name, last_name, assignee:profiles!leads_assigned_to_fkey(full_name)",
+                "domain": f"eq.{principal.domain}",
+                "archived_at": "is.null",
+                "search_text": f"ilike.*{term.lower()}*",
+                "order": "created_at.desc",
+                "limit": "5",
+            },
+        )
+        hints = [
+            {
+                "name": _full_name(o.get("first_name"), o.get("last_name")),
+                "owner": (o.get("assignee") or {}).get("full_name") or "an unassigned queue",
+            }
+            for o in owners
+        ]
+        if hints:
+            result["ownedByTeammate"] = hints
+            result["note"] = (
+                "No leads matching that are assigned to this agent. The following matching "
+                "leads exist in their domain but belong to a teammate — the agent cannot act "
+                "on these; tell them who owns it and suggest asking a manager to reassign."
+            )
     return result
 
 
@@ -638,6 +668,176 @@ async def _get_helpdesk_content(principal: Any, args: dict[str, Any]) -> Any:
 
 
 # ═════════════════════════════════════════════
+# Escalations — the live-breach read (port of sla-service getEscalatedLeads +
+# getOverdueGiaTasks). Two truths, both computed the way the /escalations page
+# computes them so Elaya and the page can never disagree:
+#   • a breached lead = a non-cadence SLA timer that FIRED within the window,
+#     OR is still `pending` with its deadline already past (the fire-job may
+#     simply not have run) — kept ONLY while the policy's trigger status still
+#     matches the lead (a moved-on lead is resolved, not a live breach).
+#   • an overdue follow-up = an open gia task stamped overdue_at, OR whose
+#     due_at is already past (the stamp job may not have run).
+# ═════════════════════════════════════════════
+
+_ESCALATION_WINDOW_DAYS = 7
+_RECIPIENT_ORDER = {"agent": 0, "manager": 1, "founder": 2}
+
+
+def _oversight_domain(principal: Any) -> str | None:
+    return principal.domain if principal.role == "manager" else None
+
+
+async def _breached_leads(domain: str | None) -> list[dict[str, Any]]:
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+    window_start = (now - timedelta(days=_ESCALATION_WINDOW_DAYS)).isoformat()
+
+    params: dict[str, str] = {
+        "select": (
+            "lead_id, rule_code, status, fired_at, scheduled_fire_at, "
+            "leads!inner(id, slug, first_name, last_name, phone, domain, status, "
+            "assignee:profiles!leads_assigned_to_fkey(full_name))"
+        ),
+        "status": "in.(fired,pending)",
+        "or": f"(fired_at.gte.{window_start},and(status.eq.pending,scheduled_fire_at.lte.{now_iso}))",
+        "leads.archived_at": "is.null",
+        "leads.status": 'not.in.("won","lost","junk")',
+        "order": "scheduled_fire_at.desc",
+        "limit": "500",
+    }
+    if domain:
+        params["leads.domain"] = f"eq.{domain}"
+
+    import asyncio
+
+    timers, policies = await asyncio.gather(
+        supa.select("lead_sla_timers", params),
+        supa.select(
+            "sla_policies",
+            {"select": "code, trigger_kind, trigger_value, recipient_role", "active": "eq.true"},
+        ),
+    )
+    by_code = {p["code"]: p for p in policies}
+
+    grouped: dict[str, dict[str, Any]] = {}
+    recipient_sets: dict[str, set[str]] = {}
+    for row in timers:
+        lead = row.get("leads")
+        if not lead:
+            continue
+        if str(row.get("rule_code", "")).startswith("CAD-"):
+            continue
+        breached_at = (
+            row.get("fired_at")
+            if row.get("status") == "fired"
+            else row.get("scheduled_fire_at")
+            if row.get("scheduled_fire_at") and row["scheduled_fire_at"] <= now_iso
+            else None
+        )
+        if not breached_at or breached_at < window_start:
+            continue
+        policy = by_code.get(row.get("rule_code"))
+        if not policy or policy.get("trigger_kind") != "status":
+            continue
+        if policy.get("trigger_value") != lead.get("status"):
+            continue
+
+        recipient_sets.setdefault(lead["id"], set()).add(policy.get("recipient_role"))
+        existing = grouped.get(lead["id"])
+        if existing:
+            if breached_at > existing["breachedAt"]:
+                existing["breachedAt"] = breached_at
+        else:
+            grouped[lead["id"]] = {
+                "name": _full_name(lead.get("first_name"), lead.get("last_name")),
+                "slug": lead.get("slug"),
+                "status": lead.get("status"),
+                "phone": lead.get("phone"),
+                "domain": lead.get("domain"),
+                "assignee": (lead.get("assignee") or {}).get("full_name"),
+                "breachedAt": breached_at,
+            }
+
+    for lead_id, roles in recipient_sets.items():
+        if lead_id in grouped:
+            grouped[lead_id]["escalatesTo"] = sorted(roles, key=lambda r: _RECIPIENT_ORDER.get(r, 9))
+    return sorted(grouped.values(), key=lambda r: r["breachedAt"], reverse=True)
+
+
+async def _overdue_gia_tasks(domain: str | None) -> list[dict[str, Any]]:
+    from datetime import datetime, timezone
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    params: dict[str, str] = {
+        "select": (
+            "id, title, due_at, overdue_at, priority, assigned_to, "
+            "task_gia_meta!inner(lead_id, leads!inner(id, slug, first_name, last_name, domain))"
+        ),
+        "or": f"(overdue_at.not.is.null,and(due_at.not.is.null,due_at.lte.{now_iso}))",
+        "status": "in.(to_do,in_progress,in_review)",
+        "task_gia_meta.leads.archived_at": "is.null",
+        "order": "due_at.desc",
+        "limit": "100",
+    }
+    if domain:
+        params["task_gia_meta.leads.domain"] = f"eq.{domain}"
+    rows = await supa.select("tasks", params)
+
+    shaped = []
+    for r in rows:
+        meta = r.get("task_gia_meta") or {}
+        if isinstance(meta, list):  # !inner can come back as a 1-list
+            meta = meta[0] if meta else {}
+        lead = meta.get("leads")
+        if not lead:
+            continue
+        overdue_at = r.get("overdue_at") or (
+            r.get("due_at") if r.get("due_at") and r["due_at"] <= now_iso else None
+        )
+        if not overdue_at:
+            continue
+        shaped.append(
+            {
+                "title": r.get("title"),
+                "priority": r.get("priority"),
+                "dueAt": r.get("due_at"),
+                "overdueSince": overdue_at,
+                "_assigned_to": r.get("assigned_to"),
+                "leadName": _full_name(lead.get("first_name"), lead.get("last_name")),
+                "leadSlug": lead.get("slug"),
+                "domain": lead.get("domain"),
+            }
+        )
+    shaped.sort(key=lambda r: r["overdueSince"], reverse=True)
+
+    assignee_ids = sorted({s["_assigned_to"] for s in shaped if s["_assigned_to"]})
+    names: dict[str, str] = {}
+    if assignee_ids:
+        profiles = await supa.select(
+            "profiles", {"select": "id, full_name", "id": f"in.({','.join(assignee_ids)})"}
+        )
+        names = {p["id"]: p["full_name"] for p in profiles}
+    for s in shaped:
+        s["assignee"] = names.get(s.pop("_assigned_to") or "", None)
+    return shaped
+
+
+async def _get_escalations(principal: Any, _args: dict[str, Any]) -> Any:
+    import asyncio
+
+    domain = _oversight_domain(principal)
+    breached, overdue = await asyncio.gather(_breached_leads(domain), _overdue_gia_tasks(domain))
+    return {
+        "breachedLeads": breached[:25],
+        "overdueTasks": overdue[:25],
+        "totalBreachedLeads": len(breached),
+        "totalOverdueTasks": len(overdue),
+    }
+
+
+# ═════════════════════════════════════════════
 # Registry + role gates (mirrors readToolsForRole)
 # ═════════════════════════════════════════════
 
@@ -776,6 +976,19 @@ TOOLS: dict[str, Tool] = {
                 }
             ),
             run=_get_helpdesk_content,
+        ),
+        Tool(
+            name="get_escalations",
+            roles=_MANAGER_UP,
+            description=(
+                "Managers and above: the live escalations in your scope — leads whose SLA has "
+                "breached (going unworked past the deadline) AND lead follow-up tasks that are "
+                "overdue. Call when the user asks what needs attention, what's slipping, what's "
+                "breached or overdue, or how the team is keeping up. Manager → own domain; "
+                "admin/founder → all domains."
+            ),
+            input_schema=_obj({}),
+            run=_get_escalations,
         ),
         Tool(
             name="get_domain_health",

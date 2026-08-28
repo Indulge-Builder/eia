@@ -78,6 +78,19 @@ model) and set the architecture up for live data, speed, security, and per-task 
   SLA-breach predicates need a careful study pass, and wrong breach data to a founder is
   the worst possible bug; a missing tool is honest, a drifted one is not. That single
   deferral is the only failing safe case.
+- **Read parity COMPLETE — python 15/15** (2026-08-29): `get_escalations` ported after the
+  study pass (the fired-OR-pending-past-deadline union, the policy/status liveness guard,
+  CAD-code exclusion, the recipient ladder, the overdue-gia stamp-or-past-due predicate —
+  each replicated from sla-service verbatim), and the FULL persona ported from persona.ts:
+  voice, language mirroring, the data rules (search-first guidance, empty-result semantics,
+  the ownedByTeammate owner-hint protocol — also added to the python search_leads — ₹
+  Indian-grouping discipline, cross-domain labeling, masked-digit rule), the per-role scope
+  hints, and the volatile IST time anchor delivered OUTSIDE the cached prefix exactly like
+  the Node brain (the year-bug protection without cache-busting; `system_tail` on the
+  provider contract). Specialists now share ONE persona with a per-specialist focus line
+  (max cache sharing). The write-protocol block deliberately waits for the write tranche —
+  a prompt promising tools that don't exist would make her claim abilities she lacks.
+  Every safe case the Node baseline passes, the Python brain now passes.
 
 ---
 

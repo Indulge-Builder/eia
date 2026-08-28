@@ -23,6 +23,7 @@ import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 
+from app.brain.persona import build_system_prompt, build_time_context
 from app.brain.pii import mask_pii
 from app.brain.principal import StaffPrincipal
 from app.brain.specialists import Specialist
@@ -60,12 +61,11 @@ async def run_turn(
     tool_names = [n for n in specialist.toolset if n in principal.toolset]
     tools = [ToolDefinition(**d) for d in definitions_for(tool_names)]
 
-    # The volatile identity line sits OUTSIDE the cached prefix contract only
-    # if it changes within a turn — it does not; per-turn stability is enough.
-    system = (
-        f"{specialist.system}\n\n"
-        f"The user is {principal.display_name} ({principal.role}, {principal.domain} domain)."
-    )
+    # The FULL persona (ported from persona.ts) is the frozen cached prefix;
+    # the volatile time anchor rides as the uncached system tail — the Node
+    # brain's exact cache shape, and the year-bug protection.
+    system = build_system_prompt(principal, specialist.focus)
+    time_tail = build_time_context()
 
     messages: list[ChatMessage] = [ChatMessage(role="user", content=message)]
     result_text = ""
@@ -78,6 +78,7 @@ async def run_turn(
                 model=llm.model,
                 max_tokens=llm.max_tokens,
                 system=system,
+                system_tail=time_tail,
                 messages=messages,
                 tools=tools,
                 cache_prefix=True,

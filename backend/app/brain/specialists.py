@@ -25,21 +25,11 @@ from dataclasses import dataclass, field
 
 from app.llm.registry import JobType
 
-_SHARED_LAWS = (
-    "You are Elaya, the Indulge team's internal assistant. "
-    "Be warm, brief, and firm on real data — when the data disagrees with the "
-    "user, say so plainly. Mirror the user's language (English or Hinglish). "
-    "Never invent records: if a tool returns nothing, say so. "
-    "Identifiers (ids) in tool results are for tool use, never for prose. "
-    "All money is Indian Rupees."
-)
-
-
 @dataclass(frozen=True)
 class Specialist:
     id: str
     description: str  # what the router matches on
-    system: str
+    focus: str  # the ONE line that varies per specialist inside the shared persona
     toolset: list[str] = field(default_factory=list)
     job: JobType = "reasoning"
 
@@ -51,11 +41,8 @@ SPECIALISTS: dict[str, Specialist] = {
             "lead lookups, HOW MANY leads / lead counts, lead status/details/notes, cold or "
             "stale leads, client/prospect questions, talking points or case studies for pitching"
         ),
-        system=(
-            f"{_SHARED_LAWS} You handle LEAD questions: finding leads, their details and "
-            "notes, which are going cold, and the Call Intelligence library for pitching. "
-            "Ground every answer in a tool call."
-        ),
+        focus=("Focus for this conversation: LEAD questions — finding leads, their details and "
+               "notes, which are going cold, and the Call Intelligence library for pitching."),
         toolset=["search_leads", "get_lead_details", "get_cold_leads", "get_helpdesk_content"],
     ),
     "tasks": Specialist(
@@ -64,25 +51,23 @@ SPECIALISTS: dict[str, Specialist] = {
             "the user's tasks, to-dos, follow-ups, deadlines, reminders, what's due, "
             "finding a teammate/colleague by name"
         ),
-        system=(
-            f"{_SHARED_LAWS} You handle TASK questions: open work, follow-ups, deadlines, "
-            "and resolving teammates by name. Ground every answer in a tool call."
-        ),
+        focus=("Focus for this conversation: the user's TASKS and follow-ups — open work, "
+               "deadlines, and resolving teammates by name."),
         toolset=["get_my_tasks", "find_teammate"],
     ),
     "analytics": Specialist(
         id="analytics",
         description=(
             "performance numbers, team roster, domain health scorecards, campaign performance, "
-            "ad spend and budget, revenue and deals, trends, comparisons, reports (NOT simple "
+            "ad spend and budget, revenue and deals, escalations / SLA breaches / overdue follow-ups "
+            "/ what needs attention or is slipping, trends, comparisons, reports (NOT simple "
             "lead lookups or lead counts — those are the leads category)"
         ),
-        system=(
-            f"{_SHARED_LAWS} You handle ANALYTICAL questions over business data: performance, "
-            "domain health, campaigns, budget, and deals. Ground every number in a tool call — "
-            "never estimate. When a cost has a zero denominator it is '—', never ₹0."
-        ),
+        focus=("Focus for this conversation: ANALYTICAL questions over business data — "
+               "performance, escalations, domain health, campaigns, budget, and deals. Ground "
+               "every number in a tool call; never estimate."),
         toolset=[
+            "get_escalations",
             "get_performance_snapshot",
             "get_domain_health",
             "get_campaigns",
@@ -94,10 +79,8 @@ SPECIALISTS: dict[str, Specialist] = {
     "general": Specialist(
         id="general",
         description="greetings, small talk, questions about Elaya/Serene itself, anything that fits nowhere else",
-        system=(
-            f"{_SHARED_LAWS} You handle general conversation and questions about Serene "
-            "itself. You may check the user's open tasks when they ask about their day."
-        ),
+        focus=("Focus for this conversation: general — greetings, questions about Serene "
+               "itself, and the user's day."),
         toolset=["get_my_tasks", "find_teammate", "get_helpdesk_content"],
     ),
 }

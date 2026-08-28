@@ -79,15 +79,24 @@ def _map_stop(reason: str | None) -> StopReason:
 
 
 async def complete(req: CompleteRequest) -> CompleteResult:
-    system: Any = req.system
     tools: list[dict[str, Any]] = [
         {"name": t.name, "description": t.description, "input_schema": t.input_schema}
         for t in req.tools
     ]
+    system: Any
     if req.cache_prefix:
-        system = [{"type": "text", "text": req.system, "cache_control": {"type": "ephemeral"}}]
+        # The breakpoint sits on the FROZEN persona block; the volatile tail
+        # (time anchor) follows it uncached — the Node brain's exact cache shape.
+        blocks: list[dict[str, Any]] = [
+            {"type": "text", "text": req.system, "cache_control": {"type": "ephemeral"}}
+        ]
+        if req.system_tail:
+            blocks.append({"type": "text", "text": req.system_tail})
+        system = blocks
         if tools:
             tools[-1]["cache_control"] = {"type": "ephemeral"}
+    else:
+        system = req.system + ("\n\n" + req.system_tail if req.system_tail else "")
 
     kwargs: dict[str, Any] = {
         "model": req.model,

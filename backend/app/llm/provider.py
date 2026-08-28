@@ -57,6 +57,10 @@ class CompleteRequest:
     # turn (no timestamps/UUIDs in system or tools) — same contract as the
     # Node provider.ts.
     cache_prefix: bool = False
+    # A VOLATILE trailing system block (the per-turn time anchor) delivered
+    # AFTER the cache_control breakpoint — it changes every request without
+    # busting the cached prefix. None = no tail.
+    system_tail: str | None = None
     on_text_delta: Callable[[str], Awaitable[None]] | None = None
 
 
