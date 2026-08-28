@@ -1,0 +1,41 @@
+# The Sia watcher — the Baileys WhatsApp ear on Fargate (Sia W1).
+# Backend Service: no exposed port, no ALB — liveness is observed from the data
+# (the /sia console's last-event dot reads sia.wag_raw_events).
+#
+# Full specification: https://aws.github.io/copilot-cli/docs/manifest/backend-service/
+
+name: watcher
+type: Backend Service
+
+image:
+  build:
+    dockerfile: ../connector/Dockerfile
+    context: ../connector
+
+cpu: 256
+memory: 512
+platform: linux/arm64   # Graviton — cheaper, and Apple Silicon builds it natively
+count: 1
+exec: true              # `copilot svc exec` for in-container debugging
+
+# Exactly ONE watcher may hold the WhatsApp session. `recreate` stops the old
+# task before starting the new one — two sockets on one session would
+# stream-conflict and log the number out.
+deployment:
+  rolling: recreate
+
+# Session identity lives in Postgres (sia.wag_auth_state, migration 0174).
+# No volume: the container is fully disposable (crash-only lifecycle). The EFS
+# mount that briefly lived here was removed with the 2026-08-27 audit (P0-1).
+
+variables:
+  NEXT_PUBLIC_SUPABASE_URL: https://xmucqqhbupudnzderchy.supabase.co
+  # Headless pairing: the watcher's own number → an 8-character pairing code in
+  # the logs instead of a QR (a QR arrives in CloudWatch batches and expires
+  # before it renders whole). Only used while the session is unregistered.
+  WAG_PAIR_NUMBER: "918956918040"
+  # Media bucket arrives as SIAMEDIA_NAME from the addons/sia-media.yml output;
+  # connector config falls back to it when WAG_MEDIA_BUCKET is unset.
+
+secrets:
+  SUPABASE_SERVICE_ROLE_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/SUPABASE_SERVICE_ROLE_KEY
