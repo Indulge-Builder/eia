@@ -1,26 +1,30 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { COUNT_UP_MS } from '@/lib/constants/motion';
+import React, { useEffect, useState } from 'react';
+import NumberFlow, { useCanAnimate } from '@number-flow/react';
+import { COUNT_UP_MS, EASE_OUT_EXPO, SLOW_DURATION } from '@/lib/constants/motion';
 
 /**
- * AnimatedNumber — living numbers (polish handoff §04).
+ * AnimatedNumber — living numbers (polish handoff §04; NumberFlow engine 2026-08-25).
  *
- * rAF count-up: 1.4s, ease-out-cubic (1-(1-p)^3), tabular-nums so digits
- * never jitter. Takes the ALREADY-FORMATTED display string (the output of
- * formatCount/formatCurrency/formatPercent — lib/utils/numbers.ts stays
- * the only formatter) and animates the numeric run inside it, preserving
- * any prefix/suffix ("₹", "%", "h", "↑ "). Intermediate frames group with
- * en-IN (the app's locale) and keep the target's decimal places; the
- * final frame always renders the original string verbatim, so the settled
- * value is byte-identical to the non-animated render.
+ * Takes the ALREADY-FORMATTED display string (the output of formatCount/
+ * formatCurrency/formatPercent — lib/utils/numbers.ts stays the only
+ * formatter), extracts the numeric run, and renders it through
+ * @number-flow/react: digits ROLL between values (odometer transition)
+ * instead of re-counting, driven by Intl.NumberFormat with the same locale
+ * the formatter used (en-IN default; en-US/$, en-IE/€ mirror numbers.ts),
+ * so the settled render matches the input string. Prefix/suffix ("₹", "%",
+ * "h", "↑ ") pass through NumberFlow's own affix slots.
  *
- * Re-runs when `value` changes — animating from the PREVIOUS value, not
- * from 0. Honors prefers-reduced-motion (jumps to final). Non-numeric
- * values ("—") render as-is.
+ * Mount keeps the count-up entrance: the first client frame starts at 0 and
+ * spins to the target over COUNT_UP_MS. Later `value` changes roll from the
+ * PREVIOUS value automatically. SSR/first paint render the final string
+ * verbatim (plain span). Reduced motion (via useCanAnimate) renders the
+ * plain string — no roll, no count-up. Non-numeric values ("—") render
+ * as-is. tabular-nums so digits never jitter.
  *
  * Server components render it directly (client leaf): StatTile, KPI
- * widgets, TargetMeter labels.
+ * widgets, TargetMeter labels, mobile MetricTile/RowCount.
  */
 
 export interface AnimatedNumberProps {
@@ -54,68 +58,60 @@ function parseValue(value: string): ParsedValue {
   };
 }
 
-function formatIntermediate(n: number, decimals: number): string {
-  return n.toLocaleString('en-IN', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
+/** numbers.ts formats USD with en-US and EUR with en-IE — mirror that so the
+    settled grouping is identical to the input string (en-IN groups lakhs). */
+function localeFor(prefix: string, suffix: string): string {
+  const affix = prefix + suffix;
+  if (affix.includes('$')) return 'en-US';
+  if (affix.includes('€')) return 'en-IE';
+  return 'en-IN';
 }
 
+const ROLL_EASE = `cubic-bezier(${EASE_OUT_EXPO.join(', ')})`;
+// COUNT_UP_MS is the sanctioned count-up tempo (motion.ts) — the roll keeps it.
+const ROLL_TIMING = { duration: COUNT_UP_MS, easing: ROLL_EASE };
+const FADE_TIMING = { duration: SLOW_DURATION * 1000, easing: 'ease-out' };
+
 export function AnimatedNumber({ value, className, style }: AnimatedNumberProps) {
-  // SSR/first paint renders the final string — the effect then counts up.
-  const [display, setDisplay] = useState(value);
-  const rafRef = useRef<number | null>(null);
-  // The numeric value currently on screen — the start point for the next run.
-  const shownRef = useRef(0);
+  const canAnimate = useCanAnimate();
+  // false on SSR/first paint — the plain final string renders until hydration.
+  const [ready, setReady] = useState(false);
+  // One post-mount frame at 0 gives the count-up entrance; then the target
+  // lands and NumberFlow rolls 0 → num. Later prop changes roll prev → next.
+  const [entered, setEntered] = useState(false);
 
   useEffect(() => {
-    const target = parseValue(value);
-    if (!target) {
-      setDisplay(value);
-      return;
-    }
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      shownRef.current = target.num;
-      setDisplay(value);
-      return;
-    }
+    setReady(true);
+    const raf = requestAnimationFrame(() => setEntered(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
-    const from = shownRef.current;
-    if (from === target.num) {
-      setDisplay(value);
-      return;
-    }
+  const target = parseValue(value);
+  const numStyle: React.CSSProperties = { fontVariantNumeric: 'tabular-nums', ...style };
 
-    const t0 = performance.now();
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - t0) / COUNT_UP_MS);
-      const eased = 1 - Math.pow(1 - p, 3);
-      const current = from + (target.num - from) * eased;
-      shownRef.current = current;
-      if (p < 1) {
-        setDisplay(target.prefix + formatIntermediate(current, target.decimals) + target.suffix);
-        rafRef.current = requestAnimationFrame(tick);
-      } else {
-        shownRef.current = target.num;
-        setDisplay(value); // settle on the original string verbatim
-      }
-    };
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
-  }, [value]);
+  if (!ready || !canAnimate || !target) {
+    return (
+      <span className={className} style={numStyle}>
+        {value}
+      </span>
+    );
+  }
 
   return (
-    <span
+    <NumberFlow
       className={className}
-      style={{ fontVariantNumeric: 'tabular-nums', ...style }}
-    >
-      {display}
-    </span>
+      style={numStyle}
+      value={entered ? target.num : 0}
+      locales={localeFor(target.prefix, target.suffix)}
+      format={{
+        minimumFractionDigits: target.decimals,
+        maximumFractionDigits: target.decimals,
+      }}
+      prefix={target.prefix}
+      suffix={target.suffix}
+      transformTiming={ROLL_TIMING}
+      spinTiming={ROLL_TIMING}
+      opacityTiming={FADE_TIMING}
+    />
   );
 }

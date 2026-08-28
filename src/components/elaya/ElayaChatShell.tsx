@@ -19,6 +19,7 @@ import { ElayaIdentityCard } from '@/components/elaya/ElayaIdentityCard';
 import { ElayaFeedbackCard } from '@/components/elaya/ElayaFeedbackCard';
 import { ElayaMessageBubble, type ElayaUiMessage } from '@/components/elaya/ElayaMessageBubble';
 import { streamElayaChat, toolStatusLabel } from '@/components/elaya/elaya-stream';
+import { ElayaStatusText } from '@/components/elaya/ElayaStatusText';
 
 type Props = {
   conversationId: string;
@@ -224,7 +225,7 @@ export function ElayaChatShell({
                 color: 'var(--theme-text-tertiary)',
               }}
             >
-              {statusLine ?? 'With you'}
+              <ElayaStatusText text={statusLine ?? 'With you'} />
             </span>
           </div>
           {capReached && (
@@ -305,7 +306,7 @@ export function ElayaChatShell({
                     color: 'var(--theme-text-tertiary)',
                   }}
                 >
-                  {statusLine}
+                  <ElayaStatusText text={statusLine} />
                 </span>
               </div>
             )}

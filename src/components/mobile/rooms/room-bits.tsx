@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { LogoSpinner } from '@/components/ui/LogoSpinner';
+import { AnimatedNumber } from '@/components/ui/AnimatedNumber';
 
 /**
  * Shared mobile-room presentation bits (mobile-ops.md §9). Display-only
@@ -54,7 +55,7 @@ export function MetricTile({
         className={`text-[22px] font-semibold leading-none ${valueColor}`}
         style={{ fontFamily: 'var(--font-serif)' }}
       >
-        {value}
+        <AnimatedNumber value={value} />
       </span>
       {sub && <span className="text-[11px] text-(--neu-text-tertiary)">{sub}</span>}
     </div>
@@ -145,7 +146,7 @@ export function RowCount({ value, token }: { value: string; token?: string }) {
       className="text-[15px] font-semibold"
       style={{ fontFamily: 'var(--font-serif)', color: token ?? 'var(--neu-text-primary)' }}
     >
-      {value}
+      <AnimatedNumber value={value} />
     </span>
   );
 }

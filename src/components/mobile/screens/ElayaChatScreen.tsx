@@ -12,6 +12,7 @@ import {
   toolStatusLabel,
 } from '@/components/elaya/elaya-stream';
 import type { ElayaUiMessage } from '@/components/elaya/ElayaMessageBubble';
+import { ElayaStatusText } from '@/components/elaya/ElayaStatusText';
 import { IconKnob } from '../buttons';
 
 /**
@@ -51,7 +52,7 @@ function TypingBubble({ statusLine }: { statusLine: string | null }) {
           className="text-[11px] text-(--neu-text-tertiary) pl-1"
           style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic' }}
         >
-          {statusLine}
+          <ElayaStatusText text={statusLine} />
         </span>
       )}
     </div>

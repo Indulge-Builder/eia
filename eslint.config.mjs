@@ -48,6 +48,9 @@ const eslintConfig = [
       'docs/**',
       'supabase/**',
       'scripts/**',           // one-off import/test scripts, run manually via tsx
+      'connector/**',         // the Sia Baileys watcher — its own Node package + tsconfig (connector/tsconfig.json); not part of the Next.js app lint scope
+      'backend/**',           // the Python backend (master-plan Step 2) — not TS/JS app code
+      'evals/**',             // the Python eval harness — not TS/JS app code
       'design_handoff_neumorphic_system/**', // design-reference bundle (HTML specimens + their runtime), never shipped
       'design_handoff_dark_mode/**',         // same — the dark-mode specimen + its generated support.js runtime
       'design_handoff_mobile_system/**',     // same — the mobile-system specimen bundle
