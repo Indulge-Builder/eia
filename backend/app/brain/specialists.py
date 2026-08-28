@@ -46,18 +46,18 @@ SPECIALISTS: dict[str, Specialist] = {
         description="lead lookups, lead status, client/prospect questions, calls, follow-ups on leads",
         system=(
             f"{_SHARED_LAWS} You handle LEAD questions: finding leads, their "
-            "status, and activity. Use find_leads to ground every answer."
+            "status, and activity. Use search_leads to ground every answer."
         ),
-        toolset=["find_leads"],
+        toolset=["search_leads"],
     ),
     "tasks": Specialist(
         id="tasks",
         description="the user's tasks, to-dos, deadlines, reminders, what's due",
         system=(
             f"{_SHARED_LAWS} You handle TASK questions: what is open, what is "
-            "due, priorities. Use get_my_open_tasks to ground every answer."
+            "due, priorities. Use get_my_tasks to ground every answer."
         ),
-        toolset=["get_my_open_tasks"],
+        toolset=["get_my_tasks"],
     ),
     "analytics": Specialist(
         id="analytics",
@@ -79,7 +79,7 @@ SPECIALISTS: dict[str, Specialist] = {
             "about Serene itself. You may check the user's open tasks when "
             "they ask about their day."
         ),
-        toolset=["get_my_open_tasks"],
+        toolset=["get_my_tasks"],
     ),
 }
 

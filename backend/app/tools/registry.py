@@ -31,10 +31,10 @@ class Tool:
     run: Callable[[Any, dict[str, Any]], Awaitable[Any]]  # (principal, args) -> result
 
 
-# ── get_my_open_tasks ────────────────────────────────────────────────────
+# ── get_my_tasks ────────────────────────────────────────────────────
 
 
-async def _get_my_open_tasks(principal: Any, _args: dict[str, Any]) -> Any:
+async def _get_my_tasks(principal: Any, _args: dict[str, Any]) -> Any:
     rows = await supa.select(
         "tasks",
         {
@@ -48,10 +48,10 @@ async def _get_my_open_tasks(principal: Any, _args: dict[str, Any]) -> Any:
     return {"tasks": rows, "count": len(rows)}
 
 
-# ── find_leads ───────────────────────────────────────────────────────────
+# ── search_leads ───────────────────────────────────────────────────────────
 
 
-async def _find_leads(principal: Any, args: dict[str, Any]) -> Any:
+async def _search_leads(principal: Any, args: dict[str, Any]) -> Any:
     query = str(args.get("query", "")).strip()
     if len(query) < 2:
         return {"error": "query too short"}
@@ -74,17 +74,17 @@ async def _find_leads(principal: Any, args: dict[str, Any]) -> Any:
 # ── Registry + role gates ────────────────────────────────────────────────
 
 TOOLS: dict[str, Tool] = {
-    "get_my_open_tasks": Tool(
-        name="get_my_open_tasks",
+    "get_my_tasks": Tool(
+        name="get_my_tasks",
         description=(
             "The caller's own open tasks (to do / in progress / in review), "
             "soonest deadline first. No arguments."
         ),
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
-        run=_get_my_open_tasks,
+        run=_get_my_tasks,
     ),
-    "find_leads": Tool(
-        name="find_leads",
+    "search_leads": Tool(
+        name="search_leads",
         description=(
             "Search leads by name, phone, email or city. Returns the caller's "
             "permitted slice only. Args: query (the search text)."
@@ -95,7 +95,7 @@ TOOLS: dict[str, Tool] = {
             "required": ["query"],
             "additionalProperties": False,
         },
-        run=_find_leads,
+        run=_search_leads,
     ),
 }
 

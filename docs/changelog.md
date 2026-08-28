@@ -55,6 +55,15 @@ model) and set the architecture up for live data, speed, security, and per-task 
 - **Deliberately still owned by the Node brain** (strangler rule; next tranches, evals as
   gate): the remaining 22 tools + write tools + confirmation resolver wiring, the full
   persona parity port, conversation persistence, the daily cap, the WhatsApp channel.
+- **The scoreboard is live** (`evals/run.py --target python`): the SAME 30-case exam now
+  examines either brain — node via the browser-identical cookie route, python via the
+  bearer-gated brain endpoint (same SSE frames, shared parser; the scorer's stream-tools
+  fallback covers the not-yet-ported persistence). First sitting: **python 7/15 safe cases**
+  (node baseline: all green) — every failure maps one-to-one to a not-yet-ported tool
+  (get_cold_leads, get_performance_snapshot, get_domain_health, get_escalations,
+  get_helpdesk_content, get_campaigns, search_deals), so the port backlog and the score
+  are now the same list. Python tool names align with the Node registry so parity is
+  measurable per tool.
 
 ---
 

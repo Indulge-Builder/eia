@@ -29,7 +29,7 @@ from pathlib import Path
 
 import yaml
 
-from harness.chat import send_message, smoke_auth
+from harness.chat import send_message, smoke_auth, smoke_brain
 from harness.config import EVALS_DIR, load_config
 from harness.fixtures import apply_setup
 from harness.score import score_step
@@ -50,6 +50,8 @@ def main() -> int:
     ap.add_argument("--include-tags", default="", help="comma list of tags to include (default: tagged cases are skipped)")
     ap.add_argument("--only", default="", help="run only cases whose id contains this substring")
     ap.add_argument("--base-url", default="", help="override EVAL_BASE_URL")
+    ap.add_argument("--target", default="node", choices=["node", "python"],
+                    help="which brain sits the exam: node (the live Next route, default) or python (the Step 3 brain)")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -64,12 +66,18 @@ def main() -> int:
     user_id = session["user"]["id"]
     db = Db(cfg)
 
-    if not smoke_auth(base_url, cookies):
+    if args.target == "python":
+        base_url = cfg.brain_url
+        if not smoke_brain(base_url, cfg.brain_secret):
+            print("✗ brain smoke check failed — wrong EVAL_BRAIN_SECRET or brain not running.")
+            print(f"  (is the Python brain up at {base_url}?)")
+            return 2
+    elif not smoke_auth(base_url, cookies):
         print("✗ auth smoke check failed — the app did not accept the session cookie.")
         print(f"  (is the app running at {base_url}? is the eval user active?)")
         return 2
 
-    print(f"✓ authed as {cfg.eval_email} against {base_url}")
+    print(f"✓ authed as {cfg.eval_email} against {base_url}  [target: {args.target}]")
     print(f"  {len(cases)} cases loaded from {len(golden_paths)} file(s)\n")
 
     results = []
@@ -96,7 +104,10 @@ def main() -> int:
             if case.get("setup"):
                 apply_setup(cfg, db, case["setup"])
             for step in case["steps"]:
-                turn = send_message(base_url, cookies, step["send"], conversation_id)
+                turn = send_message(
+                    base_url, cookies, step["send"], conversation_id,
+                    target=args.target, brain_secret=cfg.brain_secret, user_id=user_id,
+                )
                 if not turn.ok:
                     case_error = f"HTTP {turn.status_code}: {turn.rejected}"
                     break

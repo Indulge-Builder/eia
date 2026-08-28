@@ -38,6 +38,10 @@ class Config:
     eval_password: str
     upstash_url: str       # for fixture cache invalidation ("" = skip)
     upstash_token: str
+    # The Python brain (Step 3) — same exam, second brain. Local uvicorn by
+    # default; point EVAL_BRAIN_URL at the ALB to examine prod.
+    brain_url: str
+    brain_secret: str
 
     @property
     def project_ref(self) -> str:
@@ -79,4 +83,6 @@ def load_config() -> Config:
         eval_password=env["EVAL_USER_PASSWORD"],
         upstash_url=env.get("UPSTASH_REDIS_REST_URL", "").rstrip("/"),
         upstash_token=env.get("UPSTASH_REDIS_REST_TOKEN", ""),
+        brain_url=env.get("EVAL_BRAIN_URL", "http://localhost:8321").rstrip("/"),
+        brain_secret=env.get("EVAL_BRAIN_SECRET", ""),
     )
