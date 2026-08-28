@@ -1,0 +1,24 @@
+{
+  "name": "sia-connector",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The Sia WhatsApp watcher — Baileys ear, wag_ database writer. READ-ONLY: this process never sends a WhatsApp message.",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1119.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "baileys": "7.0.0-rc14",
+    "pino": "^9.0.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/qrcode-terminal": "^0.12.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
