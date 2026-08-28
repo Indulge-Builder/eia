@@ -51,6 +51,33 @@ async def select(
     return r.json()
 
 
+async def select_count(
+    table: str,
+    params: dict[str, str],
+    *,
+    schema: str = "public",
+) -> tuple[list[dict[str, Any]], int]:
+    """GET rows + the exact total count (Prefer: count=exact / Content-Range)."""
+    headers = {**_base_headers(schema), "Prefer": "count=exact"}
+    r = await client().get(f"/{table}", params=params, headers=headers)
+    r.raise_for_status()
+    total = 0
+    content_range = r.headers.get("content-range", "")
+    if "/" in content_range:
+        tail = content_range.rsplit("/", 1)[-1]
+        total = int(tail) if tail.isdigit() else 0
+    return r.json(), total
+
+
+async def rpc(fn: str, args: dict[str, Any], *, schema: str = "public") -> Any:
+    """Call a Postgres function via PostgREST — the SAME SECURITY DEFINER RPCs
+    the Node brain uses (service-role, revoked tier). Parity by construction:
+    identical SQL produces identical numbers on both brains."""
+    r = await client().post(f"/rpc/{fn}", json=args, headers=_base_headers(schema))
+    r.raise_for_status()
+    return r.json()
+
+
 async def select_one(
     table: str,
     params: dict[str, str],

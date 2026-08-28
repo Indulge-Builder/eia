@@ -18,6 +18,7 @@ the confirmation RESOLVER pre-step, write tools, the WhatsApp channel.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -31,6 +32,9 @@ from app.llm.provider import ChatMessage, CompleteRequest, ToolDefinition
 from app.tools.registry import definitions_for, execute_tool
 
 MAX_ITERATIONS = 6
+# The Node brain's TOOL_RESULT_MAX_CHARS — an oversized result is truncated the
+# same way on both brains so the model reads the same world from either.
+TOOL_RESULT_MAX_CHARS = 12_000
 
 
 @dataclass
@@ -90,17 +94,22 @@ async def run_turn(
         messages.append(
             ChatMessage(role="assistant", content=result.text, tool_calls=result.tool_calls)
         )
+        # Tools within one model turn are independent reads — run them
+        # CONCURRENTLY (a real latency win on multi-tool turns); results are
+        # appended in call order so the transcript stays deterministic.
         for call in result.tool_calls:
             tools_used.append(call.name)
             await on_tool(call.name)
-            raw = await execute_tool(principal, call.name, call.input)
+        raws = await asyncio.gather(
+            *(execute_tool(principal, c.name, c.input) for c in result.tool_calls)
+        )
+        for call, raw in zip(result.tool_calls, raws):
             masked = mask_pii(raw, depth)  # THE gateway — nothing skips it
+            serialized = json.dumps(masked, ensure_ascii=False, default=str)
+            if len(serialized) > TOOL_RESULT_MAX_CHARS:
+                serialized = serialized[:TOOL_RESULT_MAX_CHARS] + "…(truncated)"
             messages.append(
-                ChatMessage(
-                    role="tool",
-                    content=json.dumps(masked, ensure_ascii=False, default=str),
-                    tool_call_id=call.id,
-                )
+                ChatMessage(role="tool", content=serialized, tool_call_id=call.id)
             )
     else:
         # Ceiling hit — same calm posture as the Node brain.

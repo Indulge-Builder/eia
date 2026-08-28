@@ -64,6 +64,20 @@ model) and set the architecture up for live data, speed, security, and per-task 
   get_helpdesk_content, get_campaigns, search_deals), so the port backlog and the score
   are now the same list. Python tool names align with the Node registry so parity is
   measurable per tool.
+- **The read-tool tranche landed the same day — python 14/15** (from 7/15): eleven of the
+  twelve Node read tools ported. The heavy ones call the SAME SECURITY DEFINER RPCs the Node
+  data layer calls (`get_agent_roster_performance_for_elaya`, `get_agent_today_pulse_for_user`,
+  `get_domain_health_metrics`, `get_campaign_metrics`, `get_budget_summary`, `get_gia_tasks`,
+  `get_personal_tasks`, `get_group_task_summaries_for_user`) — identical SQL, identical
+  numbers by construction. Query-backed tools replicate the Node predicates exactly (the
+  going-cold definition, `canAccessLead`, the fuzzy teammate gate with soundex+levenshtein
+  ported byte-for-byte and the no-userId structural withhold, caps and truncation notes,
+  IST-anchored period boundaries in `core/periods.py`). The loop gained parallel tool
+  execution (independent reads in one model turn run concurrently) and the Node 12k
+  result ceiling. The ONE deliberate gap: `get_escalations` is deferred — its live
+  SLA-breach predicates need a careful study pass, and wrong breach data to a founder is
+  the worst possible bug; a missing tool is honest, a drifted one is not. That single
+  deferral is the only failing safe case.
 
 ---
 
