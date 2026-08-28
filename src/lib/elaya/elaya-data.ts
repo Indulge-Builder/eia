@@ -44,8 +44,10 @@ import {
   type OverdueTaskEscalationRow,
 } from '@/lib/services/sla-service';
 import { getDealsByRoleForElaya, type DealsResult } from '@/lib/services/deals-service';
-import { searchTeammatesForElaya } from '@/lib/services/profiles-service';
-import type { AssignableUser } from '@/lib/types';
+import {
+  searchTeammatesForElaya,
+  type TeammateSearchResult,
+} from '@/lib/services/profiles-service';
 import { getCampaignMetrics } from '@/lib/services/leads-service';
 import { getBudgetSummary, type BudgetCampaignRow } from '@/lib/services/ad-spend-service';
 import { GIA_DOMAINS } from '@/lib/constants/domains';
@@ -138,7 +140,7 @@ export function getColdLeads(principal: StaffPrincipal) {
 export async function findTeammates(
   _principal: StaffPrincipal,
   search: string,
-): Promise<AssignableUser[]> {
+): Promise<TeammateSearchResult> {
   return searchTeammatesForElaya(search, null);
 }
 

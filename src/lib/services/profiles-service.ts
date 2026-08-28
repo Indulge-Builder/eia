@@ -4,6 +4,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { canonicalizePhone } from "@/lib/utils/phone";
+import { nameMatchesFuzzy } from "@/lib/utils/fuzzy";
 import type { Database, Profile, UserRole, AppDomain } from "@/lib/types/database";
 import type { AssignableUser } from "@/lib/types";
 
@@ -78,10 +79,44 @@ export async function getActiveProfileByPhone(normalizedPhone: string): Promise<
  * only (reserved for a future agent-narrowing). The per-action assignment gate
  * (manager+ to assign to another) stays in the write tool — this is a READ.
  */
+/**
+ * First-name tokens of every active staff member — the Deepgram keyword-boost
+ * list for Elaya voice notes (transcription-service layer 1: hear "Arfam"
+ * correctly instead of minting "Arapham"). Admin client (sessionless webhook
+ * path); tiny table; fails soft to [] — a roster miss must never block a
+ * transcription.
+ */
+export async function getActiveStaffFirstNames(): Promise<string[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("is_active", true)
+    .neq("role", "guest")
+    .limit(200);
+  if (error || !data) {
+    if (error) console.warn("[profiles-service] staff-name boost read failed:", error.message);
+    return [];
+  }
+  const names = new Set<string>();
+  for (const row of data as { full_name: string | null }[]) {
+    const first = (row.full_name ?? "").trim().split(/\s+/)[0];
+    if (first && first.length >= 3) names.add(first);
+  }
+  return [...names];
+}
+
+export type TeammateSearchResult = {
+  users: AssignableUser[];
+  /** true = no exact/substring hit; these are SOUND-ALIKE matches (voice-artifact
+   *  names: "Arapham" → "Arfam"). The caller must confirm before assigning. */
+  fuzzy: boolean;
+};
+
 export async function searchTeammatesForElaya(
   search: string,
   scopeDomain?: AppDomain | null,
-): Promise<AssignableUser[]> {
+): Promise<TeammateSearchResult> {
   const supabase = createAdminClient();
   let query = supabase
     .from("profiles")
@@ -96,9 +131,33 @@ export async function searchTeammatesForElaya(
   const { data, error } = await query.order("full_name", { ascending: true }).limit(20);
   if (error || !data) {
     if (error) console.error("[profiles-service] searchTeammatesForElaya failed:", error.message);
-    return [];
+    return { users: [], fuzzy: false };
   }
-  return data as AssignableUser[];
+  if (data.length > 0 || !term) return { users: data as AssignableUser[], fuzzy: false };
+
+  // PHONETIC FALLBACK — the voice-artifact path. STT mangles names ("Arapham"
+  // for "Arfam", real transcript 2026-08), and a substring match finds nothing
+  // for those. The staff table is tiny, so fetch all active and rank in code
+  // via nameMatchesFuzzy (soundex + edit distance, lib/utils/fuzzy.ts). Results
+  // are flagged fuzzy: the tool layer tells the model to CONFIRM the person
+  // before assigning — a sound-alike guess must never silently pick a target.
+  let allQuery = supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, role, domain")
+    .eq("is_active", true)
+    .neq("role", "guest");
+  if (scopeDomain) allQuery = allQuery.eq("domain", scopeDomain);
+  const { data: all, error: allError } = await allQuery
+    .order("full_name", { ascending: true })
+    .limit(200);
+  if (allError || !all) {
+    if (allError) {
+      console.error("[profiles-service] teammate fuzzy fallback failed:", allError.message);
+    }
+    return { users: [], fuzzy: false };
+  }
+  const matches = (all as AssignableUser[]).filter((u) => nameMatchesFuzzy(u.full_name, term));
+  return { users: matches.slice(0, 5), fuzzy: matches.length > 0 };
 }
 
 /** Fetch a single profile by id. Returns null if not found. */

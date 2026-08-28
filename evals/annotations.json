@@ -1,0 +1,69 @@
+{
+  "71c82021-328e-435d-a665-07afe17e1f2e": {
+    "verdict": "needs_improvement",
+    "remark": "the name is ethan",
+    "conversation_id": "ea794f73-e835-4386-a19f-ef6e4388162e",
+    "user_message": "Evun ke lie ek task bana do send him to send a report to me at 4PM tomorrow.",
+    "elaya_reply": "Let me find Evun first!\n\nEvan Testman la refer karat aahat ka? Confirm kela ki task create karto.",
+    "tools": [
+      "find_teammate"
+    ],
+    "updated_at": "2026-08-27T08:02:44+00:00"
+  },
+  "18fe412e-d59c-46ed-adaa-e95a5ab17d18": {
+    "verdict": null,
+    "remark": "why it asked twice whether to update or not?",
+    "conversation_id": "75e2619d-9fa1-4907-aae7-3d8f51f1e14e",
+    "user_message": "Testak ka status touched par kar do",
+    "elaya_reply": "Testak naam se search karta hoon pehle.\n\nTestak Evalson mila — abhi status **New** hai. Inhe **Touched** par move karna chahte ho? Yes bolo toh confirm ho jayega.\n\nTestak Evalson ka status **New → Touched** karna hai. Confirm karna ho toh **yes** bolo! 👍",
+    "tools": [
+      "search_leads",
+      "update_lead_status"
+    ],
+    "updated_at": "2026-08-27T08:03:39+00:00"
+  },
+  "14c25b54-9d56-4f73-a57e-3e99bf8d8411": {
+    "verdict": null,
+    "remark": "no need to repeat the msg in hindi",
+    "conversation_id": "71f9cfc8-bfb6-43ca-ace1-f0e4903a4d97",
+    "user_message": "Testak ka status touched kar do",
+    "elaya_reply": "Pehle lead dhundte hain Testak ko.\n\nTestak Evalson milala — currently **New** status ahe. Touched karayचं आहे, confirm kara — yes bola tर update होईल.\n\n**Testak Evalson** ला New वरून **Touched** ला move करायचं आहे — confirm करायचं असेल तर **yes** बोला! 🙂",
+    "tools": [
+      "search_leads",
+      "update_lead_status"
+    ],
+    "updated_at": "2026-08-27T08:05:26+00:00"
+  },
+  "db073247-2ef3-4507-a664-36185d077004": {
+    "verdict": null,
+    "remark": "why in hindi? when the talk is in hingloish use hinglish if only hindi then also use hinglish, and if english then english",
+    "conversation_id": "50f36181-f4b1-4690-8f90-8ca373b0008c",
+    "user_message": "Testak ka status touched kar do",
+    "elaya_reply": "Testak नावाचं lead शोधतो आधी.\n\nTestak Evalson चा status **New** वरून **Touched** करायचा आहे — confirm करायचं का? Reply करा **yes**.\n\nTestak Evalson चा status **New → Touched** करायचा आहे. Confirm करण्यासाठी **yes** सांगा!",
+    "tools": [
+      "search_leads",
+      "update_lead_status"
+    ],
+    "updated_at": "2026-08-27T08:06:15+00:00"
+  },
+  "ff4be268-1cc5-4133-9f77-89bb0f60bfd7": {
+    "verdict": null,
+    "remark": "why you mized two language",
+    "conversation_id": "50f36181-f4b1-4690-8f90-8ca373b0008c",
+    "user_message": "no",
+    "elaya_reply": "Okay, status change cancel केला! काही और करायचं आहे का?",
+    "tools": [],
+    "updated_at": "2026-08-27T08:06:13+00:00"
+  },
+  "d72b13a1-b4d7-4e84-8a74-da5ca47c22b9": {
+    "verdict": "needs_improvement",
+    "remark": "",
+    "conversation_id": "48cf00da-4097-4ba3-86a3-203f0704ccdc",
+    "user_message": "Maine abhi Testak se baat ki, uska status touched par kar do",
+    "elaya_reply": "Testak Evalson mila — \"new\" status pe hai abhi. \"Touched\" karna chahte ho? Reply yes karo to confirm.\n\n(Actually, ek second — tumhi baat keली, to pehle call log karna better rahega. Kya ho gaya baat mein — connected tha, ho gaya baat? Outcome \"conversing\" mark karu?)\n\nActually, maine call log karne se status automatically \"touched\" ho jaata hai. Aur tumhi bolate ki baat ki — to `log_call` with out",
+    "tools": [
+      "search_leads"
+    ],
+    "updated_at": "2026-08-27T08:06:41+00:00"
+  }
+}

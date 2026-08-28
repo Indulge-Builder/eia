@@ -18,7 +18,10 @@
 import { sanitizeText } from '@/lib/utils/sanitize';
 import { normalizeWaPhone } from '@/lib/utils/phone';
 import { markdownToWhatsApp, truncateWhatsAppText } from '@/lib/utils/whatsapp-format';
-import { getActiveProfileByPhone } from '@/lib/services/profiles-service';
+import {
+  getActiveProfileByPhone,
+  getActiveStaffFirstNames,
+} from '@/lib/services/profiles-service';
 import { resolveLeadByPhone } from '@/lib/services/whatsapp-ingestion';
 import { sendElayaWhatsAppReply } from '@/lib/services/whatsapp-api';
 import { transcribeAudio } from '@/lib/services/transcription-service';
@@ -256,5 +259,10 @@ async function transcribeWhatsAppAudio(url: string, mimeType: string): Promise<s
   if (audio.byteLength > VOICE_MAX_BYTES) {
     throw new Error(`[elaya-whatsapp] voice-note too large: ${audio.byteLength} bytes`);
   }
-  return transcribeAudio(audio, mimeType || 'audio/ogg');
+  // Staff-roster keyword boost (layer 1 of name resolution): staff voice notes
+  // constantly name teammates ("Arfam ko bolo…"), and unboosted STT mangles
+  // those into artifacts ("Arapham"). Non-fatal — an empty roster just means
+  // an unboosted transcription.
+  const staffNames = await getActiveStaffFirstNames();
+  return transcribeAudio(audio, mimeType || 'audio/ogg', staffNames);
 }

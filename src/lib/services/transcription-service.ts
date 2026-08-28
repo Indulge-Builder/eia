@@ -33,6 +33,15 @@ type DeepgramResponse = {
 export async function transcribeAudio(
   audio: ArrayBuffer,
   mimeType: string,
+  /**
+   * Optional keyword boosts — proper nouns the audio is likely to contain
+   * (e.g. the staff roster's first names). Deepgram weights these during
+   * decoding, so "Arfam" transcribes as "Arfam" instead of the artifact
+   * "Arapham" (real 2026-08 transcript). Fixing the name AT THE SOURCE is
+   * layer 1 of the name-resolution defence; the phonetic find_teammate
+   * fallback (lib/utils/fuzzy.ts) is layer 2 for whatever still slips through.
+   */
+  keywords: string[] = [],
 ): Promise<string> {
   const apiKey = process.env.DEEPGRAM_API_KEY;
   if (!apiKey) {
@@ -44,6 +53,10 @@ export async function transcribeAudio(
     language: DEEPGRAM_LANGUAGE,
     smart_format: "true",
   });
+  for (const word of keywords.slice(0, 100)) {
+    const clean = word.trim();
+    if (clean.length >= 3) params.append("keywords", `${clean}:2`);
+  }
 
   const res = await fetch(`${DEEPGRAM_API_URL}?${params}`, {
     method: "POST",

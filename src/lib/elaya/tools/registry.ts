@@ -388,26 +388,38 @@ const findTeammate: ElayaTool = {
   },
   run: async (principal, input) => {
     const { search } = input as { search: string };
-    // Staff identity via the data seam — admin-client + principal-scoped (admin/founder:
-    // all; manager/agent: own domain), so it works on BOTH channels and never leaks
-    // cross-domain staff to a manager/agent. This is the name→userId lookup that keeps
-    // "create a task for <person>" off search_leads.
-    const matches = await elayaData.findTeammates(principal, search);
+    // Staff identity via the data seam — admin-client + principal-scoped, so it works
+    // on BOTH channels. This is the name→userId lookup that keeps "create a task for
+    // <person>" off search_leads. When the exact/substring lookup finds nothing, the
+    // service falls back to SOUND-ALIKE matching (voice-transcription artifacts:
+    // "Arapham" → "Arfam") and flags the result fuzzy — those matches must be
+    // CONFIRMED with the user before any assignment.
+    const result = await elayaData.findTeammates(principal, search);
+    const matches = result.users;
     const CAP = 15;
     return {
+      ...(result.fuzzy ? { fuzzyMatch: true } : {}),
+      // STRUCTURAL fuzzy gate: a sound-alike match deliberately carries NO userId,
+      // so the model CANNOT assign to it this turn (the id is the only handle the
+      // task tools accept). It must ask "You mean <name>?" and, after the user
+      // confirms, call find_teammate again with the exact confirmed name — the
+      // exact match returns the id. A prompt note alone proved insufficient
+      // (Sonnet 5 overrode a HARD STOP note in favor of decisiveness, eval
+      // task-voice-artifact-name 2026-08-27) — capability withheld in code is
+      // the only reliable gate, the Golden Rule posture.
       teammates: matches.slice(0, CAP).map((u) => ({
-        // userId is the handle the task tools target as assigneeId — surfaced deliberately
-        // (the get_my_tasks taskId precedent). An opaque, caller-scoped staff id.
-        userId: u.id,
+        ...(result.fuzzy ? {} : { userId: u.id }),
         name: u.full_name,
         role: u.role,
         domain: u.domain,
       })),
-      ...(matches.length === 0
-        ? { note: 'No teammate matched that name. Ask the user for the full name or who they mean — never guess a person to assign work to.' }
-        : matches.length > CAP
-          ? { note: `Showing the first ${CAP} matches — ask the user to narrow the name if the one they mean isn't here.` }
-          : {}),
+      ...(result.fuzzy
+        ? { note: 'No exact match — these are only closest-SOUNDING guesses (the name may be a voice-transcription artifact), so no userId is provided and assignment is impossible this turn. Ask the user "You mean <name>?" and wait. After they confirm, call find_teammate again with the confirmed exact name to get the userId, then assign.' }
+        : matches.length === 0
+          ? { note: 'No teammate matched that name, even by sound. Ask the user for the full name or who they mean — never guess a person to assign work to.' }
+          : matches.length > CAP
+            ? { note: `Showing the first ${CAP} matches — ask the user to narrow the name if the one they mean isn't here.` }
+            : {}),
     };
   },
 };
