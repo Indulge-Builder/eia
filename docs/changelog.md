@@ -12,6 +12,607 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-28 — Step 3 kickoff: the Python brain foundation is live (router + specialists + three model tiers)
+
+**Why:** master-plan Step 3 / plan-elaya Phase 1 — the port of Elaya's runtime to Python on
+AWS, built strangler-style (the Node brain keeps serving all users; nothing flips without
+the eval score). The founder's directive for this kickoff: re-ground in the original vision
+(docs/notion-files — the April "Elia/Atlas" blueprint already drew Haiku-for-intent →
+Sonnet-for-reasoning, cache-first, living client profiles, PII pseudonymized before any
+model) and set the architecture up for live data, speed, security, and per-task model choice
+(Sonnet 5 / Haiku / sometimes Opus).
+
+**What (all in `backend/app/`, FastAPI):**
+
+- **Three model tiers, DB-driven** (migration 0176): `llm_providers.job_type` gains `heavy`
+  — `routing`=claude-haiku-4-5, `reasoning`=claude-sonnet-5, `heavy`=claude-opus-5. Which
+  model runs which tier is an UPDATE, never a deploy (`llm/registry.py`, read per request;
+  heavy falls back to reasoning when toggled off).
+- **The orchestrator, right-sized** (`brain/router.py` + `brain/specialists.py`): a Haiku
+  turn classifies each message into one specialist (leads / tasks / analytics / general) —
+  validated in code, fail-open to general. Each specialist is a PROFILE: trimmed toolset +
+  focused prompt + tier (`analytics` rides `heavy` — the Opus seam). The 24-tools-in-one-
+  prompt weakness is deliberately not ported.
+- **The laws, ported faithfully**: `brain/pii.py` (the gateway — same regexes, UUID guard,
+  three depths, applied to every tool result before the model sees it), `brain/confirmation.py`
+  (the pure yes-classifier, word sets copied verbatim — both brains must agree on every yes
+  until the Node brain retires), `brain/principal.py` (verified profiles row → role-gated
+  toolset; the Golden Rule in code), `tools/registry.py` (single dispatch gate; identity args
+  principal-derived, model supplies filter values only; first two tools ported:
+  `get_my_open_tasks`, `find_leads` with role scoping in code).
+- **The turn loop** (`brain/loop.py`): iteration ceiling 6, PII gateway on every result,
+  prompt-cache breakpoints on the stable prefix (iterations 2..n re-read system+tools at
+  ~0.1x). Provider boundary preserved: `llm/anthropic_adapter.py` is the ONLY module
+  importing the SDK (`llm/provider.py` is the neutral contract).
+- **The endpoint** (`api/chat.py`, `POST /v1/elaya/chat`): SSE frames byte-compatible with
+  elaya-stream.ts (meta/delta/tool/done/error) — the eventual flip is a URL change in one
+  transport file. Bearer-gated (`BRAIN_API_SECRET`, fail-closed); the brain re-verifies the
+  supplied user id against profiles before any model runs.
+- **Verified live end-to-end**: greeting turn routed general → Sonnet 5 streamed; tasks turn
+  routed tasks → called `get_my_open_tasks` → answered from real rows and unprompted flagged
+  duplicate tasks (the data-firmness instinct). Deployed to the Fargate `api` service with
+  secrets in SSM.
+- **Deliberately still owned by the Node brain** (strangler rule; next tranches, evals as
+  gate): the remaining 22 tools + write tools + confirmation resolver wiring, the full
+  persona parity port, conversation persistence, the daily cap, the WhatsApp channel.
+
+---
+
+## 2026-08-27 — Sia hardening: every audit finding fixed (Postgres auth, crash-only, silence alarm, media backfill)
+
+**Why:** the founder ordered a full top-to-bottom audit of the Baileys → WhatsApp → Supabase
+pipeline after the Fargate pairing incident ("we cant ever ever take the risk of this system
+to fail"). The audit (the "Sia Watcher Audit" artifact) measured the data layer sound — zero
+duplicate messages across 79,512, 98.8% normalizer coverage — and found the gaps concentrated
+in one layer: session identity and operations. This entry closes every finding. The watcher
+phone was deliberately logged out during the incident; pairing happens once, cleanly, after
+this ships.
+
+**What:**
+
+- **P0-1 — Postgres-backed auth state** (`connector/src/auth-postgres.ts`, migration 0174
+  `sia.wag_auth_state`): replaces `useMultiFileAuthState` + the EFS volume + the whole
+  session-seed machinery (deleted). Baileys' own source recommends a DB auth store for
+  production. One row per key, BufferJSON-compatible payloads, batched round trips, wrapped
+  in Baileys' `makeCacheableSignalKeyStore`. Verified by a live round-trip test: creds and
+  signal keys persist and revive with Buffers byte-identical; deletes and missing-id
+  semantics match the file store exactly. Sessions are now inspectable and resettable in
+  SQL; the "half-written volume" failure class cannot exist. EFS removed from the manifest —
+  the container is fully disposable.
+- **P0-2 — the watcher alarm, heartbeat-based** (`src/trigger/sia-silence.ts`, every 5 min +
+  migration 0175 `sia.wag_watcher_status`): the founder caught the flaw in the first cut —
+  "no messages for 10 minutes" cries wolf at 3am when groups sleep, and gives no immediate
+  logout signal. Reworked: the connector beats its own pulse every 60s (one row: beat_at,
+  state, state_since), and the alarm classifies four conditions, most severe first —
+  `down` (5 min stale beat = process dead, true at any hour), `session_lost` (logged out →
+  immediate; unpaired 15 min — a human must enter a pairing code), `unreachable` (stuck
+  connecting 15 min), `quiet` (connected but zero events for 6 HOURS — the only
+  traffic-based check, soft by design). Fan-out rides the existing `createNotification`
+  pipeline (type `system` — no migration); per-kind Redis latches (`sia:alert:<kind>`,
+  55 min TTL) keep incidents to ~hourly reminders, recovery announces once. The /sia green
+  dot + console banner now read the SAME heartbeat (state-aware copy: live / waiting to be
+  paired / connecting / session lost / offline) — the dot had the identical
+  traffic-liveness flaw. The media strip gained the `expired` tile.
+- **P0-3 — loggedOut self-recovery**: on WhatsApp rejecting the session, the watcher now
+  archives the fact, wipes `wag_auth_state`, and exits — the next boot arms a fresh pairing
+  automatically. The permanent 401 trap-loop from the incident is structurally gone.
+- **P1-2 — crash-only lifecycle** (`connector/src/index.ts`): the in-process reconnect
+  recursion (which stacked sockets AND drain loops per reconnect — the root of the duplicate
+  pairing codes) is deleted. Any disconnect exits the process; ECS restarts pristine.
+  `fetchLatestBaileysVersion` failures no longer prevent boot (falls back to the library's
+  baked version). `uncaughtException` exits instead of limping in unknown state.
+- **P1-1 — historical media backfill** (`connector/src/media-backfill.ts`): the 14,516
+  forever-`pending` history-sync media rows now drain through an in-process drip (starts on
+  connect, ~1 item/1.5s, newest links first, one honest attempt each with Baileys'
+  re-upload refresh): every row terminates `done` (stored to S3 via the shared
+  `storeMediaBuffer`, extracted so live worker + backfill share ONE store write) or
+  `expired` (new status, migration 0174 CHECK). "Pending forever" no longer exists.
+- **P2s**: `makeCacheableSignalKeyStore` adopted; `wag_receipts` documented as
+  empty-by-design (receipts only arrive for messages the account sends — a silent watcher
+  never will); `connector/RUNBOOK.md` written — the ONE-RUNNER law, pairing procedure,
+  session SQL, outage arithmetic, number hygiene (dedicated SIM + 2FA PIN + fortnightly
+  phone check-in).
+- Dead artifacts removed: the S3 session seed, the local seed tarball, the logged-out
+  `connector/auth/` directory, `auth-seed.ts`.
+
+**Operator note:** exactly ONE runner may hold the session — scale the Fargate service to 0
+before ever running the connector locally (RUNBOOK, THE ONE LAW).
+
+---
+
+## 2026-08-27 — Sia W1: the watcher moves to AWS Fargate, media moves to S3
+
+**Why:** the Baileys watcher was running on a MacBook. It has to hold a live WhatsApp socket
+around the clock, so it can never live on Vercel (functions die after each request) and it
+cannot depend on one laptop staying awake. This is master-plan Step 4 / plan-whatsapp W1.
+
+**What:**
+
+- **Watcher on Fargate** (`copilot/watcher/manifest.yml`, Copilot service `watcher` in app
+  `serene`, env `prod`, ap-south-1): Backend Service (no port, no load balancer — liveness is
+  observed from the data, via the /sia console's last-event dot), 256 CPU / 512 MB on
+  **arm64 Graviton**, one task. `deployment.rolling: recreate` is load-bearing: exactly one
+  watcher may hold the WhatsApp session, and two tasks sharing auth state would stream-conflict
+  and log the number out. `connector/Dockerfile` (node:22-slim, tsx entry — same as local).
+- **WhatsApp session keys on EFS**: a managed EFS volume mounts at `/data`, `WAG_AUTH_DIR=/data/auth`.
+  Without it every redeploy would demand a fresh QR pairing.
+- **Media to S3** (`connector/src/media.ts`, `config.ts`): when `WAG_MEDIA_BUCKET` /
+  `SIAMEDIA_NAME` is set the download worker uploads to S3 and `wag_media.storage_path`
+  records `s3://bucket/key`; unset (local dev) keeps the on-disk store. The bucket is a
+  Copilot storage addon scoped to the watcher workload.
+- **App reads both** (`getSiaMediaPayload`): `s3://` paths mint a 15-minute presigned GET URL;
+  absolute paths keep the base64 data-URL route for any pre-W1 row. One function, two modes —
+  the viewer is unchanged.
+- **Backfill**: the 223 existing local media files were synced to the bucket and all 227
+  `wag_media` rows rewritten from local absolute paths to `s3://` URIs, so old photos and
+  voice notes now render from anywhere (including Vercel), not just the laptop that
+  downloaded them.
+- **Scoped read identity**: IAM user `serene-sia-media-reader` with `s3:GetObject` on that one
+  bucket; its keys live in `.env.local` as **`SIA_S3_ACCESS_KEY_ID` / `SIA_S3_SECRET_ACCESS_KEY` /
+  `SIA_S3_REGION`** — deliberately NOT the standard `AWS_*` names. direnv exports `.env.local`
+  into the shell, so an `AWS_ACCESS_KEY_ID` there silently replaces the operator's own admin
+  credentials with this read-only identity and every `aws` command in the repo starts failing
+  (it did, once — that is why the names are namespaced). `getSiaMediaPayload`'s S3 client reads
+  the `SIA_S3_*` pair and falls back to the default provider chain (task role) when unset.
+  Verified end to end: presigned fetch returns 200 image/jpeg.
+- **Two failures worth recording.** (1) `copilot svc init` hung with no output — the Docker
+  daemon had wedged after a Resource Saver idle-shutdown; force-killing `com.docker.backend`
+  and the VM fixed it, and the same command then finished in 9 seconds. (2) The first deploy
+  rolled back on `MountTarget1/2 … not authorized to perform ec2:CreateNetworkInterface`: this
+  was the account's first EFS filesystem, so CloudFormation created the EFS service-linked role
+  and used it before IAM propagated. The retry succeeded unchanged. Neither was a config error;
+  if either recurs, retry before re-architecting.
+
+**Still on Vercel / unchanged:** the entire Serene app, every server action and service, Elaya's
+brain, Supabase, Upstash, Trigger.dev, Gupshup. Only the watcher and the empty FastAPI health
+skeleton run on AWS. The strangler posture (locked decision 2) is intact.
+
+---
+
+## 2026-08-27 — /sia group info panel + the WhatsApp identity bridge (member → staff mapping)
+
+**Why:** the chat header should open the group's profile the way WhatsApp Web does (members,
+description, owner, metadata) — and the roster is where identity mapping starts. WhatsApp now
+addresses group members by privacy lids (`…@lid`), hiding phone numbers: all 8,955 captured
+member rows are lids, so nothing was resolvable to a person. Baileys hands over each
+participant's `phoneNumber` + display name alongside the lid, but the connector was dropping
+the pair.
+
+**What:**
+
+- **Connector identity bridge** (`connector/src/index.ts` + `db.ts`): `participantBridgeRows`
+  harvests `{lid, phone jid, phone, display name}` from group participant metadata (plus the
+  group owner) and `upsertContactBridges` persists them onto `wag_contacts` (named and
+  nameless rows upserted separately, so a bridge row can never null out an existing
+  `push_name`). Runs on boot's `seedGroups` walk (backfills every current member of all 466
+  groups on the next connector restart) and on every `groups.upsert`. Also backfilled
+  `wag_contacts.phone` for the 6,276 existing phone-jid contacts via the same derivation.
+- **Group info panel** (`SiaGroupInfoPanel.tsx`): clicking the chat header slides a parallel
+  side panel over the pane (spring, no scrim, Escape closes) — avatar + subject hero, the
+  mapping controls (the shared `KindPillRow` classify pills + rail-visibility `Toggle`, same
+  actions as the console), description, `InfoRow` metadata (messages, watching-since, created
+  by), and the member roster: search (when >12), WhatsApp Admin badges, former-members
+  collapse, and per-member identity.
+- **Member identity resolution** (`getSiaGroupInfo` in `sia-service.ts` +
+  `getSiaGroupInfoAction`): member lid → `wag_contacts` (by lid, else jid) → phone →
+  `public.profiles` phone match — the SAME phone-identity rule Elaya's WhatsApp staff gate
+  uses. A matched member wears the accent **Indulge** badge (name + role on hover): agents map
+  themselves automatically, zero manual work. Non-staff members take their side from the
+  group's kind (Client / Vendor / External); unsynced lids show honestly as "Not synced yet"
+  and resolve as the bridge fills. All batched — four queries per panel, never per-member.
+- `KindPillRow` extracted to `sia-shared.tsx`; the console now composes it (one classify
+  expression). Verified: connector + app typecheck clean, lint clean, `/sia` renders 200 as a
+  real admin session, 12 staff contacts already matchable after the backfill.
+
+---
+
+## 2026-08-27 — /sia goes live: WhatsApp-Web viewer, live tail, inline media, the Sia console
+
+**Why:** the Sia UI (master-plan 4b) had a working but rough first cut: a hand-rolled tab
+selector no other page uses, bespoke stat/avatar/pill expressions duplicating existing
+primitives, no live updates, and media rows that rendered as dead type chips. The founder
+asked for the WhatsApp-Web reading of the chat surface, real-time arrival of new messages,
+inline images and voice notes, and a strict reuse pass so the page stays DRY.
+
+**What:**
+
+- **Migration 0173** (`20260827000173_sia_group_preview.sql`, applied to prod): extends
+  `sia.wag_group_activity()` with a last-message preview (text, type, sender push name,
+  `from_me`, `is_revoked`) so the rail renders WhatsApp-style preview rows from the same single
+  aggregate pass. Return type changed, so drop + recreate; posture unchanged (SECURITY
+  DEFINER, `search_path = sia`, service_role-only EXECUTE). `database.ts` regenerated with
+  the sia schema and the hand-authored tail respliced.
+- **Live tail** (`SiaChat.tsx`): while a chat is open and the tab visible, a 4 second poll
+  through `getSiaMessagesAction(jid, { after })` appends anything newer than the last known
+  message (gte + id dedup so same-second siblings never slip). New bubbles enter on the
+  shared spring; if the reader has scrolled up, a floating accent "N new messages" pill
+  offers the jump instead of yanking the scroll. The open chat also feeds the rail so the
+  active group's preview, count, and sort position move live; the rail itself refreshes every
+  60 seconds. Chosen over client-side Supabase Realtime deliberately: `wag_` tables are
+  service_role-only (deny-by-default RLS), so a browser subscription would deliver nothing —
+  the poll keeps every byte behind the admin/founder action gate (Q-13). Push transport can
+  replace the interval when the connector moves to Fargate (Sia W1).
+- **Inline media** (`SiaMedia.tsx` + `getSiaMediaAction` + `getSiaMediaPayload`): images and
+  stickers render inline (lazy: fetched only when scrolled into view, shimmer placeholder,
+  click opens full size), voice notes and audio get a WhatsApp-style mini player (play/pause,
+  seekable progress, duration), video is tap-to-load, documents are tap-to-download through
+  `triggerBrowserDownload`. Bytes travel as base64 data URLs through the role-gated action —
+  the pilot seam; S3 signed URLs replace the action's interior with Sia W1. The service
+  validates every `storage_path` against the connector media root before reading and caps
+  inline files at 25 MB. A module-level cache makes reopened chats instant. Pending and
+  dead-letter media show honest state chips.
+- **The message stream is now the full capture** (`sia-service.ts` `enrichMessages`): each
+  page batch-attaches media rows, reaction aggregates (floating emoji chips on the bubble
+  corner), and quoted-reply previews (sender + one-line excerpt inside the bubble) in four
+  bounded queries — never per-row.
+- **WhatsApp-Web reading, Serene material** (`SiaMessageBubble.tsx`): the bubble surface
+  contract is the SAME one `whatsapp/MessageBubble` ships (inbound `--neu-surface-high`,
+  outbound `--neu-chat-user-bg`, `--neu-edge`, `--neu-shadow-chip`, tail-corner radius pair)
+  so the two chat surfaces speak one language. Sender clusters (avatar + coloured name on the
+  first bubble of a run — the name ink reuses the exact Avatar fallback hash/token pair, so a
+  sender's name always matches their avatar tint), centred day-separator chips, system rows
+  as quiet centred pills, deleted messages in serif italic, edited/forwarded markers, stickers
+  bare without bubble chrome, mono 10px in-bubble timestamps. The stream sits on a
+  `--theme-paper-subtle` wallpaper.
+- **The Sia console** (`SiaControlModal.tsx`): the Groups/Health tab selector is gone (no
+  other page uses that pattern). A gear in the page header — carrying a live watcher status
+  dot (green/red, fed by a 60 second health poll) — opens one console modal with the health
+  panel (live banner + `StatTile` grid + media pipeline) and the full group mapping manager
+  (search, classify client/vendor/internal, hide/unhide via `Toggle`; unmapped groups float
+  to the top). Mapping left the chat header entirely, so both panes are pure conversation.
+- **DRY pass:** the bespoke TabButton, HealthStat, MediaStat, avatar-tint circle, and inline
+  search input from the first cut are deleted — replaced by `TabSelector`-free layout,
+  `StatTile`, `Avatar`, `SearchBar`, `Modal`, `Toggle`, `EmptyState`, `LogoSpinner`,
+  `SeedMandala`, `CollapseReveal`, and the `.serene-pressable` / `.serene-icon-rotate-hover`
+  vocabulary. `AVATAR_COLOUR_PAIRS` is now exported from `Avatar.tsx` for the sender-ink
+  reuse. Shared Sia vocabulary (labels, preview builders, kind pill) lives once in
+  `sia-shared.tsx`. The workspace split into five focused files under `components/sia/`.
+- **Mobile:** below md the page is single-pane (rail ↔ chat with a back button), driven by
+  the shared `useMediaQuery(MQ.mobile)`.
+- **Fix — `getInitials` is now Unicode-safe** (`lib/utils/strings.ts`): `charAt(0)` sliced an
+  emoji's UTF-16 surrogate pair in half, and the lone surrogate serialized as U+FFFD on the
+  server while the client kept the raw half — a hydration mismatch the /sia rail surfaced on a
+  group named "… 💸". First "characters" are now taken by code point (`Array.from`), so emoji
+  initials stay whole ("💸P") and every avatar surface app-wide renders identically on server
+  and client.
+- Verified end-to-end: migration + RPC live in prod, downloaded media files present on disk
+  inside the guarded root, `/sia` renders 200 as a real admin session with all new surfaces,
+  role restored after the check. Typecheck and lint clean.
+
+---
+
+## 2026-08-25 — UX library adoption: NumberFlow numbers, cmdk palette engine, torph Elaya status
+
+**Why:** a curated polish pass. Six libraries were evaluated against real surfaces
+(`plan-libraries.md` holds the full verdicts); three earned a place because each upgrades a
+surface Serene already owns, and two (cobe globes, liveline streaming charts) were deliberately
+deferred because no geographic dataset and no continuously streaming metric exist yet to feed
+them. Recharts was already the chart layer and is untouched.
+
+**What:**
+
+- **`@number-flow/react` becomes the engine inside `AnimatedNumber`**
+  (`src/components/ui/AnimatedNumber.tsx`). Same public API (formatted string in, prefix and
+  suffix preserved), so every consumer — StatTile pages, dashboard widgets, performance
+  MetricCard/StatAtom/DomainTargetMeter — upgraded in one diff with zero call-site changes.
+  Digits now roll odometer-style between values instead of re-counting; locale grouping
+  mirrors `numbers.ts` exactly (en-IN default, en-US for `$`, en-IE for `€`) so the settled
+  render matches the input string. Mount keeps the count-up entrance (one frame at 0, roll to
+  target at `COUNT_UP_MS` with ease-out-expo). SSR/first paint still render the final string;
+  reduced motion renders the plain string (`useCanAnimate`).
+- **Mobile rooms animate at last:** `MetricTile` and `RowCount`
+  (`src/components/mobile/rooms/room-bits.tsx`) — the biggest static-number surface in the
+  app — now wrap their values in `AnimatedNumber`.
+- **cmdk becomes the engine inside `CommandPalette`**
+  (`src/components/ui/CommandPalette.tsx`). Bare `<Command>` parts only — never
+  `Command.Dialog` (that pulls Radix Dialog; our portal, scrim, blur carve-out, and
+  `PALETTE_DURATION` motion are unchanged). Gains: screen-reader-tested combobox semantics,
+  ranked fuzzy filtering with keyword aliases on actions + goto pages ("prefs" finds
+  Settings), loop navigation, hover selection for free. Server results from
+  `paletteSearchAction` bypass cmdk scoring (`result:` value prefix scores 1 — the action
+  already ranked them). Selection styling rides cmdk's data attributes via the new
+  `.serene-palette` block in `globals.css` (tokens only). `paletteSearchAction`, role gating,
+  debounce, and lazy mount are untouched.
+- **torph on the Elaya status line, and nowhere else.** New
+  `src/components/elaya/ElayaStatusText.tsx` wraps `TextMorph` (spring = the shared
+  `SPRING_CONFIG`, reduced-motion gated) so tool-status phrases and "Thinking…" morph into
+  each other. Mounted at the three status render points: the desktop shell's header subtitle
+  and in-transcript status row (`ElayaChatShell.tsx`) and the mobile `TypingBubble`
+  (`ElayaChatScreen.tsx`). Elaya is the one presence allowed to animate text — greetings,
+  page titles, and empty states deliberately stay static.
+
+**Packages:** `@number-flow/react@0.6.2`, `cmdk@1.1.1`, `torph@0.1.0`. None imports
+framer-motion (LazyMotion strict safe). Verified: tsc clean, eslint clean, token gate clean,
+production build clean.
+
+---
+
+## 2026-08-27 — Sia moved to its own `sia` schema + the full /sia UI (search, health, mapping) + flood-hardening
+
+**Why:** the watcher's history sync flooded on connect (the real number is in ~466 groups → 79k+
+messages). Three follow-ups: (1) the connect firehose timed out raw inserts; (2) the monthly
+partitions cluttered `public` alongside the business tables and only grow; (3) the /sia page needed
+search, a health panel, and a group-mapping tool. All three done.
+
+**What:**
+
+- **Connector flood-hardening (`connector/src/db.ts`, `index.ts`):** raw-event inserts trim
+  oversized bulk blobs (>900KB, e.g. the history-sync dump) to a compact marker and fall back to
+  per-row inserts so one bad row can't drop a batch (message capture already survived — normalize
+  reads from memory); contacts batched (`upsertContactsBatch`, was one-at-a-time over thousands);
+  messages chunked at 500/upsert.
+- **Migrations 0170–0172 (Sia moved to the `sia` schema):** 0170 enables RLS on every wag_
+  partition + a `wag_add_month_partition()` helper so future months get RLS automatically (the
+  "Unrestricted" partitions are not API-reachable — PGRST205 — but this is defense-in-depth + a
+  clean dashboard). 0171 adds `wag_group_activity()` (per-group count + last-activity in one pass,
+  killing the getSiaGroups N+1; service_role EXECUTE only). **0172 relocates the entire wag_
+  family (27 tables + partitions + functions) from `public` → a dedicated `sia` schema** via
+  SET SCHEMA (data preserved: 78,837 messages, 466 groups). `public` is now clean of wag_ clutter;
+  `sia` is exposed to PostgREST with **service_role-only** grants (anon/authenticated denied —
+  verified). `database.ts` regenerated with `included_schemas=public,sia`; hand-authored tail
+  re-appended.
+- **`/sia` UI — full build:** `getSiaGroups` rewritten to 2 aggregate queries (was 932), **the
+  200-group cap removed** (future is 10k+ clients/vendors); new service reads `getSiaHealth`,
+  `searchSiaMessages` (FTS, `simple` config), `updateSiaGroupMapping`; actions gate admin/founder.
+  `SiaWorkspace` now has **Groups + Health tabs**, a group filter bar (search + kind chips:
+  All/Client/Vendor/Internal/Unmapped/Hidden), **per-group mapping** (classify Client/Vendor/
+  Internal/Unmapped + Hide/Unhide) in the chat header, **in-group message search**, and a **Health
+  panel** (watcher-live banner from last-event time, events/messages per hour, media pipeline
+  pending/retrying/done/dead-letter, unmapped/hidden counts, 20s auto-refresh). Verified: `/sia`
+  renders 200 for an admin reading from the sia schema; connector + app typecheck + lint clean.
+
+**Restart required:** the running connector still points at `public.wag_*` (now moved) — it must be
+restarted (`Ctrl+C`, `npm start`; reconnects with no QR) to pick up the sia-schema client + the
+flood fixes. Data already captured is preserved in `sia`.
+
+## 2026-08-27 — Sia connector (Baileys watcher) + the /sia group monitor page (Step 4a / W3–W4)
+
+**Why:** with the `wag_` schema live (0169), Sia needs its two halves: the watcher that fills the
+tables, and the Serene surface to see them. Pilot scope is deliberately one number, run locally,
+to prove the pipeline end to end before the AWS/dual-watcher move (W1).
+
+**What:**
+
+- **`connector/` (new, Node/TypeScript — the one sanctioned non-Python service, decision 8).**
+  Baileys 7.0 watcher, READ-ONLY by law (no `sendMessage`, ever — plan-whatsapp §6.1). The
+  thin-handler architecture (§10.1): socket handlers only enqueue + return; a drain loop writes
+  raw-first to `wag_raw_events` then normalizes into `wag_` rows; a media worker downloads +
+  decrypts off-stream (concurrency 2, retry-inside-window → `dead_letter`). `normalize.ts` maps
+  one WAMessage → rows and never throws (unknown types store as `unknown` + raw, replayable);
+  edits chain via `edit_of_wa_message_id`, revokes flip `is_revoked`, reactions upsert
+  current-state, receipts captured for non-watcher participants. Idempotent on WhatsApp's identity
+  triple (dual-watcher-ready). Session persists to `connector/auth/` (restart needs no re-scan).
+  Boot-verified: connects to WhatsApp and renders the pairing QR.
+- **`/sia` page (admin/founder only).** `sia-service.ts` (admin-client reads — the Q-13 boundary;
+  `wag_` RLS is deny-by-default), `actions/sia.ts` (keyset message pager), `SiaWorkspace.tsx` (a
+  read-only two-pane monitor: watched-group list + chat viewer with day separators, reply/edit/
+  forward/deleted markers, sender avatars, "load older" keyset paging — no composer, by design).
+  Added to the Admin nav section + `MOBILE_TRIGGER_PATHS`; the page role-redirect + `canAccessRoute`
+  admin/founder bypass are the authorization boundary (`/sia` is deliberately not in
+  ALWAYS_ALLOWED_PREFIXES). Verified end to end: seeded a demo group → `/sia` rendered it at 200
+  for an admin, redirected a manager; demo data + role restored after.
+- **`database.ts` regenerated** against the live schema (now carries the `wag_` tables); the
+  hand-authored derived-type tail was re-appended intact. **eslint.config.mjs** ignores
+  `connector/`, `backend/`, `evals/` (their own toolchains). Typecheck + lint clean across the app
+  and the connector.
+
+## 2026-08-27 — Migration 0169: the Sia `wag_` foundation, live in prod (master-plan Step 1c / Sia W2)
+
+**Why:** the base of Sia — every message from client/vendor WhatsApp groups (via the Baileys
+watchers) needs a home built for the real cases: who sent what type, reply threads, reactions,
+edits, deletes, receipts — error-proof and future-safe. Design contract locked with the founder
+2026-08-27 (`plan-whatsapp.md` §11, eight decisions).
+
+**What (migration `20260827000169_sia_wag_foundation.sql`, applied to prod + smoke-verified):**
+
+- **9 tables:** `wag_raw_events` (black-box recorder, partitioned), `wag_contacts` (JID+LID →
+  participant_role: client/genie/bishop/queen/founder/vendor/watcher/unknown), `wag_groups`
+  (group_kind, unmapped-blocks-profiling), `wag_group_members` (membership WITH history),
+  `wag_messages` (the heart, partitioned monthly by `wa_timestamp`), `wag_media` (our S3 copy,
+  pending/retrying/done/dead_letter + attempts), `wag_reactions` (current-state upsert),
+  `wag_receipts` (capture code-gated to client-sent messages in v1), `wag_pipeline_cursors`
+  (per-consumer read positions).
+- **Error-proofing encoded:** message `type` is text with NO CHECK (inserts never fail on new
+  WhatsApp features); reply links are SOFT references (orphan quotes store fine); DEFAULT
+  partitions on both partitioned tables (no missing-month failures); `source`
+  (live/history_sync/backfill) + `normalizer_version` on every message for surgical replay.
+- **Replay-safe identity:** canonical message key = WhatsApp's `(chat_jid, wa_message_id,
+  sender_jid)` triple; children reference the triple, never our uuid; normalization is an
+  UPSERT on it. Unique index (+ partition col) is the dual-watcher dedup wall.
+- **RLS deny-by-default:** enabled on all 9, zero user policies — service-role only until the
+  Sia UI (W4) ships role-gated reads. FTS uses the `simple` config (Hinglish-safe).
+  `wag_embeddings` deliberately deferred to Step 6e (vector dimension pins to the chosen model).
+- **Smoke-verified in prod:** soft-quote insert ✓, dual-watcher duplicate bounced ✓, row landed
+  in the correct monthly partition ✓, cleaned up.
+
+## 2026-08-27 — The measured model flip: Elaya's reasoning brain → Claude Sonnet 5 (Step 1b)
+
+**Why:** production Elaya ran on `claude-sonnet-4-6` (the 0116 seed). Sonnet 5 is the current
+generation — better instruction-following — and is also CHEAPER ($2/$10 vs $3/$15 per MTok,
+~33% off every turn). Flipped the measured way: full exam before, one-row DB edit, full exam
+after. Rollback is the same one-row edit.
+
+**What:**
+
+- **Baseline (sonnet-4-6): 27/28.** One flaky miss (`lead-spoke-prefers-call-log`, a
+  clarify-vs-act wobble that passed earlier the same day).
+- **`llm_providers.reasoning.model` → `claude-sonnet-5`** (PATCH, no deploy; verified serving —
+  all subsequent replies carry `meta.model: claude-sonnet-5`).
+- **Sonnet 5: 27/28 → 28/28 after one contract fix.** It stabilized the flaky case, and exposed
+  a real design decision on fuzzy teammate matches: it resolved "Evun"→Evan and assigned
+  DECISIVELY with the name disclosed, overriding even a HARD-STOP prompt note. Two changes:
+  (1) **structural fuzzy gate** in `find_teammate` — a sound-alike match now carries NO
+  `userId`, so assignment requires a deliberate exact-name re-lookup and a fabricated id dies
+  at schema + `isAssigneeActive` (prompt notes alone proved insufficient; capability withheld
+  in code, the Golden Rule posture); (2) **contract decided:** single fuzzy match → decisive
+  assignment WITH the resolved name disclosed is correct (reversible, the be-decisive rule);
+  multi-match must still ask. Eval case updated to encode the contract.
+- **Final: 28/28 active cases green on Sonnet 5, kept.** 2 known gaps still tracked
+  (`last_week` period; Marathi affirmative). The `routing` row (Haiku 4.5) is unchanged.
+
+## 2026-08-27 — AWS foundation live: the Python backend on ECS Fargate (master-plan Step 2)
+
+**Why:** the serverless ceiling (180s maxDuration, lambda freeze, no WebSockets) blocks the
+agent-runtime future (voice, proactive Elaya, long jobs, the Baileys connector). Step 2 stands up
+the persistent home. The Next.js app on Vercel is untouched; this is the parallel foundation the
+strangler migration flips pieces onto.
+
+**What:**
+
+- **`backend/` (new)** — the Python service skeleton: FastAPI app (`/healthz` + root info),
+  pydantic-settings config (env-driven; Supabase/Anthropic keys declared for Step 3, unused
+  today), Dockerfile (python:3.13-slim, port 8080), README with the local-dev and deploy loop.
+  Deliberately tiny — the brain ports onto it at Step 3 behind the eval gate.
+- **AWS (Copilot, `ap-south-1` Mumbai — same region family as the Supabase edge):** app
+  `serene`, environment `prod` (VPC, 2×public subnets, service-discovery namespace), service
+  `api` as a Load Balanced Web Service on Fargate (0.25 vCPU / 512MB, 1 task, health check
+  `/healthz`, `linux/x86_64` cross-built from Apple Silicon). Manifests in `backend/copilot/`.
+  Verified live end to end: ALB URL answers `{"ok":true}` at ~48ms from Mumbai. Running cost
+  ≈ $25–35/month (ALB + one small task).
+- **Deploy loop:** `cd backend && copilot deploy`. Logs: `copilot svc logs --follow`.
+- **Deferred deliberately:** S3 buckets (land with Sia W1), Bedrock model enablement (lands with
+  Step 3 — the port can start on the direct Anthropic API the brain already uses), CI/CD
+  pipeline (`copilot pipeline` once the repo has a remote workflow).
+
+## 2026-08-27 — Voice-artifact name resolution (fuzzy find_teammate + Deepgram roster boost) + eval report UI
+
+**Why:** real transcripts show STT mangling staff names — "Arapham"/"Arpham"/"arpan" for
+**Arfam**, "Evun" for Evan. `find_teammate`'s substring match found nothing for these, so every
+voice note naming a teammate dead-ended in "which person?" friction. Three-layer fix; layers 1–2
+shipped here (layer 3, confirm-before-write, already existed).
+
+**What:**
+
+- **`lib/utils/fuzzy.ts` (new)** — THE fuzzy name-matching util (R-01): `soundex()`,
+  `levenshtein()`, `nameMatchesFuzzy()` (per-token phonetic OR ≤1–2 edit distance). Verified
+  against the real artifact set: Arapham/Arpham/arpan → Arfam, Evun → Evan, Pavani → Pawani,
+  Saili → Sailee, with zero false positives on controls.
+- **`searchTeammatesForElaya` (layer 2)** — now returns `{users, fuzzy}`: on a zero-hit substring
+  search it fetches the (tiny) active-staff set and ranks in code via `nameMatchesFuzzy`, capped
+  at 5, flagged `fuzzy`. The `find_teammate` tool surfaces `fuzzyMatch: true` + a note mandating
+  the model CONFIRM the person by name before assigning — a sound-alike never silently becomes a
+  write target. Sole caller (`elaya-data.findTeammates`) updated; both channels by construction.
+- **`transcribeAudio` (layer 1)** — optional `keywords` boost param (Deepgram `keywords=name:2`,
+  cap 100); the Elaya WhatsApp voice path now passes the active-staff first-name roster
+  (`getActiveStaffFirstNames`, new, fails soft) so "Arfam" is heard correctly at the source. The
+  in-app dictation path is left unboosted deliberately — its transcript is an editable draft the
+  user reviews before sending.
+- **Eval:** `task-voice-artifact-name` upgraded from "asks for clarification" to the new
+  contract — resolves "Evun" → Evan, names him, confirms before creating (passes). Eval report
+  UI (`evals/report.py`, new): self-rebuilding `results/report.html` — latest score, pass-rate
+  trend, case × run history grid showing the REAL golden-set messages, failed-check detail.
+- **`evals/review.py` (new) — the review console / annotation workbench.** A localhost web app
+  (stdlib server; the service key never reaches the browser) showing EVERY Elaya conversation —
+  real usage and eval runs — as user→Elaya transcripts with tool calls + args. Each reply grades
+  as Correct / Needs improvement with a free-text remark; a Review-queue tab collects the flags
+  (needs-improvement first). Annotations persist to `evals/annotations.json` (committed — team
+  labels feed golden cases, prompt fixes, and eventually Step-9 distillation data). Filters:
+  real / eval / WhatsApp. Untrusted chat content rendered via textContent only.
+
+## 2026-08-27 — Evals live: first baseline + the propose-protocol prompt fix
+
+**Why:** first real runs of the eval harness (Step 1a). The exam immediately caught a genuine
+Elaya bug: on state-changing asks the model was asking for confirmation CONVERSATIONALLY without
+calling the propose tool — no `elaya_actions` row, so the code-side confirmation resolver never
+engaged and the user's "yes" went nowhere (the double-ask friction).
+
+**What:**
+
+- **`persona.ts` (product fix):** the "bigger step WAITS for a yes" block now mandates TOOL FIRST,
+  THEN THE ASK — calling the tool records the proposal and never executes, and asking without the
+  tool call records nothing. Verified by eval: `confirm-propose-waits` /
+  `confirm-no-dismisses` / `confirm-yes-but-never-executes` all pass; the ledger shows
+  `proposed → dismissed` exactly per the E3 contract.
+- **Eval fixtures + fixes:** seeded eval principals (Eval Manager + no-phone teammates Evan/Vera
+  Testman + test lead Testak Evalson — write cases can never ping or touch real people); per-case
+  `setup:` blocks (lead-status reset + Redis row-key invalidation via Upstash REST) after run 2
+  showed shared-fixture state drift (log_call auto-advanced the lead, so later cases found it
+  already touched — Elaya was right, the exam was stale); scorer casing convention (uppercase
+  expectations match exactly — a ci "Rs " matched "numbe**rs** "); the
+  `lead-spoke-prefers-call-log` case added after Elaya correctly counter-proposed log_call for
+  "maine abhi baat ki" (smarter than the original expectation).
+- **Baseline:** 27/28 active cases → all green after the persona fix; 2 `known_fail` gaps tracked
+  (`last_week` period vocabulary; Marathi affirmative in `classifyConfirmation`).
+
+
+
+**Why:** the platform enters its next era: full Python backend on AWS (strangler migration), the
+Sia WhatsApp group data layer (Baileys), and an AI quality discipline where no Elaya change ships
+without an eval score. The plans were locked over 2026-08-24/25; this entry marks the start of
+execution.
+
+**What:**
+
+- **Planning docs (root):** `master-plan.md` (the one map: 8 locked decisions, 9 steps, status
+  board), `plan-elaya.md` (the AI track, renamed from `plan.md`), `plan-whatsapp.md` (the Sia
+  Baileys data layer: `wag_` schema, raw-first ingest, dual watchers, fortress/border privacy),
+  `elaya-workflow.md` (the complete as-built Elaya spec, 2026-08-24 — now the port manual),
+  `port-inventory.md` (Step 0: every backend piece mapped to its port destination; the old Node
+  backend is FROZEN for new features as of today).
+- **`evals/` — the Elaya eval harness (Step 1a), Python.** Drives the real app end to end:
+  password-grant sign-in → the `sb-*` session cookie → `POST /api/elaya/chat` SSE → verification
+  against the DB (persisted `tool_calls` args + `elaya_actions` proposal rows). Each case runs in
+  its own service-role-created conversation (archived after) so cases never contaminate each other
+  or the user's live session. Golden set v1: 29 cases seeded from REAL `elaya_messages` (Hinglish,
+  voice-transcription name artifacts, confirmation flows, injection probe), with `mutates` /
+  `needs-seed` safety gates and 2 tracked `known_fail` gaps (no `last_week` period; Marathi
+  affirmative dismissed by the confirmation classifier). Runner: `evals/run.py` (venv;
+  `--allow-writes`, `--include-tags`, `--only`). Requires a dedicated eval user (manager) + the
+  seeded test lead — `evals/README.md`.
+
+**Deliberately not done here:** no product code changed; the harness only observes. The Python
+port itself starts at master-plan Step 3, gated on this exam.
+
+---
+
+## 2026-08-24 — Docs: the Claude Project context pack regenerated (docs-only)
+
+**Why:** `docs/claude-project/` was last generated 2026-06-26 against migration `0149` and had
+carried a STALE banner since 2026-07-02. Two months of work had landed since — the entire visual
+system was replaced (neumorphic restyle, dark mode, the eight-theme lineup, the logo/loading/boot
+system, the polish layer), three modules shipped (`/m` Mobile Ops, the Elaya customer channel +
+Notes, Subscriptions & Bills), ESLint arrived, `database.ts` was regenerated twice, and the docs
+tree itself was restructured. A Claude Project loaded with the old pack would have believed in
+five themes, a dark canvas with floating paper, 11+11 Elaya tools, and a customer bot that "is not
+built".
+
+**What:** every file rewritten or updated against the live tree and `docs/changelog.md` through
+2026-08-22, plus one new file.
+
+- **Rewritten end to end:** `4-design-essentials.md` and `10-design-system.md` — the old pack
+  described the pre-neumorphic system, so nothing in either file survived unedited. They now carry
+  the five neumorphic rules, the legacy-token bridge, the Whisper/Marshmallow scales, the eight
+  themes with their post-retune hexes, the dark-mode contract, the card-header ink rule, the logo
+  and polish layers, and the current `ui/` index including everything deleted (`Spinner`,
+  `RouteVeil`, the five chart wrappers).
+- **New `11-mobile-and-pwa.md`** — the `/m` Mobile Ops layer (room registry, `DomainSwiper`,
+  `useDomainRoomData`, the four rooms, the auto-open redirect and its opt-out cookie, the mobile
+  token layer), the responsive dashboard rules, and the PWA (manifest/icons/viewport/service
+  worker/boot).
+- **`5-elaya-jarvis.md`** — 12 read + 12 write tools (`find_teammate`, `create_subtask`), the
+  built customer channel (`CustomerPrincipal`, `runCustomerTurn`, the two-tool registry, the
+  welcome-blast idempotency), Notes replacing the removed `retrieveMemoryContext`, and the shared
+  `streamElayaChat` transport.
+- **`7-data-model.md`** — migrations 0150–0168 (training assets, welcome blast, notes, themes,
+  appearance, activity events, the mobile task summary, business minutes, the notifications CHECK
+  sync, and the six subscriptions migrations), the Vault-encrypted credential pattern, and the
+  duplicate `0161` filename trap.
+- **`6-engineering-rules.md`** — the machine-enforcement section (`check:tokens` in the build,
+  ESLint's four rules), ~25 new canonical-helper registry rows, the widened A-11 exception list,
+  S-18 (stored credentials), P-10, V-15, and C-1 (param-sync).
+- **`1`, `2`, `3`, `8`, `9`** — refreshed for the new pages (`/notes`, `/subscriptions`), the SSR
+  preference cookies, the 12 Gupshup templates, the notification-preference gating seams, the
+  business-minutes helper, and a re-dated built-vs-planned ledger that calls out the two written
+  but possibly unapplied migrations and the outstanding welcome-template env var.
+- **`0-README.md`** — STALE banner removed, index updated, and it now points at
+  `docs/ai/claude-project-instructions.md` as the Project's custom instructions.
+
+Also added the pack to that instructions file's "knowledge files to upload" list.
+
+**No code, no migrations, no dependency changes.** Documentation only.
+
+---
+
 ## 2026-08-22 — Subscriptions overview: per-tool spend, range + department filters, typed data layer
 
 **Why:** three follow-ups from the merge review, approved by the founder. The overview could not

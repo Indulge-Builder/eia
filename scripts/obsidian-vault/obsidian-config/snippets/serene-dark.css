@@ -1,0 +1,100 @@
+/* ============================================================
+   SERENE — Obsidian theme snippet
+   Mirrors the Serene app: dark canvas, champagne-gold accent,
+   serif display headings, calm paper content.
+   Toggle in:  Settings → Appearance → CSS snippets → serene-dark
+   Pair with the DARK base theme (Settings → Appearance → Base color → Dark).
+   ============================================================ */
+
+/* ---- Serene palette (Earth theme, the app default) ---- */
+.theme-dark {
+  --serene-canvas:        #0d0c0a;   /* dark shell            */
+  --serene-canvas-2:      #14120e;   /* raised shell          */
+  --serene-paper:         #1a1814;   /* content surface       */
+  --serene-paper-subtle:  #211e17;   /* inset surface         */
+  --serene-border:        #2c2820;   /* hairline              */
+  --serene-accent:        #c9a553;   /* champagne gold        */
+  --serene-accent-soft:   #d8bd78;
+  --serene-accent-fg:     #201808;   /* ink on gold           */
+  --serene-text:          #ece6d8;   /* primary text          */
+  --serene-text-2:        #b6ac98;   /* secondary             */
+  --serene-text-3:        #8a8276;   /* muted                 */
+
+  /* map onto Obsidian's variables */
+  --background-primary:        var(--serene-paper);
+  --background-primary-alt:    var(--serene-paper-subtle);
+  --background-secondary:      var(--serene-canvas-2);
+  --background-secondary-alt:  var(--serene-canvas);
+  --background-modifier-border:        var(--serene-border);
+  --background-modifier-border-hover:  var(--serene-accent);
+
+  --text-normal:    var(--serene-text);
+  --text-muted:     var(--serene-text-2);
+  --text-faint:     var(--serene-text-3);
+  --text-accent:    var(--serene-accent);
+  --text-accent-hover: var(--serene-accent-soft);
+  --interactive-accent:        var(--serene-accent);
+  --interactive-accent-hover:  var(--serene-accent-soft);
+  --text-on-accent: var(--serene-accent-fg);
+
+  --titlebar-background:        var(--serene-canvas);
+  --titlebar-background-focused:var(--serene-canvas);
+
+  /* links + tags glow gold */
+  --link-color:        var(--serene-accent);
+  --link-color-hover:  var(--serene-accent-soft);
+  --tag-color:         var(--serene-accent-soft);
+  --tag-background:    rgba(201, 165, 83, 0.12);
+
+  /* graph view canvas matches the app shell */
+  --graph-line:        #3a342a;
+  --graph-node:        var(--serene-text-2);
+  --graph-node-tag:    var(--serene-accent);
+  --graph-node-focused:var(--serene-accent-soft);
+}
+
+/* ---- Serif display headings (Playfair-feel, like Serene) ---- */
+.theme-dark .markdown-preview-view h1,
+.theme-dark .markdown-rendered h1,
+.theme-dark .cm-header-1,
+.theme-dark .inline-title {
+  font-family: "Playfair Display", "Georgia", serif;
+  font-weight: 600;            /* Serene never uses 700 */
+  letter-spacing: -0.01em;
+  color: var(--serene-text);
+}
+.theme-dark .markdown-preview-view h1::after,
+.theme-dark .inline-title::after {
+  content: ".";
+  color: var(--serene-accent);  /* the Serene page-title dot */
+}
+.theme-dark h2, .theme-dark .cm-header-2 {
+  font-family: "Playfair Display", "Georgia", serif;
+  font-weight: 600;
+  color: var(--serene-accent-soft);
+}
+
+/* ---- Sidebar / file explorer calm ---- */
+.theme-dark .nav-file-title,
+.theme-dark .nav-folder-title { color: var(--serene-text-2); }
+.theme-dark .nav-file-title.is-active {
+  color: var(--serene-accent);
+  background: rgba(201,165,83,0.10);
+}
+
+/* ---- Community overview notes (_COMMUNITY_*) feel like section covers ---- */
+.theme-dark .inline-title { font-size: 2.1em; }
+
+/* ---- Callouts tinted to the accent ---- */
+.theme-dark .callout { border-radius: 8px; }
+
+/* ---- Soft card-like notes ---- */
+.theme-dark .markdown-preview-view {
+  line-height: 1.7;
+  max-width: 46rem;            /* comfortable measure */
+  margin: 0 auto;
+}
+
+/* ---- Scrollbars + chrome ---- */
+.theme-dark ::-webkit-scrollbar-thumb { background: var(--serene-border); border-radius: 6px; }
+.theme-dark .workspace-tab-header.is-active { color: var(--serene-accent); }

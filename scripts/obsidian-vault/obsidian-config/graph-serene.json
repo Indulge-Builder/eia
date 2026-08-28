@@ -1,0 +1,114 @@
+{
+  "collapse-filter": true,
+  "search": "",
+  "showTags": false,
+  "showAttachments": false,
+  "hideUnresolved": false,
+  "showOrphans": true,
+  "collapse-color-groups": true,
+  "colorGroups": [
+    {
+      "query": "[source_file:src/lib/services]",
+      "color": {
+        "a": 1,
+        "rgb": 1998194
+      }
+    },
+    {
+      "query": "[source_file:src/lib/actions]",
+      "color": {
+        "a": 1,
+        "rgb": 12734498
+      }
+    },
+    {
+      "query": "[source_file:src/lib/elaya]",
+      "color": {
+        "a": 1,
+        "rgb": 8019904
+      }
+    },
+    {
+      "query": "[source_file:src/lib/types]",
+      "color": {
+        "a": 1,
+        "rgb": 8019904
+      }
+    },
+    {
+      "query": "[source_file:src/lib/constants]",
+      "color": {
+        "a": 1,
+        "rgb": 8019904
+      }
+    },
+    {
+      "query": "[source_file:src/lib/validations]",
+      "color": {
+        "a": 1,
+        "rgb": 5535390
+      }
+    },
+    {
+      "query": "[source_file:src/lib/utils]",
+      "color": {
+        "a": 1,
+        "rgb": 5535390
+      }
+    },
+    {
+      "query": "[source_file:src/components]",
+      "color": {
+        "a": 1,
+        "rgb": 13215059
+      }
+    },
+    {
+      "query": "[source_file:src/hooks]",
+      "color": {
+        "a": 1,
+        "rgb": 13215059
+      }
+    },
+    {
+      "query": "[source_file:src/app]",
+      "color": {
+        "a": 1,
+        "rgb": 12734498
+      }
+    },
+    {
+      "query": "[source_file:src/trigger]",
+      "color": {
+        "a": 1,
+        "rgb": 1998194
+      }
+    },
+    {
+      "query": "[source_file:supabase]",
+      "color": {
+        "a": 1,
+        "rgb": 1998194
+      }
+    },
+    {
+      "query": "[source_file:docs]",
+      "color": {
+        "a": 1,
+        "rgb": 9077366
+      }
+    }
+  ],
+  "collapse-display": true,
+  "showArrow": true,
+  "textFadeMultiplier": 0,
+  "nodeSizeMultiplier": 0.533428819444444,
+  "lineSizeMultiplier": 0.248020833333333,
+  "collapse-forces": false,
+  "centerStrength": 0.518713248970312,
+  "repelStrength": 10,
+  "linkStrength": 1,
+  "linkDistance": 250,
+  "scale": 0.06071228809076093,
+  "close": false
+}

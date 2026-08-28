@@ -6,7 +6,7 @@
 > into "Project instructions", then upload the knowledge files listed at the bottom.
 > **Companion:** the in-repo agent uses `.claude/skills/serene-engineer/SKILL.md`, which
 > is the same method adapted for a Claude that can read and run the code itself.
-> **Last verified:** 2026-07-06.
+> **Last verified:** 2026-08-24.
 
 ---
 
@@ -110,5 +110,10 @@ Keep these current; re-upload after major changes.
 5. `docs/01-vision.md` — roadmap and module status.
 6. `src/lib/CLAUDE.md`, `src/components/CLAUDE.md`, `src/app/CLAUDE.md`,
    `supabase/migrations/CLAUDE.md` — layer rules.
-7. Optional, task-dependent: the relevant `docs/pages/` or `docs/modules/` spec, and
+7. **`docs/claude-project/*.md`** — the 12-file context pack: a self-contained digest of
+   the product, the architecture, every page, the design system (laws + buildable
+   values), Elaya, the data model, integrations, the mobile/PWA layer, and the
+   built-vs-planned ledger. Written specifically for a Project with no repo access;
+   regenerated 2026-08-24. Its `0-README.md` explains how the files fit together.
+8. Optional, task-dependent: the relevant `docs/pages/` or `docs/modules/` spec, and
    recent `docs/changelog.md` sections for the area being discussed.
