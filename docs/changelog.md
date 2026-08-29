@@ -58,6 +58,12 @@ messages inside a cluster sat too tight.
   on CORS — downloads now use a second presigned URL with an attachment disposition
   (plain anchor click), full-size image open uses the presigned URL directly. Local-mode
   data: URLs keep the buffer path.
+- **WhatsApp formatting rendered (same day)**: new `ui/WaText.tsx` — THE renderer for
+  human WhatsApp text: `*bold*` `_italic_` `~strike~` `` `code` `` + ```mono blocks``` +
+  bare-URL links, word-boundary guarded (snake_case never triggers), React nodes only.
+  Composed by sia/SiaMessageBubble AND whatsapp/MessageBubble (text + captions);
+  `linkifyText` moved there from sia-shared. NOT ChatMarkdown — that grammar is
+  model markdown (`**bold**`), this is human WhatsApp (`*bold*`); never merge them.
 
 **Why:** recovery must not require the codebase or AWS access. When the session dies, Ethan
 (or anyone admin/founder) should fix it from Serene alone; and the alarm should reach the
