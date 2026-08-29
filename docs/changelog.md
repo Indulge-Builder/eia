@@ -58,6 +58,11 @@ messages inside a cluster sat too tight.
   on CORS — downloads now use a second presigned URL with an attachment disposition
   (plain anchor click), full-size image open uses the presigned URL directly. Local-mode
   data: URLs keep the buffer path.
+- **Stale-tab guard (same day)**: a deploy invalidates an open tab's server-action ids and
+  the 4s live-tail poll dies SILENTLY — the tab looks quiet while messages flow (the
+  "live msgs not coming" report; capture was verified instant, the tab was just old).
+  The poll now counts a failure streak and after 3 shows a "Serene was updated — tap to
+  refresh" pill instead of pretending the groups went quiet.
 - **WhatsApp formatting rendered (same day)**: new `ui/WaText.tsx` — THE renderer for
   human WhatsApp text: `*bold*` `_italic_` `~strike~` `` `code` `` + ```mono blocks``` +
   bare-URL links, word-boundary guarded (snake_case never triggers), React nodes only.
