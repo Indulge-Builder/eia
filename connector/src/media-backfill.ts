@@ -15,8 +15,9 @@ import { db, fetchRawMessageByPair } from "./db.js";
 import { storeMediaBuffer } from "./media.js";
 import { reviveBuffers } from "./normalize.js";
 
-const DRIP_MS = 1500;
-const BATCH = 25;
+const LANES = 4;
+const LANE_PACE_MS = 1000;
+const BATCH = 50;
 const FRESH_GUARD_MS = 10 * 60 * 1000;
 
 const quietLogger = pino({ level: "silent" });
@@ -77,7 +78,11 @@ async function setStatus(
 
 let running = false;
 
-/** Start the drip. Idempotent per process; dies with the process (crash-only). */
+/** Start the drip — LANES concurrent workers over a shared batch queue
+ *  (founder call 2026-08-29: single-lane drained ~10/min; four lanes target
+ *  ~40/min). Verdict logic and the transport breaker are unchanged — the
+ *  breaker counter is shared across lanes and stops all of them.
+ *  Idempotent per process; dies with the process (crash-only). */
 export function startMediaBackfill(sock: WASocket): void {
   if (running) return;
   running = true;
@@ -85,7 +90,80 @@ export function startMediaBackfill(sock: WASocket): void {
   void (async () => {
     let done = 0;
     let expired = 0;
-    console.log("[backfill] historical media drip started");
+    let consecutiveFailures = 0;
+    let stopped = false;
+    console.log(`[backfill] historical media drip started (${LANES} lanes)`);
+
+    const processRow = async (row: PendingRow): Promise<void> => {
+      try {
+        const msg = await fetchRawMessage(row);
+        if (!msg?.message) {
+          // ORPHAN: no message row holds this media's keys (its message
+          // insert was lost in a flood batch) — undownloadable forever.
+          // dead_letter is the honest verdict; never "expired".
+          await setStatus(row, "dead_letter");
+          expired++;
+          consecutiveFailures = 0;
+          return;
+        }
+        let buffer: Buffer;
+        try {
+          buffer = (await downloadMediaMessage(msg, "buffer", {}, {
+            logger: quietLogger,
+            reuploadRequest: sock.updateMediaMessage,
+          })) as Buffer;
+        } catch (firstErr) {
+          // Historical URLs die with statuses Baileys does NOT auto-reupload
+          // on (it only reacts to 404/410; expired signatures answer 403 —
+          // the 2026-08-29 breaker trip). Ask the phone to re-upload
+          // EXPLICITLY, then retry the download once with the refreshed url.
+          const updated = (await sock.updateMediaMessage(msg)) as WAMessage;
+          buffer = (await downloadMediaMessage(updated, "buffer", {}, {
+            logger: quietLogger,
+            reuploadRequest: sock.updateMediaMessage,
+          })) as Buffer;
+          void firstErr;
+        }
+        const path = await storeMediaBuffer(row.chat_jid, row.wa_message_id, row.mime, buffer);
+        await setStatus(row, "done", { storage_path: path, size_bytes: buffer.length });
+        done++;
+        consecutiveFailures = 0;
+      } catch (e) {
+        const reason = e instanceof Error ? e.message : String(e);
+        const attempts = (row.attempts ?? 0) + 1;
+        // A verdict needs EVIDENCE: only clearly-permanent refusals expire.
+        // 'bad decrypt' is permanent: the phone's re-upload key no longer
+        // matches the key the history sync gave us — it never heals (the
+        // 2026-08-29 month-old-slab finding).
+        const permanent = /404|410|not.?found|empty media key|no url|expired|bad decrypt|failed by device/i.test(reason);
+        if (permanent || attempts >= 3) {
+          await setStatus(row, "expired", { attempts });
+        } else {
+          await setStatus(row, "pending", { attempts }); // retried a later pass
+        }
+        expired++;
+        // The breaker guards TRANSPORT sickness (socket/db/network), never a
+        // dead slab being correctly buried — a permanent verdict is the drip
+        // WORKING, so it doesn't count toward the stop.
+        if (!permanent) consecutiveFailures++;
+        if (consecutiveFailures <= 3 || consecutiveFailures % 25 === 0) {
+          const status =
+            (e as { output?: { statusCode?: number }; data?: { statusCode?: number } })?.output?.statusCode ??
+            (e as { data?: { statusCode?: number } })?.data?.statusCode;
+          console.warn(
+            `[backfill] ${row.media_type} ${row.wa_message_id} failed (attempt ${attempts}${status ? `, status ${status}` : ""}): ${reason.slice(0, 240)}`,
+          );
+        }
+        if (consecutiveFailures >= 15) {
+          console.error("[backfill] 15 consecutive failures — stopping the drip (systemic issue, investigate before grinding on)");
+          stopped = true;
+        }
+      }
+      if ((done + expired) % 100 === 0) {
+        console.log(`[backfill] progress: ${done} recovered, ${expired} failed/deferred`);
+      }
+    };
+
     for (;;) {
       const batch = await fetchPendingBatch();
       if (batch.length === 0) {
@@ -93,77 +171,21 @@ export function startMediaBackfill(sock: WASocket): void {
         running = false;
         return;
       }
-      let consecutiveFailures = 0;
-      for (const row of batch) {
-        try {
-          const msg = await fetchRawMessage(row);
-          if (!msg?.message) {
-            // ORPHAN: no message row holds this media's keys (its message
-            // insert was lost in a flood batch) — undownloadable forever.
-            // dead_letter is the honest verdict; never "expired".
-            await setStatus(row, "dead_letter");
-            expired++;
-            consecutiveFailures = 0;
-            continue;
+      const queue = [...batch];
+      await Promise.all(
+        Array.from({ length: LANES }, async () => {
+          for (;;) {
+            if (stopped) return;
+            const row = queue.shift();
+            if (!row) return;
+            await processRow(row);
+            await new Promise((r) => setTimeout(r, LANE_PACE_MS));
           }
-          let buffer: Buffer;
-          try {
-            buffer = (await downloadMediaMessage(msg, "buffer", {}, {
-              logger: quietLogger,
-              reuploadRequest: sock.updateMediaMessage,
-            })) as Buffer;
-          } catch (firstErr) {
-            // Historical URLs die with statuses Baileys does NOT auto-reupload
-            // on (it only reacts to 404/410; expired signatures answer 403 —
-            // the 2026-08-29 breaker trip). Ask the phone to re-upload
-            // EXPLICITLY, then retry the download once with the refreshed url.
-            const updated = (await sock.updateMediaMessage(msg)) as WAMessage;
-            buffer = (await downloadMediaMessage(updated, "buffer", {}, {
-              logger: quietLogger,
-              reuploadRequest: sock.updateMediaMessage,
-            })) as Buffer;
-            void firstErr;
-          }
-          const path = await storeMediaBuffer(row.chat_jid, row.wa_message_id, row.mime, buffer);
-          await setStatus(row, "done", { storage_path: path, size_bytes: buffer.length });
-          done++;
-          consecutiveFailures = 0;
-        } catch (e) {
-          const reason = e instanceof Error ? e.message : String(e);
-          const attempts = (row.attempts ?? 0) + 1;
-          // A verdict needs EVIDENCE: only clearly-permanent refusals expire.
-          // 'bad decrypt' is permanent: the phone's re-upload key no longer
-          // matches the key the history sync gave us — it never heals (the
-          // 2026-08-29 month-old-slab finding).
-          const permanent = /404|410|not.?found|empty media key|no url|expired|bad decrypt|failed by device/i.test(reason);
-          if (permanent || attempts >= 3) {
-            await setStatus(row, "expired", { attempts });
-          } else {
-            await setStatus(row, "pending", { attempts }); // retried a later pass
-          }
-          expired++;
-          // The breaker guards TRANSPORT sickness (socket/db/network), never a
-          // dead slab being correctly buried — a permanent verdict is the drip
-          // WORKING, so it doesn't count toward the stop.
-          if (!permanent) consecutiveFailures++;
-          if (consecutiveFailures <= 3 || consecutiveFailures % 25 === 0) {
-            const status =
-              (e as { output?: { statusCode?: number }; data?: { statusCode?: number } })?.output?.statusCode ??
-              (e as { data?: { statusCode?: number } })?.data?.statusCode;
-            console.warn(
-              `[backfill] ${row.media_type} ${row.wa_message_id} failed (attempt ${attempts}${status ? `, status ${status}` : ""}): ${reason.slice(0, 240)}`,
-            );
-          }
-          if (consecutiveFailures >= 15) {
-            console.error("[backfill] 15 consecutive failures — stopping the drip (systemic issue, investigate before grinding on)");
-            running = false;
-            return;
-          }
-        }
-        if ((done + expired) % 100 === 0) {
-          console.log(`[backfill] progress: ${done} recovered, ${expired} failed/deferred`);
-        }
-        await new Promise((r) => setTimeout(r, DRIP_MS));
+        }),
+      );
+      if (stopped) {
+        running = false;
+        return;
       }
     }
   })();

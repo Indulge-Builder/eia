@@ -107,8 +107,9 @@ CLI to the installed `@trigger.dev/sdk` version — a mismatched latest CLI refu
 
 - Live media downloads immediately (concurrency 2, retries, dead-letter after 5).
 - Historical/orphaned `pending` AND stranded `retrying` rows are drained by the
-  in-process backfill drip (starts on every connect, ~1 item/1.5s, newest
-  first): each row ends `done` or `expired` — nothing stays pending forever.
+  in-process backfill drip (starts on every connect, 4 concurrent lanes,
+  newest MESSAGE first): each row ends `done` or `expired` — nothing stays
+  pending forever.
 - Statuses: `pending → done | retrying → dead_letter | expired`.
   `dead_letter` = we hold no key material (orphan) or live retries exhausted;
   `expired` = WhatsApp refused re-upload (link gone for good).
