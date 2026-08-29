@@ -158,10 +158,8 @@ export const GUPSHUP_TASK_ASSIGNED_TEMPLATE_ID = '1cb3c51f-de37-4ee3-9be1-60bb16
 export const TASK_ASSIGNED_TEMPLATE_CONFIGURED = GUPSHUP_TASK_ASSIGNED_TEMPLATE_ID.length > 0;
 
 // Sia watcher alarm (sendSiaAlertNotification) — the "capture ear is in trouble" WhatsApp
-// ping to every active admin + founder. Registered template pending (the customer-welcome
-// posture): env-fallback sentinel + CONFIGURED guard so the alarm never fires a blank
-// template while the id is unset. Params: {{1}} first name, {{2}} alert title, {{3}} detail.
-export const GUPSHUP_SIA_ALERT_TEMPLATE_ID =
-  process.env.GUPSHUP_SIA_ALERT_TEMPLATE_ID ?? 'SIA_ALERT_TEMPLATE_ID_UNSET';
-export const SIA_ALERT_TEMPLATE_CONFIGURED =
-  GUPSHUP_SIA_ALERT_TEMPLATE_ID !== 'SIA_ALERT_TEMPLATE_ID_UNSET';
+// ping. Tier 1 = admins immediately (10-min cadence), founders join after 1 unresolved
+// hour (src/trigger/sia-silence.ts). Registered 2026-08-29.
+// Params: {{1}} first name, {{2}} alert title, {{3}} detail.
+export const GUPSHUP_SIA_ALERT_TEMPLATE_ID = '28d339f8-9f55-4aca-ba90-b3a694a4a841';
+export const SIA_ALERT_TEMPLATE_CONFIGURED = GUPSHUP_SIA_ALERT_TEMPLATE_ID.length > 0;
