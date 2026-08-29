@@ -45,7 +45,9 @@ async function fetchPendingBatch(): Promise<PendingRow[]> {
     .lt("created_at", cutoff)
     .lt("attempts", "5")
     .order("attempts", { ascending: true })
-    .order("created_at", { ascending: false }) // newest first — freshest links first
+    // Newest MESSAGE first (0178): recent media recover almost always; the
+    // deep tail (dead keys/links) drains to honest verdicts afterwards.
+    .order("wa_timestamp", { ascending: false, nullsFirst: false })
     .limit(BATCH);
   if (error) {
     console.error("[backfill] pending fetch failed:", error.message);
@@ -130,14 +132,20 @@ export function startMediaBackfill(sock: WASocket): void {
           const reason = e instanceof Error ? e.message : String(e);
           const attempts = (row.attempts ?? 0) + 1;
           // A verdict needs EVIDENCE: only clearly-permanent refusals expire.
-          const permanent = /404|410|not.?found|empty media key|no url|expired/i.test(reason);
+          // 'bad decrypt' is permanent: the phone's re-upload key no longer
+          // matches the key the history sync gave us — it never heals (the
+          // 2026-08-29 month-old-slab finding).
+          const permanent = /404|410|not.?found|empty media key|no url|expired|bad decrypt|failed by device/i.test(reason);
           if (permanent || attempts >= 3) {
             await setStatus(row, "expired", { attempts });
           } else {
             await setStatus(row, "pending", { attempts }); // retried a later pass
           }
           expired++;
-          consecutiveFailures++;
+          // The breaker guards TRANSPORT sickness (socket/db/network), never a
+          // dead slab being correctly buried — a permanent verdict is the drip
+          // WORKING, so it doesn't count toward the stop.
+          if (!permanent) consecutiveFailures++;
           if (consecutiveFailures <= 3 || consecutiveFailures % 25 === 0) {
             const status =
               (e as { output?: { statusCode?: number }; data?: { statusCode?: number } })?.output?.statusCode ??

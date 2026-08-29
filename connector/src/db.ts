@@ -383,6 +383,8 @@ export async function insertMediaRow(row: {
   mime: string | null;
   size_bytes: number | null;
   duration_seconds: number | null;
+  /** the MESSAGE's timestamp (0178) — the backfill recovers newest-first */
+  wa_timestamp: string;
 }): Promise<void> {
   const { error } = await db
     .from("wag_media")

@@ -198,6 +198,7 @@ async function processMessages(sock: WASocket, messages: WAMessage[], source: "l
         chat_jid: n.row.chat_jid,
         wa_message_id: n.row.wa_message_id,
         sender_jid: n.row.sender_jid,
+        wa_timestamp: n.row.wa_timestamp,
         ...n.media,
       });
       // Live messages only: history-sync payloads usually lack downloadable keys.
