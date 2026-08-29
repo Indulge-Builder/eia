@@ -475,6 +475,10 @@ function s3(): S3Client {
 
 export type SiaMediaPayload = {
   dataUrl: string;
+  /** For "save this file": S3 mode presigns with an attachment disposition so a
+   *  plain anchor click downloads it (a browser fetch() of the presigned URL
+   *  dies on CORS); local mode reuses the data: URL. */
+  downloadUrl: string;
   mime: string | null;
   mediaType: string;
   sizeBytes: number;
@@ -516,11 +520,23 @@ export async function getSiaMediaPayload(
     const key = rest.slice(slash + 1);
     if (!bucket || !key) return { payload: null, reason: "not_found" };
     try {
-      const url = await getSignedUrl(s3(), new GetObjectCommand({ Bucket: bucket, Key: key }), {
-        expiresIn: MEDIA_SIGNED_URL_TTL_SECONDS,
-      });
+      const filename = key.split("/").pop() ?? "file";
+      const [url, downloadUrl] = await Promise.all([
+        getSignedUrl(s3(), new GetObjectCommand({ Bucket: bucket, Key: key }), {
+          expiresIn: MEDIA_SIGNED_URL_TTL_SECONDS,
+        }),
+        getSignedUrl(
+          s3(),
+          new GetObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            ResponseContentDisposition: `attachment; filename="${filename}"`,
+          }),
+          { expiresIn: MEDIA_SIGNED_URL_TTL_SECONDS },
+        ),
+      ]);
       return {
-        payload: { dataUrl: url, mime: row.mime, mediaType: row.media_type, sizeBytes: 0 },
+        payload: { dataUrl: url, downloadUrl, mime: row.mime, mediaType: row.media_type, sizeBytes: 0 },
       };
     } catch (err) {
       console.error("[sia-service] media presign failed:", err);
@@ -540,9 +556,11 @@ export async function getSiaMediaPayload(
     if (info.size > MEDIA_INLINE_MAX_BYTES) return { payload: null, reason: "too_large" };
     const bytes = await readFile(resolved);
     const mime = row.mime?.split(";")[0] ?? "application/octet-stream";
+    const dataUrl = `data:${mime};base64,${bytes.toString("base64")}`;
     return {
       payload: {
-        dataUrl: `data:${mime};base64,${bytes.toString("base64")}`,
+        dataUrl,
+        downloadUrl: dataUrl,
         mime: row.mime,
         mediaType: row.media_type,
         sizeBytes: info.size,

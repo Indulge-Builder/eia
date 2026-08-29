@@ -99,6 +99,7 @@ const TYPE_BY_CONTENT: Record<string, string> = {
   // themselves arrive as separate image messages; this is just the envelope.
   albumMessage: "album",
   sendPaymentMessage: "payment",
+  productMessage: "product", // WhatsApp Business catalog share
 };
 
 const MEDIA_CONTENT = new Set([
@@ -124,6 +125,7 @@ function extractText(content: WAProto.IMessage): string | null {
     content.pollCreationMessageV2?.name ??
     content.pollCreationMessageV3?.name ??
     content.contactMessage?.displayName ??
+    content.productMessage?.product?.title ??
     null
   );
 }

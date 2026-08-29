@@ -4,7 +4,7 @@
 // pill. One home so the rail, the chat header, and the console modal can never
 // drift (R-01). Display-only (A-06).
 
-import { FileText, ImageIcon, Images, IndianRupee, Mic, Smile, Video } from "lucide-react";
+import { FileText, ImageIcon, Images, IndianRupee, Mic, ShoppingBag, Smile, Video } from "lucide-react";
 import { AVATAR_COLOUR_PAIRS } from "@/components/ui/Avatar";
 import { hashString } from "@/lib/utils/strings";
 import type { SiaGroupKind, SiaGroupRow, SiaMessageRow } from "@/lib/services/sia-service";
@@ -42,6 +42,7 @@ export const TYPE_PREVIEW: Record<string, { label: string; icon: typeof ImageIco
   document: { label: "Document", icon: FileText },
   album: { label: "Photo album", icon: Images },
   payment: { label: "Payment", icon: IndianRupee },
+  product: { label: "Product", icon: ShoppingBag },
 };
 
 /** Bare-URL linkification for chat text (the WhatsApp reading): http(s) and

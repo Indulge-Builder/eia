@@ -172,6 +172,11 @@ function InViewImage({ chatJid, waMessageId, senderJid, media, bare }: MediaProp
   const maxW = bare ? 140 : 280;
   const openFull = async () => {
     if (!payload) return;
+    if (!payload.dataUrl.startsWith("data:")) {
+      // S3 mode: the presigned URL opens directly — fetch() would die on CORS.
+      window.open(payload.dataUrl, "_blank", "noopener");
+      return;
+    }
     const blob = await (await fetch(payload.dataUrl)).blob();
     window.open(URL.createObjectURL(blob), "_blank", "noopener");
   };
@@ -433,10 +438,21 @@ function DocumentChip({ chatJid, waMessageId, senderJid, media }: MediaProps) {
     setError(null);
     const payload = await fetchMedia(chatJid, waMessageId, senderJid);
     if (payload) {
-      const mime = (payload.mime ?? "application/octet-stream").split(";")[0];
-      const ext = EXT_BY_MIME[mime] ?? mime.split("/")[1] ?? "bin";
-      const buffer = await dataUrlToBuffer(payload.dataUrl);
-      triggerBrowserDownload(`${waMessageId}.${ext}`, buffer, mime);
+      if (!payload.downloadUrl.startsWith("data:")) {
+        // S3 mode: the presigned URL carries an attachment disposition — a
+        // plain anchor click downloads it (a browser fetch() dies on CORS).
+        const a = document.createElement("a");
+        a.href = payload.downloadUrl;
+        a.rel = "noopener";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        const mime = (payload.mime ?? "application/octet-stream").split(";")[0];
+        const ext = EXT_BY_MIME[mime] ?? mime.split("/")[1] ?? "bin";
+        const buffer = await dataUrlToBuffer(payload.downloadUrl);
+        triggerBrowserDownload(`${waMessageId}.${ext}`, buffer, mime);
+      }
     } else {
       setError("This file isn't available.");
     }

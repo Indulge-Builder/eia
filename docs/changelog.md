@@ -43,6 +43,21 @@ messages inside a cluster sat too tight.
   anchors (new tab, noopener, `--neu-accent-deep` underline) via `linkifyText` in
   sia-shared — React nodes only, no innerHTML. ChatMarkdown stays the model-text
   renderer; this is for human plain text.
+- **Product shares named (same day)**: `productMessage` (WhatsApp Business catalog
+  shares) now types as `product` with the title as text; 15 stored rows reclassified.
+- **Media backfill actually drains (same day, migration 0178)**: the drip ordered by row
+  insert time (≈ random message age) and served a month-old slab first, where the phone's
+  re-upload keys no longer match the sync's keys ("bad decrypt") — 15 straight failures
+  tripped the breaker and the console said "draining" while nothing drained. Now:
+  `wag_media.wa_timestamp` (backfilled) orders recovery NEWEST MESSAGE FIRST; bad-decrypt /
+  refused-by-device verdicts are permanent (`expired`); the breaker counts only transport
+  failures, never honest verdicts. First 3 minutes after deploy: 100 recovered, 0 failed.
+  Earlier same fix chain: explicit `updateMediaMessage` re-upload fallback (Baileys only
+  auto-retries 404/410; expired signatures die differently).
+- **Media download/open fixed for S3 mode (same day)**: `fetch()` of a presigned URL dies
+  on CORS — downloads now use a second presigned URL with an attachment disposition
+  (plain anchor click), full-size image open uses the presigned URL directly. Local-mode
+  data: URLs keep the buffer path.
 
 **Why:** recovery must not require the codebase or AWS access. When the session dies, Ethan
 (or anyone admin/founder) should fix it from Serene alone; and the alarm should reach the
