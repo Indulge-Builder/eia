@@ -103,8 +103,8 @@ export function SiaKindPill({ kind }: { kind: SiaGroupKind }) {
       className="shrink-0 rounded-full type-caption"
       style={{
         padding: "1px 10px",
-        background: unmapped ? "var(--color-warning-surface)" : "var(--theme-accent-surface)",
-        color: unmapped ? "var(--color-warning-text)" : "var(--theme-accent-deep)",
+        background: unmapped ? "var(--color-warning-light)" : "var(--theme-accent-surface)",
+        color: unmapped ? "var(--color-warning-text)" : "var(--neu-accent-deep)",
         fontWeight: "var(--weight-medium)",
       }}
     >

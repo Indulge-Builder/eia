@@ -207,7 +207,7 @@ export function SiaGroupInfoPanel({
                     style={{
                       padding: "1px 9px",
                       background: "var(--theme-accent-surface)",
-                      color: "var(--theme-accent-deep)",
+                      color: "var(--neu-accent-deep)",
                       fontWeight: "var(--weight-medium)",
                     }}
                   >
@@ -365,7 +365,7 @@ function MemberRow({
             style={{
               padding: "1px 9px",
               background: "var(--theme-accent-surface)",
-              color: "var(--theme-accent-deep)",
+              color: "var(--neu-accent-deep)",
               fontWeight: "var(--weight-medium)",
             }}
           >

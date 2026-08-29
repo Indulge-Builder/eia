@@ -96,7 +96,7 @@ export function SiaControlModal({
                   <div
                     className="rounded-(--radius-md) border px-4 py-3 mb-4 flex items-center gap-3"
                     style={{
-                      background: `var(--color-${tone}-surface)`,
+                      background: `var(--color-${tone}-light)`,
                       borderColor: `var(--color-${tone})`,
                     }}
                   >

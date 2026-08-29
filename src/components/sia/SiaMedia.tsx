@@ -395,7 +395,7 @@ function ClickToLoadVideo({ chatJid, waMessageId, senderJid, media }: MediaProps
               width: "30px",
               height: "30px",
               background: "var(--theme-accent-surface)",
-              color: "var(--theme-accent-deep)",
+              color: "var(--neu-accent-deep)",
               cursor: "pointer",
             }}
           >
@@ -458,7 +458,7 @@ function DocumentChip({ chatJid, waMessageId, senderJid, media }: MediaProps) {
               width: "30px",
               height: "30px",
               background: "var(--theme-accent-surface)",
-              color: "var(--theme-accent-deep)",
+              color: "var(--neu-accent-deep)",
               cursor: "pointer",
             }}
           >

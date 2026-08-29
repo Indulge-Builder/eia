@@ -232,7 +232,7 @@ export function SiaChat({
               cursor: "pointer",
               borderColor: searchOpen ? "var(--theme-accent)" : "var(--theme-paper-border)",
               background: searchOpen ? "var(--theme-accent-surface)" : "var(--theme-paper)",
-              color: searchOpen ? "var(--theme-accent-deep)" : "var(--theme-text-secondary)",
+              color: searchOpen ? "var(--neu-accent-deep)" : "var(--theme-text-secondary)",
             }}
           >
             {searchOpen ? <X className="w-4 h-4" strokeWidth={1.5} /> : <Search className="w-4 h-4" strokeWidth={1.5} />}

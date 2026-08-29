@@ -12,6 +12,24 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-29 — Vercel build fix: the /sia components referenced tokens that do not exist
+
+**Why:** the first Vercel deploy of the Sia page failed on our own pre-build token guard
+(`scripts/check-tokens.mjs`). The new components referenced `--theme-accent-deep` (the real
+token is `--neu-accent-deep`) and `--color-warning-surface` (no `*-surface` semantic tokens
+exist at all — the family is `-light`/`-text`/`-fg`). The guard also cannot see template
+strings, so the console's dynamic `var(--color-${tone}-surface)` health banner was silently
+transparent at runtime — same phantom family, invisible to the checker.
+
+**What:**
+
+- `--theme-accent-deep` → `--neu-accent-deep` across SiaChat, SiaGroupInfoPanel, SiaMedia,
+  sia-shared (7 sites).
+- `--color-warning-surface` → `--color-warning-light` (sia-shared kind pill).
+- SiaControlModal health banner: `var(--color-${tone}-surface)` → `var(--color-${tone}-light)`
+  (success/warning/danger `-light` all verified present in both light and dark blocks).
+- `node scripts/check-tokens.mjs` green (637 files), `tsc --noEmit` clean.
+
 ## 2026-08-29 — The watcher is paired: QR-into-Postgres becomes THE flow, pairing codes retired
 
 **Why:** the pairing-code flow failed in production twice, and the study explained it
