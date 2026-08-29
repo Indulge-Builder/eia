@@ -34,6 +34,15 @@ messages inside a cluster sat too tight.
   `MessageBubble` and `ElayaMessageBubble` — one chat-bubble contract everywhere: surface
   pair + chip shadow, no border. The mobile layer's bubbles keep their own chrome (the
   mobile design handoff is a separate specced system).
+- **"unknown" bubbles decoded (same day)**: 96% were WhatsApp's `albumMessage` container
+  (the envelope before a multi-photo share — the photos themselves were always captured
+  as separate bubbles). Normalizer now types `album` + `payment`
+  (`sendPaymentMessage`); 878 + 10 stored rows reclassified in place, 33 true unknowns
+  remain (rare protocol notices, raw kept). TYPE_PREVIEW labels: "Photo album" / "Payment".
+- **Links are links (same day)**: bare http(s)/www URLs in message text render as real
+  anchors (new tab, noopener, `--neu-accent-deep` underline) via `linkifyText` in
+  sia-shared — React nodes only, no innerHTML. ChatMarkdown stays the model-text
+  renderer; this is for human plain text.
 
 **Why:** recovery must not require the codebase or AWS access. When the session dies, Ethan
 (or anyone admin/founder) should fix it from Serene alone; and the alarm should reach the

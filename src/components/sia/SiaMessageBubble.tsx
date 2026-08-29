@@ -17,7 +17,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { formatDate } from "@/lib/utils/dates";
 import { SPRING_CONFIG, FAST_DURATION, EASE_IN_OUT } from "@/lib/constants/motion";
 import { SiaMediaAttachment } from "./SiaMedia";
-import { senderInk, senderLabel, TYPE_PREVIEW } from "./sia-shared";
+import { linkifyText, senderInk, senderLabel, TYPE_PREVIEW } from "./sia-shared";
 import type { SiaMessageRow } from "@/lib/services/sia-service";
 
 export function SiaDaySeparator({ ts }: { ts: string }) {
@@ -293,7 +293,7 @@ export function SiaMessageBubble({
                     whiteSpace: "pre-wrap",
                   }}
                 >
-                  {m.text}
+                  {linkifyText(m.text)}
                 </p>
               )}
             </>

@@ -95,6 +95,10 @@ const TYPE_BY_CONTENT: Record<string, string> = {
   pollCreationMessage: "poll",
   pollCreationMessageV2: "poll",
   pollCreationMessageV3: "poll",
+  // The album container WhatsApp sends before a multi-photo share — the photos
+  // themselves arrive as separate image messages; this is just the envelope.
+  albumMessage: "album",
+  sendPaymentMessage: "payment",
 };
 
 const MEDIA_CONTENT = new Set([

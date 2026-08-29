@@ -4,7 +4,7 @@
 // pill. One home so the rail, the chat header, and the console modal can never
 // drift (R-01). Display-only (A-06).
 
-import { FileText, ImageIcon, Mic, Smile, Video } from "lucide-react";
+import { FileText, ImageIcon, Images, IndianRupee, Mic, Smile, Video } from "lucide-react";
 import { AVATAR_COLOUR_PAIRS } from "@/components/ui/Avatar";
 import { hashString } from "@/lib/utils/strings";
 import type { SiaGroupKind, SiaGroupRow, SiaMessageRow } from "@/lib/services/sia-service";
@@ -40,7 +40,37 @@ export const TYPE_PREVIEW: Record<string, { label: string; icon: typeof ImageIco
   voice: { label: "Voice note", icon: Mic },
   audio: { label: "Audio", icon: Mic },
   document: { label: "Document", icon: FileText },
+  album: { label: "Photo album", icon: Images },
+  payment: { label: "Payment", icon: IndianRupee },
 };
+
+/** Bare-URL linkification for chat text (the WhatsApp reading): http(s) and
+ *  www. runs become real anchors (new tab, noopener), everything else stays
+ *  plain text. React nodes only — never dangerouslySetInnerHTML. ChatMarkdown
+ *  is for model-authored markdown; this is for human plain text. */
+const URL_RE = /((?:https?:\/\/|www\.)[^\s<>()]+[^\s<>().,;:!?'"”’])/g;
+
+export function linkifyText(text: string): React.ReactNode {
+  const parts = text.split(URL_RE);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) => {
+    if (i % 2 === 1) {
+      const href = part.startsWith("www.") ? `https://${part}` : part;
+      return (
+        <a
+          key={i}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: "var(--neu-accent-deep)", textDecoration: "underline", wordBreak: "break-all" }}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+}
 
 export function formatBytes(bytes: number | null | undefined): string {
   if (!bytes || bytes <= 0) return "";
