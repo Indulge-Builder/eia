@@ -39,8 +39,10 @@ Postgres auth store makes "pair here, run there" free:
 
 1. Scale the AWS service to 0 (THE ONE LAW above).
 2. Wipe any leftover state: `DELETE FROM sia.wag_auth_state;`
-3. On any machine with the repo: `cd connector && npm start` → scan the QR
-   (WhatsApp → Linked Devices → Link a device).
+3. On any machine with the repo (ALWAYS with the bucket env — a run without it
+   saves media to that machine's disk where the app can never reach it):
+   `cd connector && WAG_MEDIA_BUCKET=serene-prod-watcher-addonsstack-1k9-siamediabucket-89fxizwajvaq npm start`
+   → scan the QR (WhatsApp → Linked Devices → Link a device).
 4. Let the history sync finish locally (watch message counts settle — the
    sync is delivered around pairing time and may not resume if interrupted).
 5. Ctrl+C the local connector, scale the AWS service back to 1. The task reads
