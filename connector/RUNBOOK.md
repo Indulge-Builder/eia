@@ -71,19 +71,26 @@ The watcher reports its own pulse: one row in `sia.wag_watcher_status`, beaten e
 groups sleep at night, and a traffic-based alarm either cries wolf at 3am or gets
 ignored. The /sia green dot reads the same row.
 
-`src/trigger/sia-silence.ts` (Trigger.dev, every 5 min) alerts every active admin +
-founder (in-app + push), most severe condition first:
+`src/trigger/sia-silence.ts` (Trigger.dev, EVERY MINUTE — dispatch latency ≤60s;
+detection is instant at the source) alerts in-app + push + WhatsApp
+(`sendSiaAlertNotification`, template `GUPSHUP_SIA_ALERT_TEMPLATE_ID`), most
+severe condition first:
 
 | Condition | Meaning | Fires after |
 | --- | --- | --- |
-| `down` | no heartbeat — the process is not running | 5 min stale beat |
-| `session_lost` | logged out by WhatsApp, or sitting unpaired | immediately on logout state; 15 min unpaired |
+| `down` | no heartbeat — the process is not running | 3 min stale beat |
+| `session_lost` | logged out by WhatsApp, or sitting unpaired | ≤60s after logout state; 15 min unpaired |
 | `unreachable` | process alive, stuck connecting | 15 min |
 | `quiet` | connected but zero events — possible stale socket | 6 hours (soft; the long window is the 3am protection) |
 
-Each condition re-reminds roughly hourly (per-kind Redis latch, 55 min TTL); full
-recovery clears everything and announces once. While deliberately unpaired, the
+Cadence + escalation (2026-08-29): first alert goes to ADMINS (the tech tier),
+re-reminded every 10 minutes until resolved (per-kind Redis latch, 10 min TTL);
+after 1 unresolved hour the FOUNDERS join the loop. Recovery announces once to
+everyone who was alerted. Founder WhatsApp needs their profile phone set —
+in-app + push reach them regardless. While deliberately unpaired, the
 `session_lost` reminder is expected — it stops the moment pairing completes.
+Session recovery without a terminal: Serene → Sia → gear icon → Session (the
+pairing QR renders there; Restart / Re-pair buttons beside it).
 
 Deploying trigger tasks: `npx trigger.dev@4.4.6 deploy` from the repo root (pin the
 CLI to the installed `@trigger.dev/sdk` version — a mismatched latest CLI refuses).

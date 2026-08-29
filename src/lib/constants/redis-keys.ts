@@ -102,12 +102,16 @@ export const REDIS_KEYS = {
   presence: (userId: string) =>
     `presence:${userId}`,
 
-  // Sia watcher alarm latches (audit P0-2, heartbeat rework 2026-08-27). One
+  // Sia watcher alarm latches (audit P0-2; escalation rework 2026-08-29). One
   // latch per alert kind ('down' | 'session_lost' | 'unreachable' | 'quiet');
-  // present while that condition has already been announced. 55min TTL → roughly
-  // hourly reminders during a long incident; recovery clears every kind and
+  // present while that condition has already been announced. 10min TTL → a
+  // reminder every 10 minutes until resolved; the latch VALUE carries the tier
+  // ('t1' admins-only, 't2' founders joined). Recovery clears every kind and
   // fires the "recovered" note once.
   siaAlert: (kind: string) => `sia:alert:${kind}`,
+  // First-detected stamp per kind (epoch ms, no TTL — cleared on recovery).
+  // Drives the 1-hour founder escalation and the recovery audience.
+  siaAlertSince: (kind: string) => `sia:alert:${kind}:since`,
 } as const;
 
 /** The alarm kinds sia-silence.ts latches on (used to clear all on recovery). */

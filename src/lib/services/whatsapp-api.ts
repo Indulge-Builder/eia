@@ -976,7 +976,11 @@ export async function sendTaskAssignedNotification(
 // Params: {{1}} first name, {{2}} alert title, {{3}} detail line.
 // ─────────────────────────────────────────────
 
-export async function sendSiaAlertNotification(title: string, body: string): Promise<void> {
+export async function sendSiaAlertNotification(
+  title: string,
+  body: string,
+  roles: ('admin' | 'founder')[] = ['admin', 'founder'],
+): Promise<void> {
   try {
     if (!SIA_ALERT_TEMPLATE_CONFIGURED) return;
 
@@ -984,7 +988,7 @@ export async function sendSiaAlertNotification(title: string, body: string): Pro
     const { data: recipients } = await admin
       .from('profiles')
       .select('id, phone, full_name')
-      .in('role', ['admin', 'founder'])
+      .in('role', roles)
       .eq('is_active', true);
 
     const withPhone = (recipients ?? []).filter(

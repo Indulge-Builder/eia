@@ -1,5 +1,6 @@
 /**
- * sia-silence.ts — the Sia watcher alarm (audit P0-2; heartbeat rework same day).
+ * sia-silence.ts — the Sia watcher alarm (audit P0-2; heartbeat rework 2026-08-27;
+ * escalation rework 2026-08-29).
  *
  * Liveness is judged by the watcher's OWN pulse (sia.wag_watcher_status — one
  * row, beat every 60s, migration 0175), never by group traffic: groups sleep at
@@ -7,39 +8,47 @@
  * day. With the heartbeat, "process down" and "session lost" are true positives
  * at any hour.
  *
+ * Detection is instant AT THE SOURCE (the watcher writes state changes the
+ * moment they happen); this task is the dispatcher, ticking EVERY MINUTE, so
+ * failure → WhatsApp/in-app is at most ~60 seconds.
+ *
  * Four conditions, most severe first (one alert per tick):
- *   down          — no heartbeat for 5+ min: the process is not running.
+ *   down          — no heartbeat for 3+ min (3 missed beats): process not running.
  *   session_lost  — WhatsApp logged the watcher out, or it has sat unpaired
- *                   15+ min: a HUMAN must enter a pairing code (RUNBOOK).
+ *                   15+ min: a HUMAN must scan the QR (Sia console → Session).
  *   unreachable   — process alive but stuck connecting 15+ min.
  *   quiet         — connected, but zero events for 6+ hours: worth a glance
- *                   (possible zombie connection). Soft by design — this is the
- *                   only traffic-based check, and its long window is what keeps
- *                   night-time silence from paging anyone.
+ *                   (possible zombie connection). Soft by design.
  *
- * Per-kind Redis latches (55 min TTL) keep a long incident to ~hourly reminders;
- * full recovery clears every latch and announces once. Fan-out rides the
- * existing createNotification pipeline (in-app + Web Push) to admins + founders.
+ * Cadence + escalation (founder decision 2026-08-29):
+ *   t0        → admins (the tech tier), in-app + push + WhatsApp
+ *   every 10m → re-reminder until resolved (per-kind Redis latch, 10min TTL)
+ *   t+60m     → FOUNDERS join the loop (their own intro, then the 10m cadence)
+ *   recovery  → announce once to everyone who was alerted (admins always;
+ *               founders only if the incident had escalated)
  */
 
 import { schedules } from "@trigger.dev/sdk/v3";
 
-const BEAT_STALE_MIN = 5;
+const BEAT_STALE_MIN = 3;
 const STUCK_STATE_MIN = 15;
 const QUIET_HOURS = 6;
-const LATCH_TTL_SECONDS = 55 * 60;
+const REMIND_TTL_SECONDS = 10 * 60;
+const ESCALATE_AFTER_MS = 60 * 60_000;
 
 type AlertKind = "down" | "session_lost" | "unreachable" | "quiet";
+type AlertRole = "admin" | "founder";
 
 export const siaSilenceWatchTask = schedules.task({
   id: "sia-silence-watch",
-  cron: { pattern: "*/5 * * * *" },
+  cron: { pattern: "* * * * *" },
   maxDuration: 60,
   run: async () => {
     // Dynamic imports — keep server-only modules out of the Trigger.dev module scan.
     const { getSiaWatcherStatus, getSiaLastEventAt } = await import("@/lib/services/sia-service");
     const { getAssignableUsers } = await import("@/lib/services/profiles-service");
     const { createNotification } = await import("@/lib/services/notifications-service");
+    const { sendSiaAlertNotification } = await import("@/lib/services/whatsapp-api");
     const { redis } = await import("@/lib/redis");
     const { REDIS_KEYS, SIA_ALERT_KINDS } = await import("@/lib/constants/redis-keys");
 
@@ -66,8 +75,8 @@ export const siaSilenceWatchTask = schedules.task({
       title = "Sia session needs pairing";
       body =
         status!.state === "logged_out"
-          ? "WhatsApp logged the watcher out. Someone must enter a fresh pairing code — see connector/RUNBOOK.md."
-          : `The watcher has been waiting unpaired for ${Math.floor(stateForMin)} minutes. Enter a pairing code when ready — see connector/RUNBOOK.md.`;
+          ? "WhatsApp logged the watcher out. Open Serene → Sia → the gear icon → Session, and scan the QR with the watcher phone."
+          : `The watcher has been waiting unpaired for ${Math.floor(stateForMin)} minutes. Scan the QR in Serene → Sia → Session when ready.`;
     } else if (status!.state === "connecting" && stateForMin > STUCK_STATE_MIN) {
       kind = "unreachable";
       title = "Sia watcher can't reach WhatsApp";
@@ -82,41 +91,67 @@ export const siaSilenceWatchTask = schedules.task({
       }
     }
 
-    const { sendSiaAlertNotification } = await import("@/lib/services/whatsapp-api");
-
-    const notifyAll = async (t: string, b: string) => {
-      const recipients = await getAssignableUsers({ roles: ["admin", "founder"] });
+    const notifyRoles = async (roles: AlertRole[], t: string, b: string) => {
+      const recipients = await getAssignableUsers({ roles });
       await Promise.all([
         ...recipients.map((r) =>
           createNotification({ recipient_id: r.id, type: "system", title: t, body: b, action_url: "/sia" }),
         ),
-        // The WhatsApp channel (migration 0177): the wrapper resolves its own
-        // recipients, no-ops until the template is registered, never throws.
-        sendSiaAlertNotification(t, b),
+        // WhatsApp channel — resolves its own recipients per role, no-ops until
+        // the template is registered, never throws.
+        sendSiaAlertNotification(t, b, roles),
       ]);
       return recipients.length;
     };
 
-    // ── Alert (latched per kind) ──
+    // ── Alert (10-min latch per kind; founders join after 1 hour) ──
     if (kind) {
       const latchKey = REDIS_KEYS.siaAlert(kind);
-      const latched = await redis.get(latchKey).catch(() => null);
-      if (latched) return { state: kind, note: "already alerted" };
-      const alerted = await notifyAll(title, body);
+      const sinceKey = REDIS_KEYS.siaAlertSince(kind);
+
+      const [latched, sinceRaw] = await Promise.all([
+        redis.get(latchKey).catch(() => null),
+        redis.get(sinceKey).catch(() => null),
+      ]);
+      const since = sinceRaw ? Number(sinceRaw) : now;
+      if (!sinceRaw) await redis.set(sinceKey, String(now)).catch(() => {});
+      const escalated = now - since >= ESCALATE_AFTER_MS;
+      const tier: "t1" | "t2" = escalated ? "t2" : "t1";
+
+      // Crossing the 1-hour line mid-latch: founders get their intro NOW, not
+      // at the next 10-minute boundary.
+      if (latched === "t1" && escalated) {
+        await notifyRoles(["founder"], title, `Unresolved for over an hour — ${body}`);
+        await redis.setex(latchKey, REMIND_TTL_SECONDS, "t2").catch(() => {});
+        return { state: kind, note: "escalated to founders" };
+      }
+      if (latched) return { state: kind, note: "reminder window open" };
+
+      const roles: AlertRole[] = escalated ? ["admin", "founder"] : ["admin"];
+      const alerted = await notifyRoles(roles, title, body);
       try {
-        await redis.setex(latchKey, LATCH_TTL_SECONDS, "1");
+        await redis.setex(latchKey, REMIND_TTL_SECONDS, tier);
       } catch (e) {
         console.warn("[sia-alarm] latch set failed (may re-alert next tick):", e);
       }
-      return { state: kind, alerted };
+      return { state: kind, alerted, tier };
     }
 
-    // ── Healthy: clear latches, announce recovery once ──
+    // ── Healthy: clear latches + since stamps, announce recovery once ──
     const latchKeys = SIA_ALERT_KINDS.map((k) => REDIS_KEYS.siaAlert(k));
-    const latchValues = await Promise.all(latchKeys.map((k) => redis.get(k).catch(() => null)));
-    if (latchValues.some((v) => v !== null)) {
-      await Promise.all(latchKeys.map((k) => redis.del(k).catch(() => {})));
-      const alerted = await notifyAll("Sia watcher recovered", "Heartbeat and connection are healthy again.");
+    const sinceKeys = SIA_ALERT_KINDS.map((k) => REDIS_KEYS.siaAlertSince(k));
+    const [latchValues, sinceValues] = await Promise.all([
+      Promise.all(latchKeys.map((k) => redis.get(k).catch(() => null))),
+      Promise.all(sinceKeys.map((k) => redis.get(k).catch(() => null))),
+    ]);
+    const hadIncident = latchValues.some((v) => v !== null) || sinceValues.some((v) => v !== null);
+    if (hadIncident) {
+      const oldestSince = Math.min(...sinceValues.filter((v) => v !== null).map((v) => Number(v)), now);
+      const foundersWereIn =
+        now - oldestSince >= ESCALATE_AFTER_MS || latchValues.some((v) => v === "t2");
+      await Promise.all([...latchKeys, ...sinceKeys].map((k) => redis.del(k).catch(() => {})));
+      const roles: AlertRole[] = foundersWereIn ? ["admin", "founder"] : ["admin"];
+      const alerted = await notifyRoles(roles, "Sia watcher recovered", "Heartbeat and connection are healthy again.");
       return { state: "recovered", alerted };
     }
     return { state: "healthy", watcher: status!.state };

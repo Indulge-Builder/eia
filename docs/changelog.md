@@ -43,6 +43,16 @@ founders on WhatsApp, not just in-app.
 - Also: the supabase CLI migration ledger was repaired (0161, 0169–0176 marked applied —
   they were live in prod but applied outside the ledger; orphan remote row 20260807101212
   marked reverted). `db push` now works cleanly.
+- **Alarm cadence + escalation rework** (same day, founder-specced): the cron now ticks
+  EVERY MINUTE (dispatch ≤60s; detection is instant at the source — the watcher writes
+  state changes the moment they happen), `down` fires at 3 missed beats instead of 5.
+  First alert → ADMINS (the tech tier); re-reminder every 10 minutes until resolved
+  (latch TTL 55min → 10min, latch value carries the tier); after 1 unresolved hour the
+  FOUNDERS join (own intro the moment the line is crossed, then the same cadence). New
+  Redis key `siaAlertSince(kind)` (first-detected stamp) drives escalation + the recovery
+  audience (admins always; founders only if escalated). `sendSiaAlertNotification` gained
+  a roles param. Founders currently have no profile phones — their WhatsApp leg no-ops
+  until numbers are added; in-app + push reach them regardless.
 
 ## 2026-08-29 — Sia end-to-end audit against the Baileys 7.0.0-rc14 docs: nine fixes across the pipeline
 
