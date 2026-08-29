@@ -23,6 +23,7 @@ import { config } from "./config.js";
 import {
   getWatcherStatusRow,
   insertMediaRow,
+  publishQr,
   insertRawEvents,
   markRevoked,
   memberJoined,
@@ -95,9 +96,21 @@ let myJid: string | null = null;
 
 let watcherState: WatcherState = "connecting";
 let stateSince = new Date().toISOString();
+const BOOT_AT = Date.now();
 
 function beat(): void {
-  void upsertWatcherStatus({ state: watcherState, state_since: stateSince, account_jid: myJid });
+  void upsertWatcherStatus({ state: watcherState, state_since: stateSince, account_jid: myJid }).then(
+    (restartRequestedAt) => {
+      // The Serene console's Restart / Re-pair control channel (migration 0177):
+      // a stamp newer than THIS boot means someone asked for a clean restart.
+      // Crash-only does the rest — a re-pair wiped the auth first, so the next
+      // boot arms a fresh QR straight into the console.
+      if (restartRequestedAt && new Date(restartRequestedAt).getTime() > BOOT_AT) {
+        console.log("[watcher] restart requested from Serene — exiting for a clean boot");
+        process.exit(0);
+      }
+    },
+  );
 }
 
 function setWatcherState(next: WatcherState): void {
@@ -466,12 +479,18 @@ async function start(): Promise<void> {
     if (update.receivedPendingNotifications) {
       console.log("[watcher] offline queue replayed — live stream from here");
     }
-    // Local dev with a real terminal and no WAG_PAIR_NUMBER still gets the QR.
-    if (qr && !config.pairNumber) {
-      console.log("\n[watcher] Scan this QR with the WATCHER phone (WhatsApp → Linked Devices):\n");
-      qrcode.generate(qr, { small: true });
+    if (qr) {
+      // ALWAYS publish to the status row — the /sia console renders it in the
+      // browser (remote re-pairing, migration 0177). A local terminal also
+      // draws it directly.
+      void publishQr(qr);
+      if (!config.pairNumber) {
+        console.log("\n[watcher] Scan this QR with the WATCHER phone (WhatsApp → Linked Devices):\n");
+        qrcode.generate(qr, { small: true });
+      }
     }
     if (connection === "open") {
+      void publishQr(null); // paired — never leave a stale QR on display
       myJid = normalizeJid(sock.user?.id ?? null);
       console.log(`[watcher] connected as ${myJid}`);
       setWatcherState("connected");

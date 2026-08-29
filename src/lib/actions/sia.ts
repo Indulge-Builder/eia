@@ -7,6 +7,9 @@ import {
   getSiaHealth,
   getSiaMediaPayload,
   getSiaMessages,
+  getSiaWatcherStatus,
+  requestSiaSessionRepair,
+  requestSiaWatcherRestart,
   searchSiaMessages,
   updateSiaGroupMapping,
   type SiaGroupInfo,
@@ -16,6 +19,7 @@ import {
   type SiaMediaPayload,
   type SiaMessageRow,
   type SiaSearchHit,
+  type SiaWatcherState,
 } from "@/lib/services/sia-service";
 import { formErrors } from "@/lib/validations/form-errors";
 import type { ActionResult } from "@/lib/types";
@@ -141,6 +145,63 @@ export async function getSiaHealthAction(): Promise<ActionResult<SiaHealth>> {
     console.error("[sia-action] getSiaHealth failed:", err);
     return { data: null, error: formErrors.generic };
   }
+}
+
+// ── getSiaPairingStatusAction — the console's session panel (5s poll while open).
+//    The QR is exposed ONLY while the watcher sits in 'pairing' — scanning it
+//    grants the WhatsApp session, so it never leaves this admin/founder gate. ──
+export type SiaPairingStatus = {
+  state: SiaWatcherState | "unknown";
+  beatAt: string | null;
+  stateSince: string | null;
+  qr: string | null;
+  restartPending: boolean;
+};
+
+export async function getSiaPairingStatusAction(): Promise<ActionResult<SiaPairingStatus>> {
+  const auth = await requireProfile(SIA_ROLES);
+  if (!auth.ok) return auth.result;
+  try {
+    const s = await getSiaWatcherStatus();
+    if (!s) {
+      return { data: { state: "unknown", beatAt: null, stateSince: null, qr: null, restartPending: false }, error: null };
+    }
+    const beatFresh = Date.now() - new Date(s.beat_at).getTime() < 3 * 60 * 1000;
+    return {
+      data: {
+        state: beatFresh ? s.state : "unknown",
+        beatAt: s.beat_at,
+        stateSince: s.state_since,
+        qr: s.state === "pairing" && beatFresh ? s.qr : null,
+        restartPending:
+          !!s.restart_requested_at && new Date(s.restart_requested_at).getTime() > Date.now() - 5 * 60 * 1000,
+      },
+      error: null,
+    };
+  } catch (err) {
+    console.error("[sia-action] getSiaPairingStatus failed:", err);
+    return { data: null, error: formErrors.generic };
+  }
+}
+
+// ── requestSiaRestartAction — clean restart, same session resumes (safe) ──
+export async function requestSiaRestartAction(): Promise<ActionResult<{ requested: true }>> {
+  const auth = await requireProfile(SIA_ROLES);
+  if (!auth.ok) return auth.result;
+  const ok = await requestSiaWatcherRestart();
+  if (!ok) return { data: null, error: formErrors.generic };
+  return { data: { requested: true }, error: null };
+}
+
+// ── requestSiaRepairAction — wipe the WhatsApp session + restart into pairing.
+//    The QR then appears in the console within ~1 minute. Session-destructive
+//    (never data-destructive); the UI double-confirms before calling. ──
+export async function requestSiaRepairAction(): Promise<ActionResult<{ requested: true }>> {
+  const auth = await requireProfile(SIA_ROLES);
+  if (!auth.ok) return auth.result;
+  const ok = await requestSiaSessionRepair();
+  if (!ok) return { data: null, error: formErrors.generic };
+  return { data: { requested: true }, error: null };
 }
 
 // ── updateSiaGroupMappingAction — classify a group + hide/show it ──

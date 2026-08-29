@@ -82,13 +82,18 @@ export const siaSilenceWatchTask = schedules.task({
       }
     }
 
+    const { sendSiaAlertNotification } = await import("@/lib/services/whatsapp-api");
+
     const notifyAll = async (t: string, b: string) => {
       const recipients = await getAssignableUsers({ roles: ["admin", "founder"] });
-      await Promise.all(
-        recipients.map((r) =>
+      await Promise.all([
+        ...recipients.map((r) =>
           createNotification({ recipient_id: r.id, type: "system", title: t, body: b, action_url: "/sia" }),
         ),
-      );
+        // The WhatsApp channel (migration 0177): the wrapper resolves its own
+        // recipients, no-ops until the template is registered, never throws.
+        sendSiaAlertNotification(t, b),
+      ]);
       return recipients.length;
     };
 

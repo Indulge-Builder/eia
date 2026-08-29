@@ -81,13 +81,18 @@ export type SiaSearchHit = Omit<SiaMessageRow, "media" | "reactions" | "quoted">
 
 export type SiaWatcherState = "pairing" | "connecting" | "connected" | "logged_out";
 
-/** The watcher's self-reported pulse (migration 0175) — one row, beat every 60s. */
+/** The watcher's self-reported pulse (migration 0175) — one row, beat every 60s.
+ *  0177 adds the pairing QR (published while state='pairing', cleared on connect)
+ *  and the app→watcher restart control stamp. */
 export type SiaWatcherStatus = {
   beat_at: string;
   state: SiaWatcherState;
   connected: boolean;
   state_since: string;
   account_jid: string | null;
+  qr: string | null;
+  qr_at: string | null;
+  restart_requested_at: string | null;
 };
 
 export type SiaHealth = {
@@ -573,14 +578,50 @@ export async function getSiaWatcherStatus(): Promise<SiaWatcherStatus | null> {
   const db = siaDb();
   const { data, error } = await db
     .from("wag_watcher_status")
-    .select("beat_at, state, connected, state_since, account_jid")
+    .select("beat_at, state, connected, state_since, account_jid, qr, qr_at, restart_requested_at")
     .eq("id", 1)
     .limit(1);
   if (error) {
     console.error("[sia-service] getSiaWatcherStatus failed:", error.message);
     return null;
   }
-  return (data?.[0] as SiaWatcherStatus | undefined) ?? null;
+  // Interim cast: database.ts predates the 0177 columns (qr/qr_at/restart_requested_at) —
+  // retire at the next `gen types` regen.
+  return (data?.[0] as unknown as SiaWatcherStatus | undefined) ?? null;
+}
+
+// ─────────────────────────────────────────────
+// Watcher control (migration 0177) — the app→watcher channel behind the
+// console's Restart / Re-pair buttons. The watcher reads restart_requested_at
+// on every 60s beat and exits cleanly when the stamp is newer than its boot.
+// ─────────────────────────────────────────────
+
+export async function requestSiaWatcherRestart(): Promise<boolean> {
+  const db = siaDb();
+  const { error } = await db
+    .from("wag_watcher_status")
+    // Interim cast: database.ts predates the 0177 column — retire at next regen.
+    .update({ restart_requested_at: new Date().toISOString() } as never)
+    .eq("id", 1);
+  if (error) {
+    console.error("[sia-service] restart request failed:", error.message);
+    return false;
+  }
+  return true;
+}
+
+/** Re-pair: wipe the WhatsApp session, then ask the watcher to restart. The
+ *  next boot finds empty auth, arms pairing, and publishes the QR into the
+ *  status row — the console renders it for scanning. DESTRUCTIVE for the
+ *  session (never the data); the action layer gates + confirms. */
+export async function requestSiaSessionRepair(): Promise<boolean> {
+  const db = siaDb();
+  const { error: wipeErr } = await db.from("wag_auth_state").delete().neq("key", "");
+  if (wipeErr) {
+    console.error("[sia-service] session wipe failed:", wipeErr.message);
+    return false;
+  }
+  return requestSiaWatcherRestart();
 }
 
 // ─────────────────────────────────────────────

@@ -12,6 +12,38 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-29 — Sia remote recovery: pair from the browser, WhatsApp alarm channel (migration 0177)
+
+**Why:** recovery must not require the codebase or AWS access. When the session dies, Ethan
+(or anyone admin/founder) should fix it from Serene alone; and the alarm should reach the
+founders on WhatsApp, not just in-app.
+
+**What:**
+
+- **Migration 0177**: `sia.wag_watcher_status` gains `qr` / `qr_at` (the watcher publishes
+  its pairing QR into its own status row; cleared on connect) and `restart_requested_at`
+  (the app → watcher control channel). `whatsapp_notification_logs.type` gains `sia_alert`.
+- **Connector**: publishes every pairing QR to the status row (the local terminal still
+  draws it too); every 60s beat reads back `restart_requested_at` and exits cleanly when
+  the stamp is newer than its own boot — crash-only does the rest.
+- **Sia console session panel** (SiaControlModal): 5s poll while open; when the watcher is
+  in `pairing` it renders the QR right there (white tile, auto-refreshing) with scan
+  instructions — the whole re-pair without a terminal. Buttons: **Restart watcher** (safe,
+  session resumes) and **Re-pair session** (ConfirmDialog; wipes `wag_auth_state` + restart
+  → QR appears in the panel). Actions `getSiaPairingStatusAction` /
+  `requestSiaRestartAction` / `requestSiaRepairAction`, all admin/founder-gated; the QR is
+  only ever exposed while state = pairing.
+- **WhatsApp alarm channel**: `sendSiaAlertNotification(title, body)` in whatsapp-api.ts —
+  self-contained (resolves active admin/founder recipients internally), params first name /
+  title / detail, log type `sia_alert`, DELIBERATELY ungated by notification prefs
+  (mission-critical). Wired into `sia-silence.ts` beside `createNotification` for all four
+  alert kinds AND recovery. No-ops until `GUPSHUP_SIA_ALERT_TEMPLATE_ID` env var carries the
+  registered template id (the customer-welcome sentinel posture).
+- New dep: `qrcode` (browser QR rendering, loaded on demand in the console).
+- Also: the supabase CLI migration ledger was repaired (0161, 0169–0176 marked applied —
+  they were live in prod but applied outside the ledger; orphan remote row 20260807101212
+  marked reverted). `db push` now works cleanly.
+
 ## 2026-08-29 — Sia end-to-end audit against the Baileys 7.0.0-rc14 docs: nine fixes across the pipeline
 
 **Why:** the founder asked for a top-to-bottom review of the whole WhatsApp capture flow —

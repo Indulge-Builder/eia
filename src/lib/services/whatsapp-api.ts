@@ -21,6 +21,8 @@ import {
   GUPSHUP_TASK_OVERDUE_MANAGER_GENERIC_TEMPLATE_ID,
   GUPSHUP_TASK_ASSIGNED_TEMPLATE_ID,
   TASK_ASSIGNED_TEMPLATE_CONFIGURED,
+  GUPSHUP_SIA_ALERT_TEMPLATE_ID,
+  SIA_ALERT_TEMPLATE_CONFIGURED,
 } from '@/lib/constants/whatsapp';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
@@ -298,7 +300,7 @@ function isGupshupDelivered(httpOk: boolean, body: string): boolean {
 // ─────────────────────────────────────────────
 
 interface NotificationLogEntry {
-  type:           'agent_assignment' | 'founder_alert' | 'sla_breach' | 'lead_initiation' | 'task_due_reminder' | 'task_overdue_manager' | 'task_due_soon' | 'task_overdue_agent' | 'task_overdue_manager_generic' | 'elaya_reply' | 'customer_welcome' | 'customer_reply' | 'task_assigned';
+  type:           'agent_assignment' | 'founder_alert' | 'sla_breach' | 'lead_initiation' | 'task_due_reminder' | 'task_overdue_manager' | 'task_due_soon' | 'task_overdue_agent' | 'task_overdue_manager_generic' | 'elaya_reply' | 'customer_welcome' | 'customer_reply' | 'task_assigned' | 'sia_alert';
   leadId?:        string | null;
   recipientId?:   string | null;
   recipientPhone: string;
@@ -960,6 +962,58 @@ export async function sendTaskAssignedNotification(
     });
   } catch (err) {
     console.error('[whatsapp-api] Unexpected error in sendTaskAssignedNotification:', err);
+  }
+}
+
+// ─────────────────────────────────────────────
+// Sia watcher alarm — WhatsApp ping to every active admin + founder when the
+// capture ear is in trouble (down / session lost / unreachable / quiet) and on
+// recovery. Self-contained (resolves recipients internally — the alarm runs in
+// Trigger.dev with no session); DELIBERATELY ungated by notification prefs:
+// this is the "the archive is at risk" channel, mission-critical like
+// lead_initiation. No-ops until the template id is registered
+// (SIA_ALERT_TEMPLATE_CONFIGURED). Sends run in parallel; never throws.
+// Params: {{1}} first name, {{2}} alert title, {{3}} detail line.
+// ─────────────────────────────────────────────
+
+export async function sendSiaAlertNotification(title: string, body: string): Promise<void> {
+  try {
+    if (!SIA_ALERT_TEMPLATE_CONFIGURED) return;
+
+    const admin = createAdminClient();
+    const { data: recipients } = await admin
+      .from('profiles')
+      .select('id, phone, full_name')
+      .in('role', ['admin', 'founder'])
+      .eq('is_active', true);
+
+    const withPhone = (recipients ?? []).filter(
+      (r): r is { id: string; phone: string; full_name: string } => !!r.phone,
+    );
+    if (withPhone.length === 0) {
+      console.warn('[whatsapp-api] Sia alert: no admin/founder with a phone — nothing sent');
+      return;
+    }
+
+    await Promise.all(
+      withPhone.map((r) => {
+        const firstName = r.full_name?.trim().split(/\s+/)[0] || 'there';
+        return sendGupshupTemplate({
+          templateId:     GUPSHUP_SIA_ALERT_TEMPLATE_ID,
+          destination:    r.phone,
+          templateParams: [firstName, title, body],
+          label:          'Sia watcher alert',
+          logRecipient:   `admin/founder ${r.id}`,
+          log: {
+            type:        'sia_alert',
+            recipientId: r.id,
+            agentName:   firstName,
+          },
+        });
+      }),
+    );
+  } catch (err) {
+    console.error('[whatsapp-api] Unexpected error in sendSiaAlertNotification:', err);
   }
 }
 

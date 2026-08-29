@@ -6,19 +6,31 @@
 // core Modal + StatTile + SearchBar + Avatar + Toggle primitives (R-01 — the
 // earlier bespoke HealthStat/TabButton/avatar-tint expressions are deleted).
 
-import { useMemo, useState } from "react";
-import { Circle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Circle, QrCode, RefreshCw } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
+import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { StatTile } from "@/components/ui/StatTile";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Avatar } from "@/components/ui/Avatar";
 import { Toggle } from "@/components/ui/Toggle";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LogoSpinner } from "@/components/ui/LogoSpinner";
+import { SeedMandala } from "@/components/ui/SeedMandala";
 import { formatRelativeTime } from "@/lib/utils/dates";
-import { updateSiaGroupMappingAction } from "@/lib/actions/sia";
+import { useToast } from "@/hooks/useToast";
+import {
+  getSiaPairingStatusAction,
+  requestSiaRepairAction,
+  requestSiaRestartAction,
+  updateSiaGroupMappingAction,
+  type SiaPairingStatus,
+} from "@/lib/actions/sia";
 import { groupTitle, KindPillRow } from "./sia-shared";
 import type { SiaGroupKind, SiaGroupRow, SiaHealth } from "@/lib/services/sia-service";
+
+const PAIRING_POLL_MS = 5000;
 
 export function SiaControlModal({
   open,
@@ -33,8 +45,68 @@ export function SiaControlModal({
   groups: SiaGroupRow[];
   onPatchGroup: (jid: string, patch: Partial<SiaGroupRow>) => void;
 }) {
+  const toast = useToast;
   const [search, setSearch] = useState("");
   const [savingJid, setSavingJid] = useState<string | null>(null);
+
+  // ── Session panel (migration 0177): 5s poll while the console is open, so a
+  //    lost session shows its pairing QR right here — re-pair from the browser,
+  //    no codebase or AWS access needed. ──
+  const [pairing, setPairing] = useState<SiaPairingStatus | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState<"restart" | "repair" | null>(null);
+  const [confirmRepair, setConfirmRepair] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    const tick = async () => {
+      const res = await getSiaPairingStatusAction();
+      if (alive && res.data) setPairing(res.data);
+    };
+    void tick();
+    const t = setInterval(tick, PAIRING_POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [open]);
+
+  // QR payload → image (qrcode loaded on demand — never in the route chunk).
+  useEffect(() => {
+    const qr = pairing?.qr;
+    if (!qr) {
+      setQrDataUrl(null);
+      return;
+    }
+    let alive = true;
+    import("qrcode")
+      .then((QR) => QR.toDataURL(qr, { margin: 1, width: 232 }))
+      .then((url) => {
+        if (alive) setQrDataUrl(url);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [pairing?.qr]);
+
+  const doRestart = async () => {
+    setBusy("restart");
+    const res = await requestSiaRestartAction();
+    setBusy(null);
+    if (res.data) toast.success("Restart requested — the watcher reboots within a minute");
+    else toast.danger(res.error ?? "Couldn't request the restart");
+  };
+
+  const doRepair = async () => {
+    setBusy("repair");
+    const res = await requestSiaRepairAction();
+    setBusy(null);
+    setConfirmRepair(false);
+    if (res.data) toast.success("Session reset — the QR appears below within a minute");
+    else toast.danger(res.error ?? "Couldn't reset the session");
+  };
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -163,6 +235,81 @@ export function SiaControlModal({
             </>
           )}
 
+          {/* ── Session (migration 0177) — pairing QR + recovery controls ── */}
+          <div className="label-micro mb-2" style={{ color: "var(--theme-text-tertiary)" }}>
+            Session
+          </div>
+          <div
+            className="rounded-(--radius-md) border border-(--theme-paper-border) px-4 py-3 mb-5"
+            style={{ background: "var(--theme-paper-subtle)" }}
+          >
+            {pairing?.state === "pairing" ? (
+              <div className="flex flex-col items-center gap-3 py-2">
+                {qrDataUrl ? (
+                  <>
+                    {/* The pairing QR — white tile so any phone camera reads it in dark mode too */}
+                    <div className="rounded-(--radius-md) p-3" style={{ background: "#ffffff", boxShadow: "var(--shadow-2)" }}>
+                      {/* data: URL image — next/image has no place here */}
+                      <img src={qrDataUrl} alt="WhatsApp pairing QR" width={232} height={232} style={{ display: "block" }} />
+                    </div>
+                    <div className="type-body-sm text-center" style={{ color: "var(--theme-text-primary)", maxWidth: "34ch" }}>
+                      On the watcher phone: <b>WhatsApp → Linked Devices → Link a device</b>, then scan this code.
+                    </div>
+                    <div className="type-caption text-center" style={{ color: "var(--theme-text-tertiary)" }}>
+                      The code refreshes automatically. After scanning, history re-syncs on its own.
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 py-4" style={{ color: "var(--theme-text-secondary)" }}>
+                    <SeedMandala size={16} variant="currentColor" spin={3.5} />
+                    <span className="type-body-sm">Waiting for the watcher to prepare a pairing code…</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <div className="type-body-sm" style={{ color: "var(--theme-text-primary)", fontWeight: "var(--weight-medium)" }}>
+                    {pairing?.restartPending
+                      ? "Restarting — back within a minute…"
+                      : pairing?.state === "connected"
+                        ? "Session healthy"
+                        : pairing?.state === "connecting"
+                          ? "Connecting to WhatsApp…"
+                          : pairing?.state === "logged_out"
+                            ? "Session lost — reset it to show a pairing code"
+                            : "Watcher offline — controls apply when it returns"}
+                  </div>
+                  <div className="type-caption" style={{ color: "var(--theme-text-tertiary)" }}>
+                    Restart keeps the session. Re-pair signs WhatsApp out and shows a QR here to scan.
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="secondary"
+                    size="xs"
+                    iconLeft={RefreshCw}
+                    loading={busy === "restart"}
+                    loadingLabel="Requesting…"
+                    disabled={busy !== null || pairing?.restartPending}
+                    onClick={doRestart}
+                  >
+                    Restart watcher
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="xs"
+                    iconLeft={QrCode}
+                    disabled={busy !== null || pairing?.restartPending}
+                    onClick={() => setConfirmRepair(true)}
+                  >
+                    Re-pair session
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* ── Group mapping ── */}
           <div className="label-micro mb-2" style={{ color: "var(--theme-text-tertiary)" }}>
             Group mapping
@@ -223,6 +370,24 @@ export function SiaControlModal({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmRepair}
+        title="Re-pair the WhatsApp session?"
+        body={
+          <span>
+            This signs the watcher out of WhatsApp and shows a fresh pairing QR here within a
+            minute. Capture pauses until someone scans it with the watcher phone. All captured
+            data stays — history re-syncs after pairing.
+          </span>
+        }
+        confirmLabel="Sign out & show QR"
+        pendingLabel="Resetting…"
+        danger
+        pending={busy === "repair"}
+        onConfirm={doRepair}
+        onCancel={() => setConfirmRepair(false)}
+      />
     </Modal>
   );
 }

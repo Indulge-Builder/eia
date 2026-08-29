@@ -84,23 +84,44 @@ export async function getWatcherStatusRow(): Promise<{ state: WatcherState; stat
   return (data?.[0] as { state: WatcherState; state_since: string } | undefined) ?? null;
 }
 
+/** Beat + read back the app→watcher control column in the SAME round trip.
+ *  Returns restart_requested_at so the caller can honour a Serene-side
+ *  "Restart" / "Re-pair" request (migration 0177). */
 export async function upsertWatcherStatus(row: {
   state: WatcherState;
   state_since: string;
   account_jid: string | null;
-}): Promise<void> {
-  const { error } = await db.from("wag_watcher_status").upsert(
-    {
-      id: 1,
-      beat_at: new Date().toISOString(),
-      state: row.state,
-      connected: row.state === "connected",
-      state_since: row.state_since,
-      account_jid: row.account_jid,
-    },
-    { onConflict: "id" },
-  );
-  if (error) console.error("[db] heartbeat failed:", error.message);
+}): Promise<string | null> {
+  const { data, error } = await db
+    .from("wag_watcher_status")
+    .upsert(
+      {
+        id: 1,
+        beat_at: new Date().toISOString(),
+        state: row.state,
+        connected: row.state === "connected",
+        state_since: row.state_since,
+        account_jid: row.account_jid,
+      },
+      { onConflict: "id" },
+    )
+    .select("restart_requested_at");
+  if (error) {
+    console.error("[db] heartbeat failed:", error.message);
+    return null;
+  }
+  return (data?.[0]?.restart_requested_at as string | null) ?? null;
+}
+
+/** Publish the current pairing QR (or clear it with null on connect) so the
+ *  /sia console can render it in the browser — remote re-pairing without
+ *  codebase or AWS access (migration 0177). */
+export async function publishQr(qr: string | null): Promise<void> {
+  const { error } = await db
+    .from("wag_watcher_status")
+    .update({ qr, qr_at: qr ? new Date().toISOString() : null })
+    .eq("id", 1);
+  if (error) console.error("[db] qr publish failed:", error.message);
 }
 
 // ─────────────────────────────────────────────
