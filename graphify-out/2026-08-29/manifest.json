@@ -35,8 +35,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1787994962.8744314,
-    "ast_hash": "58e58ffe8dc4d086712951a96eea48fe",
+    "mtime": 1787835062.2144442,
+    "ast_hash": "75def6eaca5821fca1b67118318b696a",
     "semantic_hash": ""
   },
   "postcss.config.mjs": {
@@ -1795,8 +1795,8 @@
     "semantic_hash": ""
   },
   "src/lib/constants/redis-keys.ts": {
-    "mtime": 1787995535.4518967,
-    "ast_hash": "fcc411af99f7230bec2b55d8ed7591cb",
+    "mtime": 1787843634.6715405,
+    "ast_hash": "6137d9a02dfb64509dbffe66b79020b6",
     "semantic_hash": ""
   },
   "src/lib/constants/revival.ts": {
@@ -1845,8 +1845,8 @@
     "semantic_hash": ""
   },
   "src/lib/constants/whatsapp.ts": {
-    "mtime": 1787995893.6812108,
-    "ast_hash": "5e990584f3bf56f62e4a3a56e6c938f4",
+    "mtime": 1782472848.3321016,
+    "ast_hash": "552e9030b9b3bd591956fcfad5eabc30",
     "semantic_hash": ""
   },
   "src/lib/elaya/adapters/anthropic.ts": {
@@ -2055,8 +2055,8 @@
     "semantic_hash": ""
   },
   "src/lib/services/whatsapp-api.ts": {
-    "mtime": 1787995538.470062,
-    "ast_hash": "0f49f9da570ebc0d5ed390daa9f9b675",
+    "mtime": 1782976257.1945884,
+    "ast_hash": "62ae1be0903e00c278f6bc18cd5f5737",
     "semantic_hash": ""
   },
   "src/lib/services/whatsapp-ingestion.ts": {
@@ -3130,8 +3130,8 @@
     "semantic_hash": ""
   },
   "docs/README.md": {
-    "mtime": 1787996432.084267,
-    "ast_hash": "81c9b0eeb4db4e58e852c02875745402",
+    "mtime": 1782976764.264417,
+    "ast_hash": "4a57927e2bbdb2de08fb32c39411b7c3",
     "semantic_hash": ""
   },
   "docs/TODO.md": {
@@ -3170,8 +3170,8 @@
     "semantic_hash": ""
   },
   "docs/changelog.md": {
-    "mtime": 1787996814.3900917,
-    "ast_hash": "3c255113f963eb11923a25cf3c524390",
+    "mtime": 1787988824.814569,
+    "ast_hash": "5472f35b07c356fcd1dfa4c9ac3fb00d",
     "semantic_hash": ""
   },
   "docs/claude-project/1-product-and-status.md": {
@@ -5065,13 +5065,13 @@
     "semantic_hash": ""
   },
   "connector/src/db.ts": {
-    "mtime": 1787994831.0131652,
-    "ast_hash": "779aa31851cd63f668fd281f2d222da7",
+    "mtime": 1787988734.9487896,
+    "ast_hash": "fe3ece34262c7e6a8c1b4042734b6863",
     "semantic_hash": ""
   },
   "connector/src/index.ts": {
-    "mtime": 1787994843.9611602,
-    "ast_hash": "d84c717ba05972fb339fc373167d207e",
+    "mtime": 1787988776.369051,
+    "ast_hash": "16cc41e15499759452a1893f72d4a79a",
     "semantic_hash": ""
   },
   "connector/src/media.ts": {
@@ -5135,13 +5135,13 @@
     "semantic_hash": ""
   },
   "src/lib/actions/sia.ts": {
-    "mtime": 1787994944.8637538,
-    "ast_hash": "b3916cc186d291985d52c2aa4497f247",
+    "mtime": 1787831976.8973513,
+    "ast_hash": "3f85c2c8bf08a2622bb84dac4f894331",
     "semantic_hash": ""
   },
   "src/lib/services/sia-service.ts": {
-    "mtime": 1787995086.8800633,
-    "ast_hash": "94423e543318e7a06f6445fff9496176",
+    "mtime": 1787988445.8790054,
+    "ast_hash": "cafc72bc818e147560c913f605eced52",
     "semantic_hash": ""
   },
   "supabase/migrations/20260827000169_sia_wag_foundation.sql": {
@@ -5490,13 +5490,13 @@
     "semantic_hash": ""
   },
   "src/components/sia/SiaChat.tsx": {
-    "mtime": 1787996735.3402863,
-    "ast_hash": "1ece5186708fbd14d70aa1a0c3f8dd48",
+    "mtime": 1787987016.2107291,
+    "ast_hash": "d8d8543500c8eef9611259d4fd5166fb",
     "semantic_hash": ""
   },
   "src/components/sia/SiaControlModal.tsx": {
-    "mtime": 1787995137.8044288,
-    "ast_hash": "fd652f2d4c79cf527bb485eb3584b174",
+    "mtime": 1787987016.209845,
+    "ast_hash": "3c4be1cd868b64d6b0d2bbf8b3a44604",
     "semantic_hash": ""
   },
   "src/components/sia/SiaMedia.tsx": {
@@ -5505,8 +5505,8 @@
     "semantic_hash": ""
   },
   "src/components/sia/SiaMessageBubble.tsx": {
-    "mtime": 1787996781.1229467,
-    "ast_hash": "51121c2b25bd4b07d3e3c2aebf74525e",
+    "mtime": 1787830659.8121872,
+    "ast_hash": "87efc993f825f7a30268f8b659d4b0c4",
     "semantic_hash": ""
   },
   "src/components/sia/sia-shared.tsx": {
@@ -6435,8 +6435,8 @@
     "semantic_hash": ""
   },
   "src/trigger/sia-silence.ts": {
-    "mtime": 1787995571.6255782,
-    "ast_hash": "be5f6b0dc55a7df8ebfd664b9cd3dbf1",
+    "mtime": 1787843660.326257,
+    "ast_hash": "17e0ab60f7909ae16bbec1b77545f9c6",
     "semantic_hash": ""
   },
   "supabase/migrations/20260827000174_sia_auth_state_and_media_expired.sql": {
@@ -6450,8 +6450,8 @@
     "semantic_hash": ""
   },
   "connector/RUNBOOK.md": {
-    "mtime": 1787995584.0175354,
-    "ast_hash": "ba5d0c8e7121054038acab878ddef335",
+    "mtime": 1787988801.3287926,
+    "ast_hash": "f37066c6844cb53059c1553808f7343f",
     "semantic_hash": ""
   },
   "backend/app/api/__init__.py": {
@@ -6682,16 +6682,6 @@
   "connector/media/120363385196480275@g.us/3EB032FEA978FA85119535.jpg": {
     "mtime": 1787985144.608267,
     "ast_hash": "3e7ecd0c5ea9d671bb9111be4439418b",
-    "semantic_hash": ""
-  },
-  "supabase/migrations/20260829000177_sia_remote_pairing_and_alert.sql": {
-    "mtime": 1787994762.0212307,
-    "ast_hash": "f2cfe32e32f68cb66b5eb94a15e2ccb3",
-    "semantic_hash": ""
-  },
-  "docs/operations/maintenance.md": {
-    "mtime": 1787996423.695991,
-    "ast_hash": "5dcaf6cc91e5e124508034fed54c6da4",
     "semantic_hash": ""
   }
 }
