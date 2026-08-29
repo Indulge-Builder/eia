@@ -1,1 +1,8 @@
-{}
+{
+  // The explicit token form (rounded-(--radius-md), bg-(--theme-paper)) is
+  // Serene's house style — it names the design token in the class (CLAUDE.md
+  // Rule 01 ethos) and scripts/check-tokens.mjs guards those references.
+  // The extension's "canonical class" shorthand suggestion fights that
+  // convention on every file, so it is off for this workspace.
+  "tailwindCSS.lint.suggestCanonicalClasses": "ignore"
+}
