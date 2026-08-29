@@ -24,6 +24,7 @@ import {
   GUPSHUP_SIA_ALERT_TEMPLATE_ID,
   SIA_ALERT_TEMPLATE_CONFIGURED,
 } from '@/lib/constants/whatsapp';
+import { SIA_ALERT_TIER1_PROFILE_IDS } from '@/lib/constants/sia-alerts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import {
   isChannelEnabled,
@@ -979,17 +980,19 @@ export async function sendTaskAssignedNotification(
 export async function sendSiaAlertNotification(
   title: string,
   body: string,
-  roles: ('admin' | 'founder')[] = ['admin', 'founder'],
+  audience: 'tier1' | 'founders' | 'both' = 'both',
 ): Promise<void> {
   try {
     if (!SIA_ALERT_TEMPLATE_CONFIGURED) return;
 
     const admin = createAdminClient();
-    const { data: recipients } = await admin
-      .from('profiles')
-      .select('id, phone, full_name')
-      .in('role', roles)
-      .eq('is_active', true);
+    // Tier 1 = the NAMED tech responders (constants/sia-alerts.ts) — not a
+    // role; founders = role 'founder' (they join after 1 unresolved hour).
+    let q = admin.from('profiles').select('id, phone, full_name').eq('is_active', true);
+    if (audience === 'tier1') q = q.in('id', [...SIA_ALERT_TIER1_PROFILE_IDS]);
+    else if (audience === 'founders') q = q.eq('role', 'founder');
+    else q = q.or(`role.eq.founder,id.in.(${SIA_ALERT_TIER1_PROFILE_IDS.join(',')})`);
+    const { data: recipients } = await q;
 
     const withPhone = (recipients ?? []).filter(
       (r): r is { id: string; phone: string; full_name: string } => !!r.phone,

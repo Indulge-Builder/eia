@@ -58,6 +58,13 @@ messages inside a cluster sat too tight.
   on CORS — downloads now use a second presigned URL with an attachment disposition
   (plain anchor click), full-size image open uses the presigned URL directly. Local-mode
   data: URLs keep the buffer path.
+- **Alert routing finalized (same day, evening)**: tier 1 is now a NAMED responder set
+  (`constants/sia-alerts.ts`: Arfam, Ethan Alvares, Manu Nataraju + the Tech Wizard
+  account) — not a role, since the responders are agents in the role model. They get
+  every channel on the 10-minute cadence; founders (role) join only after 1 unresolved
+  hour. `sendSiaAlertNotification` takes an audience (`tier1`/`founders`/`both`).
+  Manu has no profile phone yet — his WhatsApp leg skips until it's set; founder phones
+  were reported set but are still empty in profiles (surfaced to the founder).
 - **The OOM incident (same day, evening)**: the 4-lane backfill buffers whole videos in
   RAM and blew past the watcher task's 512MB — OOM-kill every ~90s. The death loop
   tripped ECS's deployment circuit breaker mid-rollout, CloudFormation wedged

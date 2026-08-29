@@ -21,10 +21,11 @@
  *                   (possible zombie connection). Soft by design.
  *
  * Cadence + escalation (founder decision 2026-08-29):
- *   t0        → admins (the tech tier), in-app + push + WhatsApp
+ *   t0        → the NAMED tech responders (constants/sia-alerts.ts — Arfam,
+ *               Ethan, Manu + the tech account), in-app + push + WhatsApp
  *   every 10m → re-reminder until resolved (per-kind Redis latch, 10min TTL)
  *   t+60m     → FOUNDERS join the loop (their own intro, then the 10m cadence)
- *   recovery  → announce once to everyone who was alerted (admins always;
+ *   recovery  → announce once to everyone who was alerted (tier 1 always;
  *               founders only if the incident had escalated)
  */
 
@@ -37,7 +38,6 @@ const REMIND_TTL_SECONDS = 10 * 60;
 const ESCALATE_AFTER_MS = 60 * 60_000;
 
 type AlertKind = "down" | "session_lost" | "unreachable" | "quiet";
-type AlertRole = "admin" | "founder";
 
 export const siaSilenceWatchTask = schedules.task({
   id: "sia-silence-watch",
@@ -91,17 +91,25 @@ export const siaSilenceWatchTask = schedules.task({
       }
     }
 
-    const notifyRoles = async (roles: AlertRole[], t: string, b: string) => {
-      const recipients = await getAssignableUsers({ roles });
+    const { SIA_ALERT_TIER1_PROFILE_IDS } = await import("@/lib/constants/sia-alerts");
+
+    // Tier 1 = the NAMED tech responders (Arfam, Ethan, Manu + the tech
+    // account) — every channel, 10-min cadence. Founders join after 1 hour.
+    const notifyTier = async (audience: "tier1" | "founders" | "both", t: string, b: string) => {
+      const ids = new Set<string>();
+      if (audience !== "founders") for (const id of SIA_ALERT_TIER1_PROFILE_IDS) ids.add(id);
+      if (audience !== "tier1") {
+        for (const f of await getAssignableUsers({ roles: ["founder"] })) ids.add(f.id);
+      }
       await Promise.all([
-        ...recipients.map((r) =>
-          createNotification({ recipient_id: r.id, type: "system", title: t, body: b, action_url: "/sia" }),
+        ...[...ids].map((id) =>
+          createNotification({ recipient_id: id, type: "system", title: t, body: b, action_url: "/sia" }),
         ),
-        // WhatsApp channel — resolves its own recipients per role, no-ops until
-        // the template is registered, never throws.
-        sendSiaAlertNotification(t, b, roles),
+        // WhatsApp channel — resolves its own recipients for the audience,
+        // no-ops until the template is registered, never throws.
+        sendSiaAlertNotification(t, b, audience),
       ]);
-      return recipients.length;
+      return ids.size;
     };
 
     // ── Alert (10-min latch per kind; founders join after 1 hour) ──
@@ -121,14 +129,13 @@ export const siaSilenceWatchTask = schedules.task({
       // Crossing the 1-hour line mid-latch: founders get their intro NOW, not
       // at the next 10-minute boundary.
       if (latched === "t1" && escalated) {
-        await notifyRoles(["founder"], title, `Unresolved for over an hour — ${body}`);
+        await notifyTier("founders", title, `Unresolved for over an hour — ${body}`);
         await redis.setex(latchKey, REMIND_TTL_SECONDS, "t2").catch(() => {});
         return { state: kind, note: "escalated to founders" };
       }
       if (latched) return { state: kind, note: "reminder window open" };
 
-      const roles: AlertRole[] = escalated ? ["admin", "founder"] : ["admin"];
-      const alerted = await notifyRoles(roles, title, body);
+      const alerted = await notifyTier(escalated ? "both" : "tier1", title, body);
       try {
         await redis.setex(latchKey, REMIND_TTL_SECONDS, tier);
       } catch (e) {
@@ -150,8 +157,7 @@ export const siaSilenceWatchTask = schedules.task({
       const foundersWereIn =
         now - oldestSince >= ESCALATE_AFTER_MS || latchValues.some((v) => v === "t2");
       await Promise.all([...latchKeys, ...sinceKeys].map((k) => redis.del(k).catch(() => {})));
-      const roles: AlertRole[] = foundersWereIn ? ["admin", "founder"] : ["admin"];
-      const alerted = await notifyRoles(roles, "Sia watcher recovered", "Heartbeat and connection are healthy again.");
+      const alerted = await notifyTier(foundersWereIn ? "both" : "tier1", "Sia watcher recovered", "Heartbeat and connection are healthy again.");
       return { state: "recovered", alerted };
     }
     return { state: "healthy", watcher: status!.state };
