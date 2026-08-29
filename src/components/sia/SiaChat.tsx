@@ -58,9 +58,13 @@ export function SiaChat({
   const [infoOpen, setInfoOpen] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
   const knownIds = useRef<Set<string>>(new Set());
   const latestTs = useRef<string | null>(null);
   const liveIds = useRef<Set<string>>(new Set());
+  const loadingMoreRef = useRef(false);
+  const [flashId, setFlashId] = useState<string | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedSearch = useDebounce(searchInput, 350);
   const searching = hits !== null;
 
@@ -132,7 +136,8 @@ export function SiaChat({
 
   // ── Older history (scroll position preserved) ──
   const loadOlder = useCallback(async () => {
-    if (loadingMore || messages.length === 0) return;
+    if (loadingMoreRef.current || messages.length === 0) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     const oldest = messages[0].wa_timestamp;
     const el = scrollRef.current;
@@ -147,8 +152,52 @@ export function SiaChat({
         if (el) el.scrollTop = el.scrollHeight - prevHeight;
       });
     }
+    loadingMoreRef.current = false;
     setLoadingMore(false);
-  }, [group.group_jid, messages, loadingMore]);
+  }, [group.group_jid, messages]);
+
+  // ── Seamless history: auto-fetch when the reader nears the top (P-05 —
+  //    the ConversationList IntersectionObserver pattern; 300px early margin
+  //    so the page usually lands before the reader ever sees the seam). ──
+  const loadOlderRef = useRef(loadOlder);
+  loadOlderRef.current = loadOlder;
+  const hasMoreRef = useRef(hasMore);
+  hasMoreRef.current = hasMore;
+
+  useEffect(() => {
+    const sentinel = topSentinelRef.current;
+    const root = scrollRef.current;
+    if (!sentinel || !root || loading || searching) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting) && hasMoreRef.current) {
+          void loadOlderRef.current();
+        }
+      },
+      { root, rootMargin: "300px 0px 0px 0px" },
+    );
+    io.observe(sentinel);
+    return () => io.disconnect();
+  }, [group.group_jid, loading, searching]);
+
+  // ── Reply-strip jump: scroll to the quoted original, flash it briefly.
+  //    If it isn't loaded yet, pull up to 3 older pages looking for it. ──
+  const jumpToMessage = useCallback(async (waMessageId: string) => {
+    const find = () =>
+      scrollRef.current?.querySelector(`[data-wa-id="${CSS.escape(waMessageId)}"]`) ?? null;
+    let el = find();
+    for (let i = 0; i < 3 && !el && hasMoreRef.current; i++) {
+      await loadOlderRef.current();
+      await new Promise((r) => requestAnimationFrame(r));
+      el = find();
+    }
+    if (!el) return; // original beyond reach — the strip itself still shows its preview
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    setFlashId(waMessageId);
+    flashTimer.current = setTimeout(() => setFlashId(null), 1400);
+  }, []);
 
   // ── In-group search (debounced) ──
   useEffect(() => {
@@ -272,27 +321,26 @@ export function SiaChat({
             </div>
           ) : (
             <>
-              {hasMore && (
+              {/* Seamless history sentinel — crossing it auto-fetches the next
+                  older page; the chip only shows while a fetch is in flight. */}
+              <div ref={topSentinelRef} aria-hidden style={{ height: 1 }} />
+              {loadingMore && hasMore && (
                 <div className="flex justify-center mb-2">
-                  <button
-                    type="button"
-                    onClick={loadOlder}
-                    disabled={loadingMore}
-                    className="serene-pressable type-caption rounded-full px-3.5 py-1 border border-(--neu-edge)"
+                  <span
+                    className="type-caption rounded-full px-3.5 py-1 inline-flex items-center gap-1.5"
                     style={{
                       background: "var(--neu-surface-high)",
                       boxShadow: "var(--neu-shadow-chip)",
                       color: "var(--theme-text-secondary)",
-                      cursor: loadingMore ? "default" : "pointer",
                       fontWeight: "var(--weight-medium)",
                     }}
                   >
-                    {loadingMore ? "Loading…" : "Load older messages"}
-                  </button>
+                    Loading earlier messages…
+                  </span>
                 </div>
               )}
               {messages.map((m, i) => (
-                <div key={m.id}>
+                <div key={m.id} data-wa-id={m.wa_message_id}>
                   {(!messages[i - 1] ||
                     new Date(messages[i - 1].wa_timestamp).toDateString() !==
                       new Date(m.wa_timestamp).toDateString()) && <SiaDaySeparator ts={m.wa_timestamp} />}
@@ -301,6 +349,8 @@ export function SiaChat({
                     prev={messages[i - 1]}
                     chatJid={group.group_jid}
                     entrance={liveIds.current.has(m.id)}
+                    flash={flashId === m.wa_message_id}
+                    onJumpToQuoted={jumpToMessage}
                   />
                 </div>
               ))}

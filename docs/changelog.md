@@ -12,7 +12,24 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
-## 2026-08-29 — Sia remote recovery: pair from the browser, WhatsApp alarm channel (migration 0177)
+## 2026-08-29 — Sia chat UX pass: seamless history, reply jump, softer bubbles
+
+**Why:** founder design review — the Load-older button broke reading flow, a reply strip
+gave no way to see the original, the bubble hairline read harsh on the wallpaper, and
+messages inside a cluster sat too tight.
+
+**What (SiaChat + SiaMessageBubble):**
+
+- **Seamless history**: the "Load older messages" button is gone. An IntersectionObserver
+  sentinel (the P-05 ConversationList pattern, 300px early margin) auto-fetches the next
+  page as the reader nears the top — the page usually lands before the seam is visible.
+  Scroll position preserved; a quiet "Loading earlier messages…" chip shows only mid-fetch.
+- **Reply jump**: the quote strip is now a button — clicking scrolls to the original
+  message (smooth, centered; instant under reduced motion) and flashes a brief accent
+  ring on it. If the original isn't loaded, up to 3 older pages are pulled while looking.
+- **Softer bubbles**: the `--neu-edge` hairline is removed from bubbles (the chip shadow
+  alone lifts them off the wallpaper — the border read sharp); cluster spacing opened up
+  from 10/2px to 14/6px so runs still read as related without sitting on each other.
 
 **Why:** recovery must not require the codebase or AWS access. When the session dies, Ethan
 (or anyone admin/founder) should fix it from Serene alone; and the alarm should reach the

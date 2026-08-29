@@ -1,10 +1,11 @@
 "use client";
 
 // One Sia message — the WhatsApp-Web reading, in Serene's own material. The
-// bubble surface contract is the SAME one whatsapp/MessageBubble ships (inbound
-// --neu-surface-high, outbound --neu-chat-user-bg, --neu-edge hairline,
-// --neu-shadow-chip, 20/6 corner pair) so the two chat surfaces speak one
-// language. Display-only (A-06).
+// bubble surfaces are the whatsapp/MessageBubble pair (inbound
+// --neu-surface-high, outbound --neu-chat-user-bg) with --neu-shadow-chip;
+// NO hairline border here (design pass 2026-08-29 — the --neu-edge line read
+// harsh on the wallpaper; the chip shadow alone lifts the bubble).
+// Display-only (A-06).
 //
 // Anatomy: day separators (centred chip) → sender clusters (avatar + coloured
 // name on the first bubble of a run) → bubble with optional quote strip, media,
@@ -57,17 +58,28 @@ function SystemRow({ m }: { m: SiaMessageRow }) {
   );
 }
 
-function QuoteStrip({ m }: { m: SiaMessageRow }) {
+function QuoteStrip({
+  m,
+  onJumpToQuoted,
+}: {
+  m: SiaMessageRow;
+  onJumpToQuoted?: (waMessageId: string) => void;
+}) {
   if (!m.quoted && !m.quoted_wa_message_id) return null;
   const q = m.quoted;
   const label = q?.sender_name ?? "Original message";
   const preview =
     q?.text?.trim() ||
     (q ? (TYPE_PREVIEW[q.type]?.label ?? q.type) : "Not captured");
+  const jumpable = !!m.quoted_wa_message_id && !!onJumpToQuoted;
   return (
-    <div
-      className="rounded-(--radius-xs) px-2.5 py-1.5 mb-1.5"
-      style={{ background: "var(--neu-well)" }}
+    <button
+      type="button"
+      disabled={!jumpable}
+      onClick={() => jumpable && onJumpToQuoted!(m.quoted_wa_message_id!)}
+      title={jumpable ? "Go to the original message" : undefined}
+      className="block w-full text-left rounded-(--radius-xs) px-2.5 py-1.5 mb-1.5 border-0"
+      style={{ background: "var(--neu-well)", cursor: jumpable ? "pointer" : "default" }}
     >
       <div
         className="type-caption truncate"
@@ -78,7 +90,7 @@ function QuoteStrip({ m }: { m: SiaMessageRow }) {
       <div className="type-caption truncate" style={{ color: "var(--theme-text-tertiary)" }}>
         {preview}
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -125,12 +137,17 @@ export function SiaMessageBubble({
   prev,
   chatJid,
   entrance = false,
+  flash = false,
+  onJumpToQuoted,
 }: {
   m: SiaMessageRow;
   prev?: SiaMessageRow;
   chatJid: string;
   /** true only for messages appended live after mount — history renders static. */
   entrance?: boolean;
+  /** brief accent ring after a reply-strip jump lands here */
+  flash?: boolean;
+  onJumpToQuoted?: (waMessageId: string) => void;
 }) {
   if (m.type === "system") return <SystemRow m={m} />;
 
@@ -154,7 +171,9 @@ export function SiaMessageBubble({
       className="flex gap-2"
       style={{
         justifyContent: fromMe ? "flex-end" : "flex-start",
-        marginTop: clusterStart ? "10px" : "2px",
+        // Cluster rhythm: related messages read as a run, but each bubble still
+        // breathes (was 10/2 — too dense, design pass 2026-08-29).
+        marginTop: clusterStart ? "14px" : "6px",
         marginBottom: hasReactions ? "12px" : 0,
       }}
     >
@@ -198,8 +217,12 @@ export function SiaMessageBubble({
             padding: "var(--space-2) var(--space-3)",
             borderRadius: fromMe ? "16px 16px 5px 16px" : clusterStart ? "5px 16px 16px 16px" : "16px",
             background: fromMe ? "var(--neu-chat-user-bg)" : "var(--neu-surface-high)",
-            border: "1px solid var(--neu-edge)",
-            boxShadow: "var(--neu-shadow-chip)",
+            // No hairline — the chip shadow alone lifts the bubble off the
+            // wallpaper (the --neu-edge border read harsh; design pass 2026-08-29).
+            boxShadow: flash
+              ? "var(--neu-shadow-chip), 0 0 0 2px var(--theme-accent)"
+              : "var(--neu-shadow-chip)",
+            transition: "box-shadow 600ms var(--ease-in-out)",
           }}
         >
           {/* Sender name — first bubble of an inbound cluster */}
@@ -236,7 +259,7 @@ export function SiaMessageBubble({
             </div>
           ) : (
             <>
-              <QuoteStrip m={m} />
+              <QuoteStrip m={m} onJumpToQuoted={onJumpToQuoted} />
 
               {m.media && (
                 <div className={m.text ? "mb-1.5" : ""}>
