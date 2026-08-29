@@ -28,22 +28,24 @@ And set it back to 1 when done. Never run both.
 
 ## Pairing (linking the WhatsApp number)
 
-Pairing happens ONCE per session; deploys never need re-pairing (identity is in Postgres).
+Pairing happens ONCE per session; deploys never re-pair (identity lives in
+Postgres, so any machine resumes the same session).
 
-1. The service must be running with empty auth state (`SELECT count(*) FROM sia.wag_auth_state;` → 0).
-2. Watch the logs for the code:
-   ```
-   PYTHONUNBUFFERED=1 aws logs tail /copilot/serene-prod-watcher --follow --format short --region ap-south-1 \
-     | grep --line-buffered -i "PAIRING CODE"
-   ```
-3. On the watcher phone: WhatsApp → Settings → Linked Devices → Link a device →
-   **Link with phone number instead** → type the newest code promptly (a code dies with
-   its socket; the process restarts about every minute while unpaired, minting a fresh one).
-4. Success looks like: `connected as <jid>` then `seeded N groups` in the logs, and the
-   green dot on /sia within ~a minute.
-5. Local dev with a terminal and no `WAG_PAIR_NUMBER` env still shows a QR instead.
+THE flow is QR ON A LOCAL TERMINAL — the pairing-code flow is retired: our
+crash-only restarts kill the socket a code is bound to (codes died before they
+could be typed), and a failed code attempt persists a half-identity that
+confuses the next boot. A local terminal renders the QR perfectly, and the
+Postgres auth store makes "pair here, run there" free:
 
-The pairing number lives in `backend/copilot/watcher/manifest.yml` (`WAG_PAIR_NUMBER`).
+1. Scale the AWS service to 0 (THE ONE LAW above).
+2. Wipe any leftover state: `DELETE FROM sia.wag_auth_state;`
+3. On any machine with the repo: `cd connector && npm start` → scan the QR
+   (WhatsApp → Linked Devices → Link a device).
+4. Let the history sync finish locally (watch message counts settle — the
+   sync is delivered around pairing time and may not resume if interrupted).
+5. Ctrl+C the local connector, scale the AWS service back to 1. The task reads
+   the same session from Postgres and simply resumes — no new pairing, no new
+   device entry on the phone.
 
 ## Session inspection & reset (SQL)
 

@@ -30,10 +30,11 @@ deployment:
 
 variables:
   NEXT_PUBLIC_SUPABASE_URL: https://xmucqqhbupudnzderchy.supabase.co
-  # Headless pairing: the watcher's own number → an 8-character pairing code in
-  # the logs instead of a QR (a QR arrives in CloudWatch batches and expires
-  # before it renders whole). Only used while the session is unregistered.
-  WAG_PAIR_NUMBER: "918956918040"
+  # No WAG_PAIR_NUMBER: pairing-code flow is RETIRED (2026-08-29) — crash-only
+  # restarts kill the socket a code is bound to, and a failed attempt persists a
+  # half-identity that confuses the next boot. THE pairing flow is now QR on a
+  # local terminal (connector RUNBOOK): the session lands in Postgres, and this
+  # task simply resumes it. Scale this service to 0 before pairing locally.
   # Media bucket arrives as SIAMEDIA_NAME from the addons/sia-media.yml output;
   # connector config falls back to it when WAG_MEDIA_BUCKET is unset.
 

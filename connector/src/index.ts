@@ -373,7 +373,13 @@ async function start(): Promise<void> {
     },
     logger,
     markOnlineOnConnect: false, // stay quiet — the watcher is a silent member
-    syncFullHistory: false,     // recent history only; gradual by design
+    // FULL history sync (founder decision 2026-08-29): the watcher advertises as
+    // a full-sync client so WhatsApp delivers the deepest group history it holds
+    // on pairing — the Sia vision feeds on the whole archive, not a recent
+    // window. The dedup wall makes any overlap land exactly once; the flood
+    // hardening (payload trim, 500-row chunks, per-row salvage) absorbs the
+    // larger messaging-history.set batches.
+    syncFullHistory: true,
     getMessage: async () => undefined,
   });
   setMediaSocket(sock);

@@ -12,6 +12,35 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-29 — The watcher is paired: QR-into-Postgres becomes THE flow, pairing codes retired
+
+**Why:** the pairing-code flow failed in production twice, and the study explained it
+structurally: Baileys binds each code to the socket that minted it, and our crash-only
+lifecycle cycles that socket — codes died before they could be typed, and a failed attempt
+persists a half-identity (creds.me set, 1 key) that confuses the next boot. The founder
+called it: check the docs, use QR. The Postgres auth store made that trivially right.
+
+**What:**
+
+- **THE pairing flow (RUNBOOK)**: scale AWS to 0 → wipe `wag_auth_state` → `npm start` on any
+  laptop → scan the QR in a real terminal → let history settle → Ctrl+C → scale AWS to 1.
+  The session lives in Postgres, so the Fargate task RESUMES it — pair here, run anywhere,
+  never re-pair on deploys. `WAG_PAIR_NUMBER` removed from the manifest; the code path stays
+  for emergencies but is no longer the doctrine.
+- **Local supervisor loop** (`connector/package.json` start script): crash-only needs a
+  supervisor everywhere — ECS provides it in the cloud; locally the 515-after-QR (WhatsApp's
+  mandatory reconnect-to-finish) previously just exited and left the phone hanging with
+  "couldn't log in". `npm start` now loops through restarts; Ctrl+C still stops everything.
+- **Full history sync ON** (`syncFullHistory: true`, founder decision): the watcher
+  advertises as a full-sync client. Measured result: the archive already reached back to
+  2023-08 from the first pairing, so round two mostly dedup-bounced — confirming the wall
+  and that the deep history was already ours.
+- Paired live 2026-08-29 (session `918956918040:7`, 823 signal keys), verified via the
+  heartbeat + event flow; the media backfill drip auto-started on connect; handover to
+  Fargate automated on local-heartbeat silence.
+
+---
+
 ## 2026-08-28 — Step 3 kickoff: the Python brain foundation is live (router + specialists + three model tiers)
 
 **Why:** master-plan Step 3 / plan-elaya Phase 1 — the port of Elaya's runtime to Python on
