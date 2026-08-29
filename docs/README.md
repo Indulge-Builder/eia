@@ -113,6 +113,7 @@ for product context
 | An env var | `operations/environments.md` |
 | How to deploy / build commands | `operations/deployment.md` |
 | Is the SLA/revival engine healthy today | `operations/engine-health-check.md` |
+| Recurring duties + open upkeep items (partition clocks, watcher phone, pinned versions) | `operations/maintenance.md` |
 | Known issues from past audits | `audits/` + open tables therein |
 
 ## The page-spec template
