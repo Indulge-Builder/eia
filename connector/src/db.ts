@@ -72,6 +72,18 @@ export async function insertRawEvents(
 
 export type WatcherState = "pairing" | "connecting" | "connected" | "logged_out";
 
+/** Boot-time read so a restart in the SAME state inherits its state_since.
+ *  Without this, a crash loop resets state_since every boot and the alarm's
+ *  "stuck for N minutes" conditions can never fire. Non-fatal: null on error. */
+export async function getWatcherStatusRow(): Promise<{ state: WatcherState; state_since: string } | null> {
+  const { data, error } = await db.from("wag_watcher_status").select("state, state_since").eq("id", 1).limit(1);
+  if (error) {
+    console.error("[db] watcher status read failed:", error.message);
+    return null;
+  }
+  return (data?.[0] as { state: WatcherState; state_since: string } | undefined) ?? null;
+}
+
 export async function upsertWatcherStatus(row: {
   state: WatcherState;
   state_since: string;
@@ -95,39 +107,56 @@ export async function upsertWatcherStatus(row: {
 // Contacts / groups / members
 // ─────────────────────────────────────────────
 
-export async function upsertContact(row: {
+type ContactUpsertRow = {
   jid: string;
   lid?: string | null;
+  phone?: string | null;
   push_name?: string | null;
   participant_role?: string;
-}): Promise<void> {
-  const { error } = await db
-    .from("wag_contacts")
-    .upsert(
-      { ...row, last_seen_at: new Date().toISOString() },
-      { onConflict: "jid", ignoreDuplicates: false },
-    );
-  if (error) console.error("[db] contact upsert failed:", error.message);
-}
+};
 
 /**
- * Batch contact upsert — the connect-flood path (contacts.upsert can carry
- * thousands of rows for the real watcher number). One statement per chunk instead
- * of thousands of sequential round-trips. Chunked so no single insert goes oversized.
+ * THE contact write — every contact upsert routes through here. A null/undefined
+ * field is DROPPED from the payload so it can never overwrite a value we already
+ * hold (contacts.update events are partial: a row without `notify` used to null
+ * out an existing push_name). Rows are grouped by their present-key signature
+ * (PostgREST builds one column list per statement), deduped by jid within each
+ * group, and chunked so no single statement goes oversized.
  */
-export async function upsertContactsBatch(
-  rows: { jid: string; lid?: string | null; push_name?: string | null }[],
-): Promise<void> {
+async function upsertContactRowsSafe(rows: ContactUpsertRow[]): Promise<void> {
   if (rows.length === 0) return;
   const now = new Date().toISOString();
   const CHUNK = 500;
-  for (let i = 0; i < rows.length; i += CHUNK) {
-    const chunk = rows.slice(i, i + CHUNK).map((r) => ({ ...r, last_seen_at: now }));
-    const { error } = await db
-      .from("wag_contacts")
-      .upsert(chunk, { onConflict: "jid", ignoreDuplicates: false });
-    if (error) console.error("[db] contact batch upsert failed:", error.message);
+  const bySignature = new Map<string, Map<string, Record<string, unknown>>>();
+  for (const r of rows) {
+    const clean: Record<string, unknown> = { jid: r.jid, last_seen_at: now };
+    for (const [k, v] of Object.entries(r)) {
+      if (k !== "jid" && v !== null && v !== undefined) clean[k] = v;
+    }
+    const sig = Object.keys(clean).sort().join(",");
+    const group = bySignature.get(sig) ?? new Map<string, Record<string, unknown>>();
+    group.set(r.jid, clean); // last write wins within one event batch
+    bySignature.set(sig, group);
   }
+  for (const group of bySignature.values()) {
+    const list = [...group.values()];
+    for (let i = 0; i < list.length; i += CHUNK) {
+      const { error } = await db
+        .from("wag_contacts")
+        .upsert(list.slice(i, i + CHUNK), { onConflict: "jid", ignoreDuplicates: false });
+      if (error) console.error("[db] contact upsert failed:", error.message);
+    }
+  }
+}
+
+export async function upsertContact(row: ContactUpsertRow): Promise<void> {
+  await upsertContactRowsSafe([row]);
+}
+
+/** Batch contact upsert — the connect-flood path (contacts.upsert can carry
+ *  thousands of rows for the real watcher number). */
+export async function upsertContactsBatch(rows: ContactUpsertRow[]): Promise<void> {
+  await upsertContactRowsSafe(rows);
 }
 
 /**
@@ -135,26 +164,11 @@ export async function upsertContactsBatch(
  * metadata (lid-addressed groups hide numbers behind @lid ids; the participant
  * object still carries `phoneNumber`). One contact row per phone jid, `lid` +
  * `phone` filled so the app can resolve members → names → staff profiles.
- * Rows WITHOUT a display name are upserted separately so they can never
- * overwrite an existing push_name with null.
  */
 export async function upsertContactBridges(
   rows: { jid: string; lid: string | null; phone: string | null; push_name: string | null }[],
 ): Promise<void> {
-  if (rows.length === 0) return;
-  const now = new Date().toISOString();
-  const named = rows.filter((r) => r.push_name);
-  const nameless = rows.filter((r) => !r.push_name).map(({ jid, lid, phone }) => ({ jid, lid, phone }));
-  const CHUNK = 500;
-  for (const batch of [named, nameless]) {
-    for (let i = 0; i < batch.length; i += CHUNK) {
-      const chunk = batch.slice(i, i + CHUNK).map((r) => ({ ...r, last_seen_at: now }));
-      const { error } = await db
-        .from("wag_contacts")
-        .upsert(chunk, { onConflict: "jid", ignoreDuplicates: false });
-      if (error) console.error("[db] contact bridge upsert failed:", error.message);
-    }
-  }
+  await upsertContactRowsSafe(rows);
 }
 
 export async function upsertGroup(row: {
@@ -163,12 +177,23 @@ export async function upsertGroup(row: {
   description?: string | null;
   owner_jid?: string | null;
   member_count?: number | null;
-  watcher_joined_at?: string;
 }): Promise<void> {
   const { error } = await db
     .from("wag_groups")
     .upsert(row, { onConflict: "group_jid", ignoreDuplicates: false });
   if (error) console.error("[db] group upsert failed:", error.message);
+}
+
+/** Stamp "watching since" exactly once — the null guard means a reboot or
+ *  re-seed can never reset a group's original watch date (it used to reset on
+ *  every boot, so the info panel's "Watching since" was always today). */
+export async function stampWatcherJoined(groupJid: string): Promise<void> {
+  const { error } = await db
+    .from("wag_groups")
+    .update({ watcher_joined_at: new Date().toISOString() })
+    .eq("group_jid", groupJid)
+    .is("watcher_joined_at", null);
+  if (error) console.error("[db] watcher_joined stamp failed:", error.message);
 }
 
 /** Membership history: a join inserts a new stint; leave closes the open one. */
@@ -242,6 +267,20 @@ export async function upsertMessages(rows: WagMessageRow[]): Promise<void> {
     });
     if (error) console.error("[db] message upsert failed:", error.message);
   }
+}
+
+/** Raw-message lookup by PAIR, not triple: sender_jid is the unstable leg (lid
+ *  vs phone forms across sync eras) and a message id is unique within its chat.
+ *  Shared by the media backfill AND the socket's getMessage callback. */
+export async function fetchRawMessageByPair(chatJid: string, waMessageId: string): Promise<unknown | null> {
+  const { data, error } = await db
+    .from("wag_messages")
+    .select("raw")
+    .eq("chat_jid", chatJid)
+    .eq("wa_message_id", waMessageId)
+    .limit(1);
+  if (error || !data?.[0]?.raw) return null;
+  return data[0].raw;
 }
 
 /** Delete-for-everyone: flip the tag, keep everything (locked decision 4). */

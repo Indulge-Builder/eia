@@ -33,13 +33,16 @@ function revive<T>(value: unknown): T {
   return JSON.parse(JSON.stringify(value), BufferJSON.reviver) as T;
 }
 
+// Reads must be as loud as writes: a transient error that silently returns null
+// is CATASTROPHIC at boot — the connector would init a fresh identity and its
+// first creds.update would overwrite the live session. Retry, then THROW; the
+// crash-only supervisor restarts clean and the real creds are still in Postgres.
 async function readKey<T>(key: string): Promise<T | null> {
-  const { data, error } = await db.from(TABLE).select("value").eq("key", key).limit(1);
-  if (error) {
-    console.error(`[auth] read ${key} failed:`, error.message);
-    return null;
-  }
-  return data?.[0] ? revive<T>(data[0].value) : null;
+  return withRetry(`read ${key}`, async () => {
+    const { data, error } = await db.from(TABLE).select("value").eq("key", key).limit(1);
+    if (error) throw new Error(error.message);
+    return data?.[0] ? revive<T>(data[0].value) : null;
+  });
 }
 
 // Key writes must NEVER fail silently: Baileys' signal transactions assume a
@@ -93,15 +96,17 @@ export async function usePostgresAuthState(): Promise<{
         get: async <T extends keyof SignalDataTypeMap>(type: T, ids: string[]) => {
           const data: { [id: string]: SignalDataTypeMap[T] } = {};
           if (ids.length === 0) return data;
-          const { data: rows, error } = await db
-            .from(TABLE)
-            .select("key, value")
-            .in("key", ids.map((id) => `${type}-${id}`));
-          if (error) {
-            console.error(`[auth] get ${type} failed:`, error.message);
-            return data;
-          }
-          for (const row of (rows ?? []) as { key: string; value: unknown }[]) {
+          // Same loud-failure law as writes: an empty result on a transient DB
+          // error looks like "no session" to Signal and poisons decrypt chains.
+          const rows = await withRetry(`get ${type}`, async () => {
+            const { data: r, error } = await db
+              .from(TABLE)
+              .select("key, value")
+              .in("key", ids.map((id) => `${type}-${id}`));
+            if (error) throw new Error(error.message);
+            return r ?? [];
+          });
+          for (const row of rows as { key: string; value: unknown }[]) {
             const id = row.key.slice(type.length + 1);
             let value = revive<SignalDataTypeMap[T]>(row.value);
             if (type === "app-state-sync-key" && value) {
@@ -139,7 +144,8 @@ export async function usePostgresAuthState(): Promise<{
  * state and arms a fresh pairing instead of hammering a dead login forever.
  */
 export async function wipeAuthState(reason: string): Promise<void> {
-  const creds = await readKey<AuthenticationCreds>("creds");
+  // Logging-only read — a throw here must never block the wipe itself.
+  const creds = await readKey<AuthenticationCreds>("creds").catch(() => null);
   const { count } = await db.from(TABLE).select("key", { count: "exact", head: true });
   console.error(
     `[auth] wiping session (${reason}): was ${creds?.me?.id ?? "unpaired"}, ${count ?? "?"} keys — next boot will pair fresh`,

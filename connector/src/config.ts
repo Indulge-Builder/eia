@@ -50,11 +50,11 @@ export const config = {
   awsRegion: env.AWS_REGION || "ap-south-1",
   mediaDir: env.WAG_MEDIA_DIR || resolve(CONNECTOR_DIR, "media"),
   /**
-   * The watcher's own number (digits + country code, no '+'). When set AND the
-   * session is unregistered, the connector pairs with an 8-character CODE
-   * instead of a QR — the only workable route on a headless host, where a
-   * 65-line QR arrives in log batches and expires before it is fully drawn.
-   * Unset (local dev with a terminal) keeps the QR.
+   * EMERGENCY-ONLY. The pairing-code flow is RETIRED (2026-08-29, RUNBOOK):
+   * codes bind to the socket that minted them — crash-only restarts killed
+   * them before they could be typed, and a failed attempt persists a
+   * half-identity that poisons the next boot. THE flow is QR on a local
+   * terminal into the Postgres auth store; leave WAG_PAIR_NUMBER unset.
    */
   pairNumber: env.WAG_PAIR_NUMBER || null,
 };

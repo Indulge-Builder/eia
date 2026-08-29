@@ -44,7 +44,7 @@ export type SiaMediaInfo = {
   mime: string | null;
   size_bytes: number | null;
   duration_seconds: number | null;
-  download_status: "pending" | "retrying" | "done" | "dead_letter";
+  download_status: "pending" | "retrying" | "done" | "dead_letter" | "expired";
 };
 
 export type SiaQuotedPreview = {
@@ -591,7 +591,10 @@ export async function getSiaHealth(): Promise<SiaHealth> {
   const db = siaDb();
   const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-  const [status, lastEvent, eventsHr, msgsHr, totalMsgs, totalGroups, unmapped, hidden, media] =
+  // Media states as head-counts — never select the whole table (it was 15k rows
+  // fetched to Node just to count them; five indexed counts instead).
+  const MEDIA_STATES = ["pending", "retrying", "done", "dead_letter", "expired"] as const;
+  const [status, lastEvent, eventsHr, msgsHr, totalMsgs, totalGroups, unmapped, hidden, ...mediaStateCounts] =
     await Promise.all([
       getSiaWatcherStatus(),
       db.from("wag_raw_events").select("received_at").order("received_at", { ascending: false }).limit(1),
@@ -601,13 +604,15 @@ export async function getSiaHealth(): Promise<SiaHealth> {
       db.from("wag_groups").select("group_jid", { count: "exact", head: true }),
       db.from("wag_groups").select("group_jid", { count: "exact", head: true }).eq("group_kind", "unmapped"),
       db.from("wag_groups").select("group_jid", { count: "exact", head: true }).eq("is_active", false),
-      db.from("wag_media").select("download_status"),
+      ...MEDIA_STATES.map((s) =>
+        db.from("wag_media").select("id", { count: "exact", head: true }).eq("download_status", s),
+      ),
     ]);
 
   const mediaCounts = { pending: 0, retrying: 0, done: 0, dead_letter: 0, expired: 0 };
-  for (const m of (media.data ?? []) as { download_status: keyof typeof mediaCounts }[]) {
-    if (m.download_status in mediaCounts) mediaCounts[m.download_status]++;
-  }
+  MEDIA_STATES.forEach((s, i) => {
+    mediaCounts[s] = Number((mediaStateCounts[i] as { count: number | null }).count ?? 0);
+  });
 
   const lastEventAt = (lastEvent.data?.[0]?.received_at as string | undefined) ?? null;
   const beatFresh = !!status && Date.now() - new Date(status.beat_at).getTime() < LIVE_WINDOW_MS;

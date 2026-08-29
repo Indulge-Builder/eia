@@ -70,6 +70,9 @@ export function SiaMediaAttachment(props: MediaProps) {
   if (media.download_status === "dead_letter") {
     return <MediaChip media={media} note="Media unavailable" danger />;
   }
+  if (media.download_status === "expired") {
+    return <MediaChip media={media} note="Expired on WhatsApp" danger />;
+  }
   if (media.download_status !== "done") {
     return <MediaChip media={media} note="Downloading…" spinning />;
   }

@@ -99,10 +99,36 @@ CLI to the installed `@trigger.dev/sdk` version — a mismatched latest CLI refu
 ## Media
 
 - Live media downloads immediately (concurrency 2, retries, dead-letter after 5).
-- Historical/orphaned `pending` rows are drained by the in-process backfill drip
-  (starts on every connect, ~1 item/1.5s, newest first): each row ends `done` or
-  `expired` — nothing stays pending forever.
+- Historical/orphaned `pending` AND stranded `retrying` rows are drained by the
+  in-process backfill drip (starts on every connect, ~1 item/1.5s, newest
+  first): each row ends `done` or `expired` — nothing stays pending forever.
 - Statuses: `pending → done | retrying → dead_letter | expired`.
+  `dead_letter` = we hold no key material (orphan) or live retries exhausted;
+  `expired` = WhatsApp refused re-upload (link gone for good).
+
+## Replacing the number (blocked, banned, or SIM lost)
+
+The DATA is never at risk — every captured message, media file, and raw event
+stays in our database forever. Only the EAR needs replacing. Total downtime is
+however long steps 1–4 take (typically under an hour once you have a SIM).
+
+1. Get a fresh SIM and install WhatsApp on the dedicated watcher phone.
+   Set two-step verification (PIN) immediately.
+2. Scale the AWS service to 0, then `DELETE FROM sia.wag_auth_state;`
+3. Pair the new number exactly like a first pairing (QR flow above).
+4. Scale AWS back to 1.
+5. **The real cost: group membership.** A new number is not in any group.
+   A group admin (or the old number, if it still works) must re-add the
+   watcher number to every group. Until a group re-adds it, that group is
+   not captured. Track progress in /sia — re-added groups go live again
+   the moment the first message arrives.
+6. History: on pairing, WhatsApp delivers whatever history the NEW number
+   can see (little, since it just joined the groups). The old archive is
+   already in our DB; the dedup wall keeps the two eras from colliding.
+
+What downtime loses: messages sent in a group while the watcher number was
+not a member are NOT recoverable — WhatsApp only delivers history a member
+is entitled to. This is the one true gap; everything else replays.
 
 ## The number itself
 

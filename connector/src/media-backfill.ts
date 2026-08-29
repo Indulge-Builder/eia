@@ -11,40 +11,15 @@
 
 import { downloadMediaMessage, type WAMessage, type WASocket } from "baileys";
 import pino from "pino";
-import { db } from "./db.js";
+import { db, fetchRawMessageByPair } from "./db.js";
 import { storeMediaBuffer } from "./media.js";
+import { reviveBuffers } from "./normalize.js";
 
 const DRIP_MS = 1500;
 const BATCH = 25;
 const FRESH_GUARD_MS = 10 * 60 * 1000;
 
 const quietLogger = pino({ level: "silent" });
-
-/** jsonSafe turned Buffers into base64 strings; downloadMediaMessage needs the
- *  binary fields back. Revive the known byte fields anywhere in the tree. */
-const BYTE_FIELDS = new Set([
-  "mediaKey",
-  "fileEncSha256",
-  "fileSha256",
-  "streamingSidecar",
-  "jpegThumbnail",
-  "thumbnailEncSha256",
-  "thumbnailSha256",
-  "waveform",
-]);
-
-function reviveBuffers(value: unknown, keyName?: string): unknown {
-  if (typeof value === "string" && keyName && BYTE_FIELDS.has(keyName)) {
-    return Buffer.from(value, "base64");
-  }
-  if (Array.isArray(value)) return value.map((v) => reviveBuffers(v));
-  if (value && typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value)) out[k] = reviveBuffers(v, k);
-    return out;
-  }
-  return value;
-}
 
 type PendingRow = {
   chat_jid: string;
@@ -58,12 +33,17 @@ type PendingRow = {
 
 async function fetchPendingBatch(): Promise<PendingRow[]> {
   const cutoff = new Date(Date.now() - FRESH_GUARD_MS).toISOString();
+  // 'retrying' is included: the LIVE worker stamps it between its in-memory
+  // retries, and a crash mid-cycle strands the row there forever (the live
+  // queue is memory-only). The 10-min fresh guard keeps the two workers from
+  // ever touching the same row; attempts<5 lets stranded live rows (attempts
+  // up to 4) re-enter, and the >=3 rule below still resolves them promptly.
   const { data, error } = await db
     .from("wag_media")
     .select("chat_jid, wa_message_id, sender_jid, media_type, mime, created_at, attempts")
-    .eq("download_status", "pending")
+    .in("download_status", ["pending", "retrying"])
     .lt("created_at", cutoff)
-    .lt("attempts", "3")
+    .lt("attempts", "5")
     .order("attempts", { ascending: true })
     .order("created_at", { ascending: false }) // newest first — freshest links first
     .limit(BATCH);
@@ -75,16 +55,8 @@ async function fetchPendingBatch(): Promise<PendingRow[]> {
 }
 
 async function fetchRawMessage(row: PendingRow): Promise<WAMessage | null> {
-  // Lookup by PAIR, not triple: sender_jid is the unstable leg (lid vs phone
-  // forms across sync eras), and a message id is unique within its chat.
-  const { data, error } = await db
-    .from("wag_messages")
-    .select("raw")
-    .eq("chat_jid", row.chat_jid)
-    .eq("wa_message_id", row.wa_message_id)
-    .limit(1);
-  if (error || !data?.[0]?.raw) return null;
-  return reviveBuffers(data[0].raw) as WAMessage;
+  const raw = await fetchRawMessageByPair(row.chat_jid, row.wa_message_id);
+  return raw ? (reviveBuffers(raw) as WAMessage) : null;
 }
 
 async function setStatus(

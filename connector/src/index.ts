@@ -21,12 +21,14 @@ import pino from "pino";
 import qrcode from "qrcode-terminal";
 import { config } from "./config.js";
 import {
+  getWatcherStatusRow,
   insertMediaRow,
   insertRawEvents,
   markRevoked,
   memberJoined,
   memberLeft,
   memberRoleChanged,
+  stampWatcherJoined,
   upsertContact,
   upsertContactBridges,
   upsertContactsBatch,
@@ -39,9 +41,10 @@ import {
   type WatcherState,
 } from "./db.js";
 import { usePostgresAuthState, wipeAuthState } from "./auth-postgres.js";
+import { fetchRawMessageByPair } from "./db.js";
 import { startMediaBackfill } from "./media-backfill.js";
 import { enqueueMediaDownload, setMediaSocket } from "./media.js";
-import { isGroupJid, jsonSafe, normalizeJid, normalizeMessage } from "./normalize.js";
+import { isGroupJid, jsonSafe, normalizeJid, normalizeMessage, reviveBuffers } from "./normalize.js";
 
 const logger = pino({ level: "warn" });
 
@@ -211,8 +214,34 @@ async function processEvent(sock: WASocket, e: QueuedEvent): Promise<void> {
       break;
     }
     case "messaging-history.set": {
-      const { messages } = e.payload as { messages?: WAMessage[] };
+      const { messages, lidPnMappings } = e.payload as {
+        messages?: WAMessage[];
+        lidPnMappings?: { pn: string; lid: string }[];
+      };
+      // History chunks carry lid↔phone pairs — the identity bridge feeds on them.
+      if (lidPnMappings?.length) {
+        await upsertContactBridges(
+          lidPnMappings.map((m) => {
+            const jid = normalizeJid(m.pn);
+            const digits = jid.split("@")[0].replace(/\D/g, "");
+            return { jid, lid: normalizeJid(m.lid), phone: digits ? `+${digits}` : null, push_name: null };
+          }),
+        );
+      }
       if (messages?.length) await processMessages(sock, messages, "history_sync");
+      break;
+    }
+    case "lid-mapping.update": {
+      // 7.x streams lid↔phone pairs as they are learned (docs audit 2026-08-29) —
+      // persist each one; the group-info identity resolution reads this bridge.
+      const m = e.payload as { pn?: string; lid?: string };
+      if (m.pn && m.lid) {
+        const jid = normalizeJid(m.pn);
+        const digits = jid.split("@")[0].replace(/\D/g, "");
+        await upsertContactBridges([
+          { jid, lid: normalizeJid(m.lid), phone: digits ? `+${digits}` : null, push_name: null },
+        ]);
+      }
       break;
     }
     case "messages.update": {
@@ -256,8 +285,8 @@ async function processEvent(sock: WASocket, e: QueuedEvent): Promise<void> {
           description: g.desc ?? null,
           owner_jid: g.owner ? normalizeJid(g.owner) : null,
           member_count: g.size ?? g.participants?.length ?? null,
-          watcher_joined_at: new Date().toISOString(),
         });
+        await stampWatcherJoined(g.id);
         for (const p of g.participants ?? []) {
           await memberJoined(g.id, normalizeJid(p.id), p.admin ?? "member");
         }
@@ -323,8 +352,8 @@ async function seedGroups(sock: WASocket): Promise<void> {
         description: meta.desc ?? null,
         owner_jid: meta.owner ? normalizeJid(meta.owner) : null,
         member_count: meta.participants?.length ?? null,
-        watcher_joined_at: new Date().toISOString(),
       });
+      await stampWatcherJoined(jid);
       for (const p of meta.participants ?? []) {
         await memberJoined(jid, normalizeJid(p.id), p.admin ?? "member");
       }
@@ -355,7 +384,19 @@ async function start(): Promise<void> {
   mkdirSync(config.mediaDir, { recursive: true });
 
   const { state, saveCreds } = await usePostgresAuthState();
-  setWatcherState(state.creds.me ? "connecting" : "pairing");
+
+  // Inherit state_since when a restart lands in the SAME state — otherwise a
+  // crash loop resets the clock every boot and the alarm's "stuck connecting /
+  // unpaired for N minutes" conditions can never fire (each boot looks fresh).
+  const initialState: WatcherState = state.creds.me ? "connecting" : "pairing";
+  const prior = await getWatcherStatusRow();
+  if (prior?.state === initialState && prior.state_since) {
+    watcherState = initialState;
+    stateSince = prior.state_since;
+    beat();
+  } else {
+    setWatcherState(initialState);
+  }
 
   // The version fetch is a network call; a blip must not prevent boot (audit
   // P1-2). Undefined lets Baileys fall back to its baked protocol version.
@@ -380,7 +421,21 @@ async function start(): Promise<void> {
     // hardening (payload trim, 500-row chunks, per-row salvage) absorbs the
     // larger messaging-history.set batches.
     syncFullHistory: true,
-    getMessage: async () => undefined,
+    // rc14 TRAP (Baileys docs audit 2026-08-29): the DEFAULT
+    // shouldSyncHistoryMessage silently DROPS chunks of syncType FULL — so
+    // syncFullHistory alone requests deep history and then throws it away.
+    // A zero-loss watcher accepts every chunk; the dedup wall absorbs overlap.
+    shouldSyncHistoryMessage: () => true,
+    // Serve retried/poll-referenced messages from our own archive (docs: needed
+    // for retry receipts + poll-vote decryption; returning undefined starves
+    // both). Pair lookup + byte-field revival — the same path the backfill uses.
+    getMessage: async (key) => {
+      if (!key.remoteJid || !key.id) return undefined;
+      const raw = await fetchRawMessageByPair(key.remoteJid, key.id).catch(() => null);
+      if (!raw) return undefined;
+      const msg = reviveBuffers(raw) as WAMessage;
+      return msg.message ?? undefined;
+    },
   });
   setMediaSocket(sock);
 
@@ -407,6 +462,10 @@ async function start(): Promise<void> {
 
   sock.ev.on("connection.update", (update) => {
     const { connection, lastDisconnect, qr } = update;
+    // The server's "offline queue fully replayed — you are live now" watermark.
+    if (update.receivedPendingNotifications) {
+      console.log("[watcher] offline queue replayed — live stream from here");
+    }
     // Local dev with a real terminal and no WAG_PAIR_NUMBER still gets the QR.
     if (qr && !config.pairNumber) {
       console.log("\n[watcher] Scan this QR with the WATCHER phone (WhatsApp → Linked Devices):\n");
@@ -448,6 +507,7 @@ async function start(): Promise<void> {
   sock.ev.on("group-participants.update", (p) => enqueue("group-participants.update", p));
   sock.ev.on("contacts.upsert", (p) => enqueue("contacts.upsert", p));
   sock.ev.on("contacts.update", (p) => enqueue("contacts.update", p));
+  sock.ev.on("lid-mapping.update", (p) => enqueue("lid-mapping.update", p));
 
   void drainLoop(sock);
 }

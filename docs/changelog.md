@@ -12,6 +12,56 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-29 — Sia end-to-end audit against the Baileys 7.0.0-rc14 docs: nine fixes across the pipeline
+
+**Why:** the founder asked for a top-to-bottom review of the whole WhatsApp capture flow —
+happy path, failure path, alarm — held against the latest Baileys documentation and source
+(read at exactly our installed version, 7.0.0-rc14). The audit found one critical config trap,
+two session-safety gaps, an alarm blind spot, and a handful of capture/UI bugs.
+
+**What (connector — one Fargate deploy):**
+
+- **CRITICAL — full history was being thrown away:** rc14's DEFAULT `shouldSyncHistoryMessage`
+  silently drops history chunks of syncType FULL, so `syncFullHistory: true` requested deep
+  history and then discarded it. Now `shouldSyncHistoryMessage: () => true`. This is why the
+  second full-sync round mostly bounced.
+- **Session safety:** auth-state READS now retry then THROW like writes. Before, a transient
+  DB error at boot silently returned null creds → the connector would mint a fresh identity
+  whose first `creds.update` could overwrite the live session. Same law applied to signal-key
+  `get` (an empty result on DB error reads as "no session" and poisons decrypt chains).
+- **`getMessage` served from our own archive** (was `undefined` forever): pair lookup into
+  `wag_messages.raw` + byte-field revival (`messageSecret` added for poll-vote decryption).
+- **Alarm blind spot:** a crash loop reset `state_since` every boot, so "stuck connecting /
+  unpaired for 15 min" could never fire. Boot now inherits `state_since` from the status row
+  when the state is unchanged.
+- **`watcher_joined_at` stamped once** (null-guarded update) — it was overwritten on every
+  boot, so the group info panel's "Watching since" was always today.
+- **Contact writes null-safe:** partial `contacts.update` events could null out an existing
+  push_name/lid. All contact upserts now route through one helper that drops null fields
+  from the payload (grouped by key signature, deduped by jid).
+- **LID identity bridge fed from the real sources:** new `lid-mapping.update` handler + the
+  `lidPnMappings` field of history chunks (7.x streams lid↔phone pairs; we only harvested
+  group participant metadata before).
+- **Video notes captured:** `ptvMessage` was landing as type `unknown` with no media row.
+  Wrapper unwrap now uses Baileys' own `normalizeMessageContent` (covers
+  `associatedChildMessage`, `groupStatusMessage` wrappers a hand-rolled list missed).
+- **Backfill sweeps stranded `retrying` rows** (a live-worker crash left them orphaned
+  forever; the 10-min fresh guard keeps the two workers apart).
+- RUNBOOK: new "Replacing the number (blocked / banned / SIM lost)" playbook; pairing-code
+  config comment updated to the retired-doctrine wording.
+
+**What (app — Vercel):**
+
+- `expired` media rows rendered "Downloading…" forever (the status was missing from
+  `SiaMediaInfo` and the dispatcher). Now an honest "Expired on WhatsApp" chip.
+- `getSiaHealth` fetched ALL media rows (~15k) to count statuses in JS — now five indexed
+  head-counts.
+
+**Verified working (no change needed):** edits (2,341 chained rows captured via the
+`messages.upsert` MESSAGE_EDIT path — a second handler on `messages.update` would
+double-store), reactions incl. removal, revokes via both paths, the dedup wall, receipts
+(empty by design — the watcher never sends), the Q-13 read boundary, per-action role gates.
+
 ## 2026-08-29 — Vercel build fix: the /sia components referenced tokens that do not exist
 
 **Why:** the first Vercel deploy of the Sia page failed on our own pre-build token guard

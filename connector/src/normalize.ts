@@ -5,7 +5,13 @@
 // smarter normalizer replays it later. Edits become NEW rows chained to the
 // original; revokes and reactions are returned as instructions for db.ts.
 
-import { getContentType, jidNormalizedUser, type WAMessage, type WAProto } from "baileys";
+import {
+  getContentType,
+  jidNormalizedUser,
+  normalizeMessageContent,
+  type WAMessage,
+  type WAProto,
+} from "baileys";
 import type { WagMessageRow } from "./db.js";
 
 /** JSON-safe deep copy: Buffers/Uint8Arrays → base64 strings (raw stays replayable). */
@@ -38,19 +44,39 @@ export function normalizeJid(jid: string | null | undefined): string {
   }
 }
 
-/** Unwrap the containers WhatsApp nests real content inside. */
+/** Unwrap the containers WhatsApp nests real content inside — Baileys' own
+ *  normalizeMessageContent (R-01: the library's canonical list covers wrappers
+ *  a hand-rolled unwrap missed: associatedChildMessage, groupStatusMessage…). */
 function unwrapContent(message: WAProto.IMessage | null | undefined): WAProto.IMessage | null {
-  let m = message ?? null;
-  for (let i = 0; i < 5 && m; i++) {
-    if (m.ephemeralMessage?.message) m = m.ephemeralMessage.message;
-    else if (m.viewOnceMessage?.message) m = m.viewOnceMessage.message;
-    else if (m.viewOnceMessageV2?.message) m = m.viewOnceMessageV2.message;
-    else if (m.viewOnceMessageV2Extension?.message) m = m.viewOnceMessageV2Extension.message;
-    else if (m.documentWithCaptionMessage?.message) m = m.documentWithCaptionMessage.message;
-    else if (m.editedMessage?.message) m = m.editedMessage.message;
-    else break;
+  return normalizeMessageContent(message) ?? null;
+}
+
+/** jsonSafe turned Buffers into base64 strings; Baileys needs the binary fields
+ *  back to decrypt media / poll votes. Revive the known byte fields anywhere in
+ *  the tree (shared by the media backfill AND the socket's getMessage). */
+const BYTE_FIELDS = new Set([
+  "mediaKey",
+  "fileEncSha256",
+  "fileSha256",
+  "streamingSidecar",
+  "jpegThumbnail",
+  "thumbnailEncSha256",
+  "thumbnailSha256",
+  "waveform",
+  "messageSecret", // poll-vote decryption reads it via getMessage
+]);
+
+export function reviveBuffers(value: unknown, keyName?: string): unknown {
+  if (typeof value === "string" && keyName && BYTE_FIELDS.has(keyName)) {
+    return Buffer.from(value, "base64");
   }
-  return m;
+  if (Array.isArray(value)) return value.map((v) => reviveBuffers(v));
+  if (value && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) out[k] = reviveBuffers(v, k);
+    return out;
+  }
+  return value;
 }
 
 const TYPE_BY_CONTENT: Record<string, string> = {
@@ -58,6 +84,7 @@ const TYPE_BY_CONTENT: Record<string, string> = {
   extendedTextMessage: "text",
   imageMessage: "image",
   videoMessage: "video",
+  ptvMessage: "video", // round video notes — a videoMessage in a circle
   audioMessage: "audio", // refined to 'voice' below when ptt
   documentMessage: "document",
   stickerMessage: "sticker",
@@ -73,6 +100,7 @@ const TYPE_BY_CONTENT: Record<string, string> = {
 const MEDIA_CONTENT = new Set([
   "imageMessage",
   "videoMessage",
+  "ptvMessage",
   "audioMessage",
   "documentMessage",
   "stickerMessage",
@@ -209,6 +237,7 @@ export function normalizeMessage(msg: WAMessage, source: "live" | "history_sync"
           mime:
             content.imageMessage?.mimetype ??
             content.videoMessage?.mimetype ??
+            content.ptvMessage?.mimetype ??
             content.audioMessage?.mimetype ??
             content.documentMessage?.mimetype ??
             content.stickerMessage?.mimetype ??
@@ -216,13 +245,19 @@ export function normalizeMessage(msg: WAMessage, source: "live" | "history_sync"
           size_bytes: Number(
             content.imageMessage?.fileLength ??
               content.videoMessage?.fileLength ??
+              content.ptvMessage?.fileLength ??
               content.audioMessage?.fileLength ??
               content.documentMessage?.fileLength ??
               content.stickerMessage?.fileLength ??
               0,
           ) || null,
           duration_seconds:
-            Number(content.audioMessage?.seconds ?? content.videoMessage?.seconds ?? 0) || null,
+            Number(
+              content.audioMessage?.seconds ??
+                content.videoMessage?.seconds ??
+                content.ptvMessage?.seconds ??
+                0,
+            ) || null,
         }
       : null;
 
