@@ -45,6 +45,42 @@ export const TYPE_PREVIEW: Record<string, { label: string; icon: typeof ImageIco
   product: { label: "Product", icon: ShoppingBag },
 };
 
+/** Human copy for WhatsApp system rows. The connector stores the protocol stub
+ *  as "N" or "N: params" (Baileys WebMessageInfo.StubType) — mapping at render
+ *  time fixes every stored row, past and future, without touching data. */
+const SYSTEM_STUB_LABELS: Record<string, string> = {
+  "1": "Message deleted",
+  "2": "Waiting for this message — it couldn't be decoded yet",
+  "20": "Group created",
+  "21": "Group name changed",
+  "22": "Group icon changed",
+  "23": "Invite link reset",
+  "24": "Group description changed",
+  "25": "Group settings changed",
+  "26": "Group settings changed",
+  "27": "Member added",
+  "28": "Member removed",
+  "29": "Member promoted to admin",
+  "30": "Member demoted",
+  "31": "Member joined via invite link",
+  "32": "Member left",
+  "33": "Member changed their number",
+  "37": "Notification",
+  "38": "A member's security code changed",
+  "40": "Missed voice call",
+  "41": "Missed video call",
+  "42": "Contact changed their number",
+  "43": "Group deleted",
+};
+
+export function formatSystemText(text: string | null): string {
+  if (!text) return "Group update";
+  const m = /^([A-Z_0-9]+)(?::\s*[\s\S]*)?$/.exec(text.trim());
+  if (m && SYSTEM_STUB_LABELS[m[1]]) return SYSTEM_STUB_LABELS[m[1]];
+  // A non-stub text (already human) passes through untouched.
+  return /^\d+(?::|$)/.test(text.trim()) ? "Group update" : text;
+}
+
 export function formatBytes(bytes: number | null | undefined): string {
   if (!bytes || bytes <= 0) return "";
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;

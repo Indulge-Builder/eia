@@ -161,6 +161,12 @@ export function normalizeMessage(msg: WAMessage, source: "live" | "history_sync"
 
     // System stubs (member added, subject changed, ...) have no content.
     if (msg.messageStubType) {
+      // CIPHERTEXT (2) = "couldn't decode yet" — a PLACEHOLDER, not a fact.
+      // It gets its own type so the dedup wall can be pierced when the real
+      // message arrives via retry (db.ts deletes 'undecrypted' rows before
+      // inserting decoded content for the same message id).
+      const stub = String(msg.messageStubType);
+      const isCiphertext = stub === "2" || stub === "CIPHERTEXT";
       return {
         kind: "message",
         row: {
@@ -168,7 +174,7 @@ export function normalizeMessage(msg: WAMessage, source: "live" | "history_sync"
           wa_message_id: waMessageId,
           sender_jid: senderJid,
           from_me: fromMe,
-          type: "system",
+          type: isCiphertext ? "undecrypted" : "system",
           text: `${msg.messageStubType}${msg.messageStubParameters?.length ? ": " + msg.messageStubParameters.join(", ") : ""}`,
           quoted_wa_message_id: null,
           quoted_sender_jid: null,

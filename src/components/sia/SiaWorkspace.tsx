@@ -23,7 +23,7 @@ import { EASE_OUT_EXPO, FAST_DURATION } from "@/lib/constants/motion";
 import { getSiaGroupsAction, getSiaHealthAction } from "@/lib/actions/sia";
 import { SiaChat } from "./SiaChat";
 import { SiaControlModal } from "./SiaControlModal";
-import { groupTitle, KIND_LABEL, TYPE_PREVIEW } from "./sia-shared";
+import { formatSystemText, groupTitle, KIND_LABEL, TYPE_PREVIEW } from "./sia-shared";
 import type { SiaGroupKind, SiaGroupRow, SiaHealth, SiaMessageRow } from "@/lib/services/sia-service";
 
 type KindFilter = "all" | SiaGroupKind;
@@ -350,6 +350,15 @@ function RailPreview({ group }: { group: SiaGroupRow }) {
     return (
       <div className="type-caption text-(--theme-text-tertiary) truncate italic">
         {who ? `${who}: ` : ""}Message deleted
+      </div>
+    );
+  }
+
+  // System/undecrypted rows carry protocol stubs — always show the human copy.
+  if (group.last_type === "system" || group.last_type === "undecrypted") {
+    return (
+      <div className="type-caption text-(--theme-text-tertiary) truncate italic">
+        {group.last_type === "undecrypted" ? "Waiting for a message" : formatSystemText(group.last_text)}
       </div>
     );
   }

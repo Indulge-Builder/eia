@@ -58,6 +58,16 @@ messages inside a cluster sat too tight.
   on CORS — downloads now use a second presigned URL with an attachment disposition
   (plain anchor click), full-size image open uses the presigned URL directly. Local-mode
   data: URLs keep the buffer path.
+- **Undecrypted placeholders pierce the dedup wall (same day)**: a message that fails
+  to decode arrives as a CIPHERTEXT stub; we stored it as a system row showing raw
+  protocol text ("2: No session found...") AND it occupied the message's identity slot,
+  so the successful retry re-send bounced off the dedup upsert — the real content was
+  lost. Now: stub 2 gets its own type `undecrypted`; `upsertMessages` deletes matching
+  placeholders before inserting decoded content (a correction, not a history rewrite —
+  the failure's raw event stays in the black box); the UI shows "Waiting for this
+  message" italic. All 44 protocol stub types now render human copy via
+  `formatSystemText` (member added/left, group renamed, missed call...) in bubbles AND
+  the rail preview; 23 stored placeholders reclassified.
 - **Stale-tab guard (same day)**: a deploy invalidates an open tab's server-action ids and
   the 4s live-tail poll dies SILENTLY — the tab looks quiet while messages flow (the
   "live msgs not coming" report; capture was verified instant, the tab was just old).

@@ -282,7 +282,31 @@ export async function upsertMessages(rows: WagMessageRow[]): Promise<void> {
   const CHUNK = 500;
   const stamped = rows.map((r) => ({ ...r, normalizer_version: NORMALIZER_VERSION }));
   for (let i = 0; i < stamped.length; i += CHUNK) {
-    const { error } = await db.from("wag_messages").upsert(stamped.slice(i, i + CHUNK), {
+    const chunk = stamped.slice(i, i + CHUNK);
+
+    // Pierce the dedup wall for decode retries: an 'undecrypted' CIPHERTEXT
+    // placeholder occupies the message's identity slot, so the DECODED re-send
+    // would silently bounce off the upsert. Delete matching placeholders first
+    // — the real content replacing its own placeholder is a correction, not a
+    // history rewrite (the raw event of the failure is still in the black box).
+    const contentByChat = new Map<string, string[]>();
+    for (const r of chunk) {
+      if (r.type === "undecrypted") continue;
+      const ids = contentByChat.get(r.chat_jid) ?? [];
+      ids.push(r.wa_message_id);
+      contentByChat.set(r.chat_jid, ids);
+    }
+    for (const [chatJid, ids] of contentByChat) {
+      const { error } = await db
+        .from("wag_messages")
+        .delete()
+        .eq("chat_jid", chatJid)
+        .eq("type", "undecrypted")
+        .in("wa_message_id", ids);
+      if (error) console.error("[db] placeholder sweep failed:", error.message);
+    }
+
+    const { error } = await db.from("wag_messages").upsert(chunk, {
       onConflict: "chat_jid,wa_message_id,sender_jid,wa_timestamp",
       ignoreDuplicates: true, // dual watcher / redelivery → silent bounce
     });

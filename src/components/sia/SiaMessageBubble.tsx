@@ -18,7 +18,7 @@ import { formatDate } from "@/lib/utils/dates";
 import { SPRING_CONFIG, FAST_DURATION, EASE_IN_OUT } from "@/lib/constants/motion";
 import { renderWaText } from "@/components/ui/WaText";
 import { SiaMediaAttachment } from "./SiaMedia";
-import { senderInk, senderLabel, TYPE_PREVIEW } from "./sia-shared";
+import { formatSystemText, senderInk, senderLabel, TYPE_PREVIEW } from "./sia-shared";
 import type { SiaMessageRow } from "@/lib/services/sia-service";
 
 export function SiaDaySeparator({ ts }: { ts: string }) {
@@ -51,9 +51,12 @@ function SystemRow({ m }: { m: SiaMessageRow }) {
           maxWidth: "80%",
           background: "var(--neu-well)",
           color: "var(--theme-text-tertiary)",
+          fontStyle: m.type === "undecrypted" ? "italic" : undefined,
         }}
       >
-        {m.text ?? "Group update"}
+        {m.type === "undecrypted"
+          ? "Waiting for this message — it couldn't be decoded yet"
+          : formatSystemText(m.text)}
       </span>
     </div>
   );
@@ -150,7 +153,7 @@ export function SiaMessageBubble({
   flash?: boolean;
   onJumpToQuoted?: (waMessageId: string) => void;
 }) {
-  if (m.type === "system") return <SystemRow m={m} />;
+  if (m.type === "system" || m.type === "undecrypted") return <SystemRow m={m} />;
 
   const fromMe = m.from_me;
   const label = senderLabel(m);
