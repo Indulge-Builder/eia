@@ -58,6 +58,17 @@ messages inside a cluster sat too tight.
   on CORS — downloads now use a second presigned URL with an attachment disposition
   (plain anchor click), full-size image open uses the presigned URL directly. Local-mode
   data: URLs keep the buffer path.
+- **The OOM incident (same day, evening)**: the 4-lane backfill buffers whole videos in
+  RAM and blew past the watcher task's 512MB — OOM-kill every ~90s. The death loop
+  tripped ECS's deployment circuit breaker mid-rollout, CloudFormation wedged
+  (UPDATE_ROLLBACK_FAILED — the rollback restores a task size that also dies), and a
+  deploy-wrapper pipe was masking exit codes so the failed 2GB deploy read as success.
+  Recovery: continue-update-rollback --resources-to-skip Service → stack unlocked →
+  2GB/512cpu task deployed (manifest annotated). Soak: 0 restarts in 12 min under full
+  load; the un-killed lanes run ~135 files/min. Crash-only + the offline queue meant
+  zero message loss through the whole incident; the alarm ran its first complete live
+  cycle (down alerts + recovery). Lesson wired in: deploy commands capture the deploy's
+  OWN exit code, never a pipe tail's.
 - **Undecrypted placeholders pierce the dedup wall (same day)**: a message that fails
   to decode arrives as a CIPHERTEXT stub; we stored it as a system row showing raw
   protocol text ("2: No session found...") AND it occupied the message's identity slot,
