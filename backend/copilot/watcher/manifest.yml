@@ -12,8 +12,8 @@ image:
     dockerfile: ../connector/Dockerfile
     context: ../connector
 
-cpu: 256
-memory: 512
+cpu: 512
+memory: 2048  # 4-lane media backfill buffers whole videos in RAM; 512MB OOM-killed the task every ~90s (2026-08-29)
 platform: linux/arm64   # Graviton — cheaper, and Apple Silicon builds it natively
 count: 1
 exec: true              # `copilot svc exec` for in-container debugging
