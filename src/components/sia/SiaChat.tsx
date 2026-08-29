@@ -63,6 +63,8 @@ export function SiaChat({
   const latestTs = useRef<string | null>(null);
   const liveIds = useRef<Set<string>>(new Set());
   const loadingMoreRef = useRef(false);
+  const pollFails = useRef(0);
+  const [needsReload, setNeedsReload] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedSearch = useDebounce(searchInput, 350);
@@ -101,7 +103,19 @@ export function SiaChat({
     const tick = async () => {
       if (document.visibilityState !== "visible") return;
       if (!latestTs.current) return;
-      const res = await getSiaMessagesAction(group.group_jid, { after: latestTs.current });
+      let res: Awaited<ReturnType<typeof getSiaMessagesAction>>;
+      try {
+        res = await getSiaMessagesAction(group.group_jid, { after: latestTs.current });
+        if (res.error) throw new Error(res.error);
+        pollFails.current = 0;
+      } catch {
+        // A deploy invalidates an old tab's server-action ids and the poll dies
+        // SILENTLY (2026-08-29 live-tail incident) — after a failure streak,
+        // say so instead of pretending the groups went quiet.
+        pollFails.current += 1;
+        if (pollFails.current >= 3) setNeedsReload(true);
+        return;
+      }
       const fresh = (res.data?.messages ?? []).filter((m) => !knownIds.current.has(m.id));
       if (fresh.length === 0) return;
       for (const m of fresh) {
@@ -357,6 +371,36 @@ export function SiaChat({
             </>
           )}
         </div>
+
+        {/* ── Stale-build pill: the poll failed repeatedly (a deploy outdated
+            this tab) — live messages are flowing, this tab just can't hear
+            them until it reloads. ── */}
+        <AnimatePresence>
+          {needsReload && (
+            <motion.button
+              key="sia-reload"
+              type="button"
+              onClick={() => window.location.reload()}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={SPRING_CONFIG}
+              className="serene-pressable absolute left-1/2 -translate-x-1/2 rounded-full inline-flex items-center gap-1.5 border-0 type-caption"
+              style={{
+                top: "12px",
+                padding: "5px 14px",
+                background: "var(--color-warning-light)",
+                color: "var(--color-warning-text)",
+                boxShadow: "var(--shadow-2)",
+                cursor: "pointer",
+                fontWeight: "var(--weight-medium)",
+                zIndex: "var(--z-raised)",
+              }}
+            >
+              Serene was updated — tap to refresh
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {/* ── New-messages pill (arrivals while scrolled up) ── */}
         <AnimatePresence>
