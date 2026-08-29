@@ -53,15 +53,18 @@ type PendingRow = {
   media_type: string;
   mime: string | null;
   created_at: string;
+  attempts: number | null;
 };
 
 async function fetchPendingBatch(): Promise<PendingRow[]> {
   const cutoff = new Date(Date.now() - FRESH_GUARD_MS).toISOString();
   const { data, error } = await db
     .from("wag_media")
-    .select("chat_jid, wa_message_id, sender_jid, media_type, mime, created_at")
+    .select("chat_jid, wa_message_id, sender_jid, media_type, mime, created_at, attempts")
     .eq("download_status", "pending")
     .lt("created_at", cutoff)
+    .lt("attempts", "3")
+    .order("attempts", { ascending: true })
     .order("created_at", { ascending: false }) // newest first — freshest links first
     .limit(BATCH);
   if (error) {
@@ -72,18 +75,23 @@ async function fetchPendingBatch(): Promise<PendingRow[]> {
 }
 
 async function fetchRawMessage(row: PendingRow): Promise<WAMessage | null> {
+  // Lookup by PAIR, not triple: sender_jid is the unstable leg (lid vs phone
+  // forms across sync eras), and a message id is unique within its chat.
   const { data, error } = await db
     .from("wag_messages")
     .select("raw")
     .eq("chat_jid", row.chat_jid)
     .eq("wa_message_id", row.wa_message_id)
-    .eq("sender_jid", row.sender_jid)
     .limit(1);
   if (error || !data?.[0]?.raw) return null;
   return reviveBuffers(data[0].raw) as WAMessage;
 }
 
-async function setStatus(row: PendingRow, status: "done" | "expired", extra: Record<string, unknown> = {}) {
+async function setStatus(
+  row: PendingRow,
+  status: "done" | "expired" | "dead_letter" | "pending",
+  extra: Record<string, unknown> = {},
+) {
   const { error } = await db
     .from("wag_media")
     .update({ download_status: status, last_attempt_at: new Date().toISOString(), ...extra })
@@ -111,28 +119,50 @@ export function startMediaBackfill(sock: WASocket): void {
         running = false;
         return;
       }
+      let consecutiveFailures = 0;
       for (const row of batch) {
         try {
           const msg = await fetchRawMessage(row);
           if (!msg?.message) {
-            await setStatus(row, "expired");
+            // ORPHAN: no message row holds this media's keys (its message
+            // insert was lost in a flood batch) — undownloadable forever.
+            // dead_letter is the honest verdict; never "expired".
+            await setStatus(row, "dead_letter");
             expired++;
-          } else {
-            const buffer = (await downloadMediaMessage(msg, "buffer", {}, {
-              logger: quietLogger,
-              reuploadRequest: sock.updateMediaMessage,
-            })) as Buffer;
-            const path = await storeMediaBuffer(row.chat_jid, row.wa_message_id, row.mime, buffer);
-            await setStatus(row, "done", { storage_path: path, size_bytes: buffer.length });
-            done++;
+            consecutiveFailures = 0;
+            continue;
           }
-        } catch {
-          // One honest attempt per row: WhatsApp refused / link gone → expired.
-          await setStatus(row, "expired");
+          const buffer = (await downloadMediaMessage(msg, "buffer", {}, {
+            logger: quietLogger,
+            reuploadRequest: sock.updateMediaMessage,
+          })) as Buffer;
+          const path = await storeMediaBuffer(row.chat_jid, row.wa_message_id, row.mime, buffer);
+          await setStatus(row, "done", { storage_path: path, size_bytes: buffer.length });
+          done++;
+          consecutiveFailures = 0;
+        } catch (e) {
+          const reason = e instanceof Error ? e.message : String(e);
+          const attempts = (row.attempts ?? 0) + 1;
+          // A verdict needs EVIDENCE: only clearly-permanent refusals expire.
+          const permanent = /404|410|not.?found|empty media key|no url|expired/i.test(reason);
+          if (permanent || attempts >= 3) {
+            await setStatus(row, "expired", { attempts });
+          } else {
+            await setStatus(row, "pending", { attempts }); // retried a later pass
+          }
           expired++;
+          consecutiveFailures++;
+          if (consecutiveFailures <= 3 || consecutiveFailures % 25 === 0) {
+            console.warn(`[backfill] ${row.media_type} ${row.wa_message_id} failed (attempt ${attempts}): ${reason.slice(0, 140)}`);
+          }
+          if (consecutiveFailures >= 15) {
+            console.error("[backfill] 15 consecutive failures — stopping the drip (systemic issue, investigate before grinding on)");
+            running = false;
+            return;
+          }
         }
         if ((done + expired) % 100 === 0) {
-          console.log(`[backfill] progress: ${done} recovered, ${expired} expired`);
+          console.log(`[backfill] progress: ${done} recovered, ${expired} failed/deferred`);
         }
         await new Promise((r) => setTimeout(r, DRIP_MS));
       }

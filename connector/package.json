@@ -5,7 +5,7 @@
   "type": "module",
   "description": "The Sia WhatsApp watcher \u2014 Baileys ear, wag_ database writer. READ-ONLY: this process never sends a WhatsApp message.",
   "scripts": {
-    "start": "while true; do tsx src/index.ts; echo '[watcher] restarting in 2s (crash-only)'; sleep 2; done",
+    "start": "trap 'echo; echo [watcher] stopped; exit 0' INT TERM; while true; do tsx src/index.ts; echo '[watcher] restarting in 2s (crash-only)'; sleep 2; done",
     "typecheck": "tsc --noEmit",
     "once": "tsx src/index.ts"
   },

@@ -42,19 +42,42 @@ async function readKey<T>(key: string): Promise<T | null> {
   return data?.[0] ? revive<T>(data[0].value) : null;
 }
 
+// Key writes must NEVER fail silently: Baileys' signal transactions assume a
+// completed set() persisted — a swallowed failure silently loses sender keys
+// and poisons decryption for whole chains (observed as "No session found to
+// decrypt" after a laptop network blip, 2026-08-29). Retry transient errors,
+// then THROW so the transaction aborts loudly and crash-only restarts clean.
+async function withRetry<T>(what: string, fn: () => Promise<T>): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[auth] ${what} attempt ${attempt} failed:`, e instanceof Error ? e.message : e);
+      await new Promise((r) => setTimeout(r, 400 * attempt));
+    }
+  }
+  throw lastErr;
+}
+
 async function writeKeys(rows: { key: string; value: unknown }[]): Promise<void> {
   if (rows.length === 0) return;
-  const { error } = await db.from(TABLE).upsert(
-    rows.map((r) => ({ key: r.key, value: serialize(r.value), updated_at: new Date().toISOString() })),
-    { onConflict: "key" },
-  );
-  if (error) console.error("[auth] write failed:", error.message);
+  await withRetry("write", async () => {
+    const { error } = await db.from(TABLE).upsert(
+      rows.map((r) => ({ key: r.key, value: serialize(r.value), updated_at: new Date().toISOString() })),
+      { onConflict: "key" },
+    );
+    if (error) throw new Error(error.message);
+  });
 }
 
 async function deleteKeys(keys: string[]): Promise<void> {
   if (keys.length === 0) return;
-  const { error } = await db.from(TABLE).delete().in("key", keys);
-  if (error) console.error("[auth] delete failed:", error.message);
+  await withRetry("delete", async () => {
+    const { error } = await db.from(TABLE).delete().in("key", keys);
+    if (error) throw new Error(error.message);
+  });
 }
 
 export async function usePostgresAuthState(): Promise<{
