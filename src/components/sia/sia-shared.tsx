@@ -45,34 +45,6 @@ export const TYPE_PREVIEW: Record<string, { label: string; icon: typeof ImageIco
   product: { label: "Product", icon: ShoppingBag },
 };
 
-/** Bare-URL linkification for chat text (the WhatsApp reading): http(s) and
- *  www. runs become real anchors (new tab, noopener), everything else stays
- *  plain text. React nodes only — never dangerouslySetInnerHTML. ChatMarkdown
- *  is for model-authored markdown; this is for human plain text. */
-const URL_RE = /((?:https?:\/\/|www\.)[^\s<>()]+[^\s<>().,;:!?'"”’])/g;
-
-export function linkifyText(text: string): React.ReactNode {
-  const parts = text.split(URL_RE);
-  if (parts.length === 1) return text;
-  return parts.map((part, i) => {
-    if (i % 2 === 1) {
-      const href = part.startsWith("www.") ? `https://${part}` : part;
-      return (
-        <a
-          key={i}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: "var(--neu-accent-deep)", textDecoration: "underline", wordBreak: "break-all" }}
-        >
-          {part}
-        </a>
-      );
-    }
-    return part;
-  });
-}
-
 export function formatBytes(bytes: number | null | undefined): string {
   if (!bytes || bytes <= 0) return "";
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, CheckCheck, X, FileText, ImageIcon, Video, Mic } from "lucide-react";
+import { renderWaText } from "@/components/ui/WaText";
 import { m as motion } from "framer-motion";
 import { Avatar } from "@/components/ui/Avatar";
 import { formatRelativeTime } from "@/lib/utils/dates";
@@ -136,7 +137,7 @@ function MediaPlaceholder({ message }: { message: WhatsAppMessage }) {
               whiteSpace: "pre-wrap",
             }}
           >
-            {caption}
+            {renderWaText(caption)}
           </p>
         )}
       </div>
@@ -209,7 +210,7 @@ function MediaPlaceholder({ message }: { message: WhatsAppMessage }) {
             whiteSpace: "pre-wrap",
           }}
         >
-          {caption}
+          {renderWaText(caption)}
         </p>
       )}
     </div>
@@ -324,7 +325,7 @@ export function MessageBubble({ message, isOptimistic = false, entrance = false 
               whiteSpace: "pre-wrap",
             }}
           >
-            {message.content ?? ""}
+            {renderWaText(message.content ?? "")}
           </p>
         )}
 
