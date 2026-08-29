@@ -104,10 +104,24 @@ export function startMediaBackfill(sock: WASocket): void {
             consecutiveFailures = 0;
             continue;
           }
-          const buffer = (await downloadMediaMessage(msg, "buffer", {}, {
-            logger: quietLogger,
-            reuploadRequest: sock.updateMediaMessage,
-          })) as Buffer;
+          let buffer: Buffer;
+          try {
+            buffer = (await downloadMediaMessage(msg, "buffer", {}, {
+              logger: quietLogger,
+              reuploadRequest: sock.updateMediaMessage,
+            })) as Buffer;
+          } catch (firstErr) {
+            // Historical URLs die with statuses Baileys does NOT auto-reupload
+            // on (it only reacts to 404/410; expired signatures answer 403 —
+            // the 2026-08-29 breaker trip). Ask the phone to re-upload
+            // EXPLICITLY, then retry the download once with the refreshed url.
+            const updated = (await sock.updateMediaMessage(msg)) as WAMessage;
+            buffer = (await downloadMediaMessage(updated, "buffer", {}, {
+              logger: quietLogger,
+              reuploadRequest: sock.updateMediaMessage,
+            })) as Buffer;
+            void firstErr;
+          }
           const path = await storeMediaBuffer(row.chat_jid, row.wa_message_id, row.mime, buffer);
           await setStatus(row, "done", { storage_path: path, size_bytes: buffer.length });
           done++;
@@ -125,7 +139,12 @@ export function startMediaBackfill(sock: WASocket): void {
           expired++;
           consecutiveFailures++;
           if (consecutiveFailures <= 3 || consecutiveFailures % 25 === 0) {
-            console.warn(`[backfill] ${row.media_type} ${row.wa_message_id} failed (attempt ${attempts}): ${reason.slice(0, 140)}`);
+            const status =
+              (e as { output?: { statusCode?: number }; data?: { statusCode?: number } })?.output?.statusCode ??
+              (e as { data?: { statusCode?: number } })?.data?.statusCode;
+            console.warn(
+              `[backfill] ${row.media_type} ${row.wa_message_id} failed (attempt ${attempts}${status ? `, status ${status}` : ""}): ${reason.slice(0, 240)}`,
+            );
           }
           if (consecutiveFailures >= 15) {
             console.error("[backfill] 15 consecutive failures — stopping the drip (systemic issue, investigate before grinding on)");
