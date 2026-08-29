@@ -46,11 +46,11 @@ export function ElayaMessageBubble({
         style={{
           // User floats on the accent wash (--neu-chat-user-bg — lifted-accent
           // wash under [data-neu="dark"]); Elaya on the raised high surface
-          // (neumorphic chip chrome — paired shadow + hairline, never inset).
+          // (chip shadow only — the hairline came off all chat bubbles in the
+          // 2026-08-29 design pass, never inset).
           background: isUser
             ? 'var(--neu-chat-user-bg)'
             : 'var(--neu-surface-high)',
-          border: '1px solid var(--neu-edge)',
           // Refined asymmetric radius — the corner nearest the sender's edge is
           // tighter, the chat-bubble convention (one scale, V-07).
           borderRadius: isUser

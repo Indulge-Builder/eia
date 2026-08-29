@@ -292,7 +292,8 @@ export function MessageBubble({ message, isOptimistic = false, entrance = false 
           background:   isOutbound
             ? "var(--neu-chat-user-bg)"
             : "var(--neu-surface-high)",
-          border:       "1px solid var(--neu-edge)",
+          // No hairline — the chip shadow alone lifts the bubble (the chat-bubble
+          // contract, aligned with Sia's design pass 2026-08-29).
           boxShadow:    "var(--neu-shadow-chip)",
         }}
       >

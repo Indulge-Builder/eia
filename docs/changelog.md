@@ -30,6 +30,10 @@ messages inside a cluster sat too tight.
 - **Softer bubbles**: the `--neu-edge` hairline is removed from bubbles (the chip shadow
   alone lifts them off the wallpaper — the border read sharp); cluster spacing opened up
   from 10/2px to 14/6px so runs still read as related without sitting on each other.
+- **Consistency follow-up (same day)**: the hairline also came off the WhatsApp module's
+  `MessageBubble` and `ElayaMessageBubble` — one chat-bubble contract everywhere: surface
+  pair + chip shadow, no border. The mobile layer's bubbles keep their own chrome (the
+  mobile design handoff is a separate specced system).
 
 **Why:** recovery must not require the codebase or AWS access. When the session dies, Ethan
 (or anyone admin/founder) should fix it from Serene alone; and the alarm should reach the
