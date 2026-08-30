@@ -1035,11 +1035,45 @@ def _tools_for_role(role: str) -> frozenset[str]:
     return frozenset(n for n, t in TOOLS.items() if t.roles is None or role in t.roles)
 
 
+# ── Write tools (the bridge tranche, 2026-08-30) ─────────────────────────
+# NAMES ONLY: definitions come from the Node bridge (op=definitions — Node is
+# the single source of the model-facing schema) and execution goes through the
+# bridge into the same write-registry/cores. This list mirrors Node's
+# writeToolsForRole: reassign_lead is manager+, everything else all-staff.
+# The assign-to-another policy on create_personal_task is enforced inside the
+# Node tool run(), not here.
+
+WRITE_TOOL_NAMES: frozenset[str] = frozenset(
+    {
+        "add_lead_note",
+        "log_call",
+        "create_lead_task",
+        "update_lead_status",
+        "reassign_lead",
+        "log_deal",
+        "create_personal_task",
+        "create_group_task",
+        "create_subtask",
+        "update_task_status",
+        "update_task",
+        "delete_task",
+    }
+)
+
+
+def write_tools_for_role(role: str) -> frozenset[str]:
+    if role == "guest":
+        return frozenset()
+    if role in _MANAGER_UP:
+        return WRITE_TOOL_NAMES
+    return WRITE_TOOL_NAMES - {"reassign_lead"}
+
+
 TOOLSET_BY_ROLE: dict[str, frozenset[str]] = {
-    "agent": _tools_for_role("agent"),
-    "manager": _tools_for_role("manager"),
-    "admin": _tools_for_role("admin"),
-    "founder": _tools_for_role("founder"),
+    "agent": _tools_for_role("agent") | write_tools_for_role("agent"),
+    "manager": _tools_for_role("manager") | write_tools_for_role("manager"),
+    "admin": _tools_for_role("admin") | write_tools_for_role("admin"),
+    "founder": _tools_for_role("founder") | write_tools_for_role("founder"),
     "guest": frozenset(),  # guests converse but get zero data access
 }
 

@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Shared bearer between our own servers (Next.js, evals) and the brain
     # endpoints. Empty = brain endpoints refuse everything (fail closed).
     brain_api_secret: str = ""
+    # The Next.js app — the write bridge lives there (/api/elaya/bridge).
+    # Local dev/evals default; the Fargate manifest carries the prod URL.
+    web_app_url: str = "http://localhost:3000"
 
 
 settings = Settings()

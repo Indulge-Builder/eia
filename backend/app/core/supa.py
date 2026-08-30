@@ -69,6 +69,39 @@ async def select_count(
     return r.json(), total
 
 
+async def insert(
+    table: str,
+    row: dict[str, Any],
+    *,
+    schema: str = "public",
+    returning: bool = True,
+) -> dict[str, Any] | None:
+    """POST one row. Returns the created row (Prefer: return=representation)
+    unless returning=False. Raises on any error — callers decide fatality."""
+    headers = _base_headers(schema)
+    headers["Prefer"] = "return=representation" if returning else "return=minimal"
+    r = await client().post(f"/{table}", json=row, headers=headers)
+    r.raise_for_status()
+    if not returning:
+        return None
+    rows = r.json()
+    return rows[0] if rows else None
+
+
+async def update(
+    table: str,
+    patch: dict[str, Any],
+    filters: dict[str, str],
+    *,
+    schema: str = "public",
+) -> None:
+    """PATCH rows matching raw PostgREST filters. Raises on error."""
+    headers = _base_headers(schema)
+    headers["Prefer"] = "return=minimal"
+    r = await client().patch(f"/{table}", json=patch, params=filters, headers=headers)
+    r.raise_for_status()
+
+
 async def rpc(fn: str, args: dict[str, Any], *, schema: str = "public") -> Any:
     """Call a Postgres function via PostgREST — the SAME SECURITY DEFINER RPCs
     the Node brain uses (service-role, revoked tier). Parity by construction:
@@ -120,3 +153,21 @@ async def get_pii_masking_depth() -> str:
     )
     value = (row or {}).get("value")
     return value if value in ("off", "light", "strict") else "light"
+
+
+async def get_daily_message_cap() -> int:
+    """elaya_settings daily_message_cap — the Node default (200) when unset."""
+    row = await select_one(
+        "elaya_settings", {"select": "value", "key": "eq.daily_message_cap"}
+    )
+    value = (row or {}).get("value")
+    return value if isinstance(value, int) and value > 0 else 200
+
+
+async def get_session_expiry_hours() -> int:
+    """elaya_settings session_expiry_hours — the Node default (24) when unset."""
+    row = await select_one(
+        "elaya_settings", {"select": "value", "key": "eq.session_expiry_hours"}
+    )
+    value = (row or {}).get("value")
+    return value if isinstance(value, int) and value > 0 else 24

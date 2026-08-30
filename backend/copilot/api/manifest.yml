@@ -49,6 +49,9 @@ network:
 variables:
   ENV: production
   SUPABASE_URL: https://xmucqqhbupudnzderchy.supabase.co
+  # The Next.js app — the write bridge (/api/elaya/bridge) the brain's write
+  # tools and confirmation resolver execute through (write tranche 2026-08-30).
+  WEB_APP_URL: https://indulge-serene.vercel.app
 
 secrets:
   SUPABASE_SERVICE_ROLE_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/SUPABASE_SERVICE_ROLE_KEY

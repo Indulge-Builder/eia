@@ -8,11 +8,16 @@ const WEBHOOK_PREFIX = "/api/webhooks";
  *  the static manifest/sw.js/icons. Routing it through session refresh would
  *  silently break installability. */
 const MANIFEST_PREFIX = "/api/manifest";
+/** The Python brain's write bridge — service-to-service, bearer-authenticated
+ *  inside the route (BRAIN_API_SECRET, fail-closed). No session cookie exists
+ *  on these calls; the webhook bypass posture applies. */
+const BRIDGE_PREFIX = "/api/elaya/bridge";
 
 export async function proxy(request: NextRequest) {
   if (
     request.nextUrl.pathname.startsWith(WEBHOOK_PREFIX) ||
-    request.nextUrl.pathname.startsWith(MANIFEST_PREFIX)
+    request.nextUrl.pathname.startsWith(MANIFEST_PREFIX) ||
+    request.nextUrl.pathname.startsWith(BRIDGE_PREFIX)
   ) {
     return NextResponse.next({ request });
   }

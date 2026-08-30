@@ -39,21 +39,50 @@ SPECIALISTS: dict[str, Specialist] = {
         id="leads",
         description=(
             "lead lookups, HOW MANY leads / lead counts, lead status/details/notes, cold or "
-            "stale leads, client/prospect questions, talking points or case studies for pitching"
+            "stale leads, client/prospect questions, talking points or case studies for pitching, "
+            "logging a call on a lead, adding a note to a lead, changing a lead's status, "
+            "reassigning a lead, recording/closing a deal, creating a follow-up or reminder for a "
+            "lead — including mixed asks like 'note this on the lead and remind me tomorrow'"
         ),
-        focus=("Focus for this conversation: LEAD questions — finding leads, their details and "
-               "notes, which are going cold, and the Call Intelligence library for pitching."),
-        toolset=["search_leads", "get_lead_details", "get_cold_leads", "get_helpdesk_content"],
+        focus=("Focus for this conversation: LEAD questions and actions — finding leads, their "
+               "details and notes, which are going cold, logging calls, notes, status changes, "
+               "follow-ups, deals, and the Call Intelligence library for pitching."),
+        toolset=[
+            "search_leads",
+            "get_lead_details",
+            "get_cold_leads",
+            "get_helpdesk_content",
+            "find_teammate",
+            "add_lead_note",
+            "log_call",
+            "create_lead_task",
+            "update_lead_status",
+            "reassign_lead",
+            "log_deal",
+        ],
     ),
     "tasks": Specialist(
         id="tasks",
         description=(
             "the user's tasks, to-dos, follow-ups, deadlines, reminders, what's due, "
-            "finding a teammate/colleague by name"
+            "creating/assigning/delegating a task or reminder, marking a task done, updating or "
+            "deleting a task, team/group tasks, finding a teammate/colleague by name (BUT a "
+            "note/call/reminder ABOUT A LEAD or after talking to a lead/client belongs to the "
+            "leads category, even when it also asks for a reminder)"
         ),
         focus=("Focus for this conversation: the user's TASKS and follow-ups — open work, "
-               "deadlines, and resolving teammates by name."),
-        toolset=["get_my_tasks", "find_teammate"],
+               "deadlines, creating and assigning tasks and reminders, updating or completing "
+               "them, and resolving teammates by name."),
+        toolset=[
+            "get_my_tasks",
+            "find_teammate",
+            "create_personal_task",
+            "create_group_task",
+            "create_subtask",
+            "update_task_status",
+            "update_task",
+            "delete_task",
+        ],
     ),
     "analytics": Specialist(
         id="analytics",
@@ -81,7 +110,26 @@ SPECIALISTS: dict[str, Specialist] = {
         description="greetings, small talk, questions about Elaya/Serene itself, anything that fits nowhere else",
         focus=("Focus for this conversation: general — greetings, questions about Serene "
                "itself, and the user's day."),
-        toolset=["get_my_tasks", "find_teammate", "get_helpdesk_content"],
+        # The safety-net specialist: a mis-routed action message must still find
+        # its tool, so general carries the full write surface + the resolvers.
+        toolset=[
+            "get_my_tasks",
+            "find_teammate",
+            "get_helpdesk_content",
+            "search_leads",
+            "add_lead_note",
+            "log_call",
+            "create_lead_task",
+            "update_lead_status",
+            "reassign_lead",
+            "log_deal",
+            "create_personal_task",
+            "create_group_task",
+            "create_subtask",
+            "update_task_status",
+            "update_task",
+            "delete_task",
+        ],
     ),
 }
 

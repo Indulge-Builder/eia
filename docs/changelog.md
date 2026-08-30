@@ -12,6 +12,71 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-30 — Python brain: the write tranche — Elaya ACTS from the second brain
+
+**Why:** Step 3's biggest block. The Python brain had full read parity (15/15) but could
+not act — no notes, no tasks, no status changes, no confirmation protocol. The founder's
+bar: the basic lead/task actions must be foolproof at industry-leader level, on a base
+strong enough to supercharge later.
+
+**The architecture — the write BRIDGE (Decision Log 2026-08-30, P-02):** the constitution
+says a mutation core must never be re-implemented, and the cores are TypeScript with deep
+side-effect chains (Redis invalidation, SLA, Trigger.dev, Gupshup, push). So Python stays
+the THINKING layer and writes execute through `/api/elaya/bridge` — the same
+write-registry run() paths, cores, per-resource gates, PII seam, and `elaya_actions`
+ledger the Node brain uses. One mutation authority; zero drift possible. The bridge also
+serves the write-tool DEFINITIONS, so the model sees byte-identical schemas on both
+brains — Node stays the single source of the tool surface.
+
+**What (Node):** `/api/elaya/bridge` (bearer `BRAIN_API_SECRET`, timing-safe, fail-closed;
+proxy bypass — sessionless by construction; principal re-resolved via the ADMIN client per
+the parity rule). Ops: `definitions` / `execute_tool` (write registry only) /
+`execute_proposed` (re-fetches the still-live proposal by id before executing).
+
+**What (Python `backend/app`):**
+
+- Persistence parity moved INTO this tranche (writes structurally need history):
+  `core/elaya_store.py` ports elaya-service — one active session per user (24h config
+  window), append-only messages, IST daily cap that FAILS CLOSED, model-context read,
+  `elaya_actions` pending read + dismiss stamp. `supa.py` gains insert/update + the
+  cap/expiry settings readers.
+- `tools/write_bridge.py` — the bridge client (definitions cached 60s per role; bridge
+  results arrive already PII-masked, never re-masked).
+- `brain/resolver.py` — the E3 confirmation resolver ported with every invariant:
+  15-min proposal TTL, verdict from the human's latest USER message only, H3b
+  ask-was-relayed, dismiss-by-default; execution only through the bridge.
+- `tools/registry.py` — `WRITE_TOOL_NAMES` + `write_tools_for_role` (reassign_lead
+  manager+, rest all-staff) folded into `TOOLSET_BY_ROLE`.
+- Specialists: leads gains the 6 lead writes + find_teammate; tasks gains the 6 task
+  writes; general carries the full write surface (the mis-route safety net). Router
+  descriptions extended with action phrasings.
+- `loop.py`: history-aware turns (text-only replay, the brain.ts law); write calls run
+  SEQUENTIALLY in call order, pure-read batches stay concurrent; iteration ceiling
+  6 → 10 (multi-person group tasks). `api/chat.py`: the full Node-route orchestration
+  order — auth → principal → cap → conversation (S-06 ownership) → persist user msg →
+  resolver → turn → persist assistant → done frame with real ids.
+
+**Verified live (local bridge + brain):** inline write end-to-end ("add a note to
+Testak" → search_leads → add_lead_note via bridge → real note row + `executed` ledger
+row) and the FULL propose→confirm protocol in Hinglish ("Testak ka status touched par
+kar do" → proposal row, zero mutation → "haan" → resolver → bridge → lead moved, the
+code-generated "Done — Testak Evalson is now Touched." line leading the reply).
+
+**The exam (full suite, writes + seeded cases enabled, vs the Python brain):**
+first run 19/26 — every failure mechanical, none model: (a) assistant rows persisted
+tool-call NAMES only (the scorer and the audit trail need args — now full {id, name,
+input} records, the Node shape); (b) the persona still carried the read-tranche
+"you can't make changes yet" block, actively fighting the write tools — the full
+action block (log-call-vs-note, be-decisive-don't-interrogate, personal-vs-group,
+the propose-then-ask choreography) ported verbatim → 25/26; (c) the mixed Hinglish
+"note on the lead + remind me tomorrow" routed to the tasks specialist which has no
+lead tools — router descriptions now send lead-touching messages to leads → **26/26**.
+Also: `getProfileById` session-client trap caught by the bridge smoke (sessionless =
+blank — the parity rule's textbook case); proxy bypass added for the bridge; api
+manifest carries `WEB_APP_URL`.
+
+---
+
 ## 2026-08-29 — Sia chat UX pass: seamless history, reply jump, softer bubbles
 
 **Why:** founder design review — the Load-older button broke reading flow, a reply strip

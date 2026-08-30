@@ -38,7 +38,13 @@ def send_message(
         res = requests.post(
             f"{base_url}/v1/elaya/chat",
             headers={"Authorization": f"Bearer {brain_secret}"},
-            json={"message": message, "user_id": user_id},
+            json={
+                "message": message,
+                "user_id": user_id,
+                # Multi-turn cases (the confirmation protocol) chain on the
+                # same conversation — the Python brain persists now.
+                "conversation_id": conversation_id or None,
+            },
             stream=True,
             timeout=timeout,
         )

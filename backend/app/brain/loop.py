@@ -30,9 +30,14 @@ from app.brain.specialists import Specialist
 from app.core import supa
 from app.llm import registry
 from app.llm.provider import ChatMessage, CompleteRequest, ToolDefinition
-from app.tools.registry import definitions_for, execute_tool
+from app.tools import write_bridge
+from app.tools.registry import WRITE_TOOL_NAMES, definitions_for, execute_tool
 
-MAX_ITERATIONS = 6
+# Raised 6 → 10 with the write tranche (parity with brain.ts): a multi-person
+# group task is create_group_task + a find_teammate + a create_subtask PER
+# person — 10 keeps the runaway backstop while never truncating a real team
+# task mid-creation.
+MAX_ITERATIONS = 10
 # The Node brain's TOOL_RESULT_MAX_CHARS — an oversized result is truncated the
 # same way on both brains so the model reads the same world from either.
 TOOL_RESULT_MAX_CHARS = 12_000
@@ -42,6 +47,10 @@ TOOL_RESULT_MAX_CHARS = 12_000
 class TurnResult:
     text: str
     tools_used: list[str] = field(default_factory=list)
+    # FULL call records ({id, name, input}) — persisted with the assistant
+    # message exactly like the Node brain's ElayaToolCallRecord (the eval
+    # scorer and the audit trail both read args from here).
+    tool_calls: list[dict] = field(default_factory=list)
     specialist: str = ""
     input_tokens: int = 0
     output_tokens: int = 0
@@ -50,16 +59,43 @@ class TurnResult:
 async def run_turn(
     principal: StaffPrincipal,
     specialist: Specialist,
-    message: str,
+    history: list[dict],
     on_delta: Callable[[str], Awaitable[None]],
     on_tool: Callable[[str], Awaitable[None]],
+    *,
+    conversation_id: str,
+    channel: str = "in_app",
 ) -> TurnResult:
     llm = await registry.resolve(specialist.job)
     depth = await supa.get_pii_masking_depth()
 
     # The specialist's toolset ∩ the principal's role gate — both cuts apply.
     tool_names = [n for n in specialist.toolset if n in principal.toolset]
-    tools = [ToolDefinition(**d) for d in definitions_for(tool_names)]
+    read_names = [n for n in tool_names if n not in WRITE_TOOL_NAMES]
+    write_names = [n for n in tool_names if n in WRITE_TOOL_NAMES]
+    tools = [ToolDefinition(**d) for d in definitions_for(read_names)]
+
+    # Write-tool definitions come from the Node bridge — the single source of
+    # the model-facing schema (zero drift by construction). A bridge outage
+    # degrades this turn to read-only rather than failing it.
+    if write_names:
+        try:
+            bridge_defs = await write_bridge.fetch_write_definitions(
+                principal.user_id, principal.role
+            )
+            wanted = set(write_names)
+            tools += [
+                ToolDefinition(
+                    name=d["name"],
+                    description=d["description"],
+                    # Node's LlmToolDefinition field is camelCase `inputSchema`.
+                    input_schema=d["inputSchema"],
+                )
+                for d in bridge_defs
+                if d.get("name") in wanted
+            ]
+        except Exception as e:
+            print(f"[loop] write definitions unavailable (read-only turn): {e}")
 
     # The FULL persona (ported from persona.ts) is the frozen cached prefix;
     # the volatile time anchor rides as the uncached system tail — the Node
@@ -67,7 +103,17 @@ async def run_turn(
     system = build_system_prompt(principal, specialist.focus)
     time_tail = build_time_context()
 
-    messages: list[ChatMessage] = [ChatMessage(role="user", content=message)]
+    # Persisted history replays as TEXT ONLY (brain.ts law: tool_use blocks
+    # without their paired results are provider-rejected); the live loop below
+    # builds proper pairs. The latest user message is history's last row.
+    call_records: list[dict] = []
+    messages: list[ChatMessage] = [
+        ChatMessage(role=m["role"], content=m["content"])
+        for m in history
+        if m.get("role") in ("user", "assistant") and (m.get("content") or "").strip()
+    ]
+    if not messages:
+        return TurnResult(text="", specialist=specialist.id)
     result_text = ""
     tools_used: list[str] = []
     in_tokens = out_tokens = 0
@@ -95,23 +141,44 @@ async def run_turn(
         messages.append(
             ChatMessage(role="assistant", content=result.text, tool_calls=result.tool_calls)
         )
-        # Tools within one model turn are independent reads — run them
-        # CONCURRENTLY (a real latency win on multi-tool turns); results are
-        # appended in call order so the transcript stays deterministic.
         for call in result.tool_calls:
             tools_used.append(call.name)
+            call_records.append({"id": call.id, "name": call.name, "input": call.input})
             await on_tool(call.name)
-        raws = await asyncio.gather(
-            *(execute_tool(principal, c.name, c.input) for c in result.tool_calls)
-        )
-        for call, raw in zip(result.tool_calls, raws):
-            masked = mask_pii(raw, depth)  # THE gateway — nothing skips it
-            serialized = json.dumps(masked, ensure_ascii=False, default=str)
-            if len(serialized) > TOOL_RESULT_MAX_CHARS:
-                serialized = serialized[:TOOL_RESULT_MAX_CHARS] + "…(truncated)"
-            messages.append(
-                ChatMessage(role="tool", content=serialized, tool_call_id=call.id)
+
+        has_write = any(c.name in WRITE_TOOL_NAMES for c in result.tool_calls)
+        if has_write:
+            # WRITES run SEQUENTIALLY in call order (the brain.ts law) — a
+            # mutation must observe the one before it, never race it. Bridge
+            # results arrive ALREADY PII-masked + serialized by the Node
+            # executeTool seam; read results are masked locally as always.
+            for call in result.tool_calls:
+                if call.name in WRITE_TOOL_NAMES:
+                    serialized = await write_bridge.execute_write_tool(
+                        principal.user_id, conversation_id, channel, call.name, call.input
+                    )
+                else:
+                    raw = await execute_tool(principal, call.name, call.input)
+                    serialized = json.dumps(mask_pii(raw, depth), ensure_ascii=False, default=str)
+                if len(serialized) > TOOL_RESULT_MAX_CHARS:
+                    serialized = serialized[:TOOL_RESULT_MAX_CHARS] + "…(truncated)"
+                messages.append(
+                    ChatMessage(role="tool", content=serialized, tool_call_id=call.id)
+                )
+        else:
+            # Pure-read batches stay CONCURRENT (a real latency win); results
+            # are appended in call order so the transcript stays deterministic.
+            raws = await asyncio.gather(
+                *(execute_tool(principal, c.name, c.input) for c in result.tool_calls)
             )
+            for call, raw in zip(result.tool_calls, raws):
+                masked = mask_pii(raw, depth)  # THE gateway — nothing skips it
+                serialized = json.dumps(masked, ensure_ascii=False, default=str)
+                if len(serialized) > TOOL_RESULT_MAX_CHARS:
+                    serialized = serialized[:TOOL_RESULT_MAX_CHARS] + "…(truncated)"
+                messages.append(
+                    ChatMessage(role="tool", content=serialized, tool_call_id=call.id)
+                )
     else:
         # Ceiling hit — same calm posture as the Node brain.
         closing = " I've hit my step limit on this one — try asking a smaller piece."
@@ -121,6 +188,7 @@ async def run_turn(
     return TurnResult(
         text=result_text,
         tools_used=tools_used,
+        tool_calls=call_records,
         specialist=specialist.id,
         input_tokens=in_tokens,
         output_tokens=out_tokens,
