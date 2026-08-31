@@ -47,7 +47,16 @@ an offline migration of `sia.wag_auth_state` first; an unmigrated client
 cannot connect at all. When v8 lands: read its migration guide, migrate the
 auth table, then upgrade. Never just bump the package.
 
-### 4. Trigger.dev CLI stays pinned to the SDK version
+### 4. BRAIN_API_SECRET lives in FOUR places — they must move together
+
+The Python brain's shared bearer exists in: `backend/.env` (local brain),
+repo `.env.local` (local Next bridge), Vercel production env (prod bridge),
+and SSM `/copilot/serene/prod/secrets/BRAIN_API_SECRET` (Fargate brain).
+A drift between them makes the prod brain's writes silently 401 at the
+bridge (it happened 2026-08-30 — SSM held an older value). Rotate all four
+in one sitting, then force a new api deployment so the task re-reads SSM.
+
+### 5. Trigger.dev CLI stays pinned to the SDK version
 
 Deploy with `npx trigger.dev@4.4.6 deploy` (matches `@trigger.dev/sdk`).
 A newer CLI refuses a mismatched project. If you upgrade the SDK, update the
