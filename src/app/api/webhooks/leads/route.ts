@@ -56,7 +56,7 @@ export async function GET(): Promise<NextResponse> {
 }
 
 // ─────────────────────────────────────────────
-// POST /api/webhooks/leads?source=meta|google|website
+// POST /api/webhooks/leads?source=meta|google|website|shop_app
 //
 // Order of operations:
 //   1. Rate limit check (no body read yet)
@@ -86,9 +86,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const rawPayloadId = await logRawPayload(rawPayload, source);
 
-  // 3. Bearer token validation
-  const webhookSecret = process.env.PABBLY_WEBHOOK_SECRET;
+  // 3. Bearer token validation — one secret PER SENDER, not one per endpoint.
+  //    The shop app is a different organisation's deployment on different
+  //    infrastructure; sharing Pabbly's token would mean a leak on either side
+  //    forces a rotation that breaks the other. Both are compared timing-safe.
+  const webhookSecret =
+    source === 'shop_app'
+      ? process.env.SHOP_APP_WEBHOOK_SECRET
+      : process.env.PABBLY_WEBHOOK_SECRET;
   if (!webhookSecret) {
+    console.error(`[webhook/leads] No webhook secret configured for source "${source}"`);
     return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
   }
 
@@ -113,7 +120,20 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  // Notifications run in after(): the 201 is flushed to Pabbly immediately while
+  // A REDELIVERY notifies nobody. The shop retries delivery 3 times automatically
+  // (1s/4s/9s backoff) plus unlimited manual retries, all carrying the same lead id.
+  // Without this guard one enquiry would ping the assigned agent on every attempt.
+  // Nothing new happened, so nothing is announced — the 200 just tells the sender to
+  // stop retrying.
+  if (result.enquiry === 'duplicate') {
+    return NextResponse.json({ leadId: result.leadId, duplicate: true }, { status: 200 });
+  }
+
+  // A new enquiry on a lead that already exists is a repeat enquiry: same human,
+  // different product. In-app only, no WhatsApp, no SLA re-arm.
+  const isRepeatEnquiry = result.is_duplicate && result.enquiry === 'new';
+
+  // Notifications run in after(): the 201 is flushed to the sender immediately while
   // Vercel keeps the lambda alive until notifyLeadAssigned's awaited Gupshup sends
   // settle. A bare `await` here would delay the webhook response by the send time;
   // a bare `void`/fire-and-forget would be killed when the lambda freezes. after()
@@ -131,6 +151,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       isDuplicate: result.is_duplicate,
       actorId:     null,
       scheduleSla: !result.is_duplicate,
+      repeatEnquiry: isRepeatEnquiry
+        ? { productName: result.enquiry_product_name }
+        : null,
     }).catch((err) => {
       console.error('[webhooks/leads] notifyLeadAssigned failed (non-fatal):', err);
     }),

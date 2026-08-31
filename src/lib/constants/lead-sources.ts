@@ -9,6 +9,12 @@ const LEAD_SOURCE_DEF = defineEnum([
   { id: "referral", label: "Referral" },
   { id: "ypo",      label: "YPO"      },
   { id: "events",   label: "Events"   },
+  // The Indulge Shop app (React Native + NestJS). Its own webhook channel with its
+  // own secret — deliberately NOT folded into "website", so marketplace product
+  // enquiries stay separable from website form fills in every report.
+  // Adding a value here REQUIRES extending the deals.source CHECK in the same
+  // change (migration 0180 did so for this one).
+  { id: "shop_app", label: "Shop App" },
 ]);
 
 export const LEAD_SOURCES = LEAD_SOURCE_DEF.values;
@@ -45,6 +51,7 @@ export const PLATFORM_LABELS: Record<string, string> = {
   google:    "Google",
   website:   "Website",
   whatsapp:  "WhatsApp",
+  shop_app:  "Shop App",
 };
 
 export const META_MEDIUM_LABELS: Record<string, string> = {
@@ -57,4 +64,24 @@ export const META_MEDIUM_LABELS: Record<string, string> = {
 export function getMetaMediumLabel(medium: string | null): string | null {
   if (!medium) return null;
   return META_MEDIUM_LABELS[medium.toLowerCase()] ?? medium;
+}
+
+// ─────────────────────────────────────────────
+// Shop app enquiry types (migration 0180)
+// SQL mirror of the enquiry_type CHECK on lead_product_enquiries, and of the
+// shop backend's own ENQUIRY_TYPES enum. Adding a value means extending BOTH
+// this list and that CHECK in one change.
+// ─────────────────────────────────────────────
+export const SHOP_ENQUIRY_TYPES = ['enquire', 'price_request', 'source_request'] as const;
+
+export type ShopEnquiryType = (typeof SHOP_ENQUIRY_TYPES)[number];
+
+export const SHOP_ENQUIRY_TYPE_LABELS: Record<ShopEnquiryType, string> = {
+  enquire:        'Enquiry',
+  price_request:  'Price request',
+  source_request: 'Sourcing request',
+};
+
+export function getShopEnquiryTypeLabel(type: string): string {
+  return SHOP_ENQUIRY_TYPE_LABELS[type as ShopEnquiryType] ?? type;
 }

@@ -23,6 +23,16 @@ export interface LeadAssignedNotifyInput {
   isNew: boolean;              // false for duplicate resubmissions
   isDuplicate: boolean;
   actorId?: string | null;     // who triggered it; suppress self-notify when actor === assignedTo
+  /**
+   * Set ONLY when an existing lead received a NEW product enquiry from an app
+   * channel (migration 0180) — the same person asking about a second piece.
+   *
+   * This is deliberately quieter than an assignment: the agent already owns this
+   * lead and already got a WhatsApp when it arrived, so a second WhatsApp per
+   * product would train them to ignore the channel. In-app only, with copy that
+   * names the product instead of claiming a new assignment.
+   */
+  repeatEnquiry?: { productName: string | null } | null;
   scheduleSla: boolean;        // false for duplicates (existing timers already running)
   leadStatus?: string;         // current lead status for SLA scheduling; defaults to 'new'
   assignedAt?: string;         // ISO timestamp of assignment; defaults to now
@@ -64,6 +74,7 @@ export async function notifyLeadAssigned(input: LeadAssignedNotifyInput): Promis
     domain,
     isDuplicate,
     actorId,
+    repeatEnquiry,
     scheduleSla,
     leadStatus = 'new',
     assignedAt,
@@ -76,8 +87,9 @@ export async function notifyLeadAssigned(input: LeadAssignedNotifyInput): Promis
   // rejection here is unexpected — log it but never throw.
   const whatsappSends: Promise<unknown>[] = [];
 
-  // 1. Agent WhatsApp — only when an agent was assigned
-  if (assignedTo) {
+  // 1. Agent WhatsApp — only when an agent was assigned, and never for a repeat
+  //    enquiry (the agent already holds this lead; see repeatEnquiry above).
+  if (assignedTo && !repeatEnquiry) {
     whatsappSends.push(
       sendLeadAssignmentNotification(
         assignedTo,
@@ -111,14 +123,21 @@ export async function notifyLeadAssigned(input: LeadAssignedNotifyInput): Promis
     }
   }
 
-  // 3. In-app notification — skip self-notify (actor assigning to themselves)
+  // 3. In-app notification — skip self-notify (actor assigning to themselves).
+  //    A repeat enquiry keeps the same recipient and gate but swaps the copy:
+  //    "New lead assigned to you" would be a lie on a lead the agent already owns,
+  //    and the product name is the whole reason the notification is worth sending.
   if (assignedTo && assignedTo !== actorId) {
     createNotification({
       recipient_id: assignedTo,
       type: 'lead_assigned',
       notificationKey: 'lead_assigned',  // SEAM A — per-user control plane (0133)
-      title: 'New lead assigned to you',
-      body: actorId ? undefined : 'Assigned automatically',
+      title: repeatEnquiry ? 'New enquiry on your lead' : 'New lead assigned to you',
+      body: repeatEnquiry
+        ? (repeatEnquiry.productName
+            ? `${leadName} enquired about ${repeatEnquiry.productName}`
+            : `${leadName} sent another enquiry`)
+        : (actorId ? undefined : 'Assigned automatically'),
       action_url: `/leads/${leadId}`,
     }).catch(() => {});
   }

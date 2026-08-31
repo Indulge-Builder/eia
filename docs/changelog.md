@@ -12,6 +12,79 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-08-31 — Shop app lead channel: one lead per person, many product enquiries
+
+**Why:** the Indulge Shop app (React Native client, NestJS on EC2) needed its marketplace
+enquiries to land in Serene as real leads. Pabbly was the wrong tool for it. Pabbly exists
+only because Meta will not POST to an arbitrary URL, and it does the page-token dance for
+us. The shop is our own deployment on both ends, so it posts direct: no middleman bill, no
+extra hop, no third party holding our members' phone numbers.
+
+**The problem worth writing down.** The shop de-duplicates on (member, product, enquiry
+type). We de-duplicate on PHONE. Those two models disagree in exactly the case a
+marketplace encourages: one member asking about three different pieces. Their side
+correctly sends three webhooks. Our phone dedup correctly refuses to make three leads for
+one human. Before this change the 2nd and 3rd products were dropped into a
+`duplicate_submission` activity that recorded only source, campaign, domain and raw payload
+id, so the agent rang up to talk about a handbag while the member was waiting to hear about
+a watch.
+
+Splitting into three leads would have been the wrong fix. Three agents, three SLA timers,
+one person counted three times in the pipeline. So: one lead per person, many enquiries
+hanging off it.
+
+**Migration 0180** — `lead_product_enquiries`. Append-only (Rule 08), no UPDATE or DELETE
+policy, service-role writes only, SELECT scoped by an EXISTS on the parent lead exactly
+like `lead_activities`. `external_lead_id` is UNIQUE, and that one constraint carries the
+idempotency contract: the shop retries delivery 3 times automatically (1s/4s/9s) plus
+unlimited manual retries from its admin panel, and every attempt carries the same Mongo
+ObjectId. Same migration extends the `deals.source` CHECK, which is coupled to
+LEAD_SOURCES and must always move with it.
+
+Product columns are a frozen snapshot, never a reference. The shop hard-deletes products
+and enriches at delivery time, so a redelivery after a deletion legitimately arrives with a
+null image and a URL that 404s. The card renders from the stored columns and never
+re-fetches. A dead link is honest, an empty card is not.
+
+**What changed:**
+
+- `lib/constants/lead-sources.ts` — `shop_app` source, plus the `SHOP_ENQUIRY_TYPES`
+  vocabulary and labels (the `META_MEDIUM_LABELS` precedent: channel vocabulary lives in
+  constants, not in the adapter that first consumes it).
+- `lib/leads/adapters.ts` — `adaptShopApp`, and a typed `product_enquiry` on
+  `NormalizedLeadPayload`. Product data deliberately does NOT go to `form_data`: one lead
+  accumulates many enquiries, and `form_data` is written once at INSERT and never updated
+  (the 0096 contract). `city` is left inside `form_data` on purpose so it rides the
+  existing `form_data.city` to `leads.city` lift instead of getting a second route.
+  A local `safeHttpUrl()` accepts http(s) only, because these values are rendered as href
+  and src and both `new URL()` and Zod's `.url()` happily accept `javascript:`.
+- `lib/services/lead-enquiries-service.ts` — THE ledger access. Admin client for the write
+  (webhook path, no session), session client for the dossier read (RLS does the scoping).
+  A 23505 on the write is expected traffic, not an error: it means redelivery.
+- `lib/services/lead-ingestion.ts` — the dedup branch now appends to the ledger and carries
+  the product name into the activity row. A shop payload with no external id or no product
+  name is rejected 422 `missing_product_enquiry` rather than creating a hollow lead: the
+  sender persists to its own database before delivering, so nothing is lost and the failure
+  surfaces on /error-log where it can be re-driven.
+- `lib/services/lead-assignment-notify.ts` — an optional `repeatEnquiry` mode. A second
+  product on a lead the agent already owns gets an in-app notification naming the product,
+  and no WhatsApp. A WhatsApp per product would train agents to ignore the channel.
+- `api/webhooks/leads/route.ts` — per-sender secret (`SHOP_APP_WEBHOOK_SECRET`, never
+  shared with Pabbly, so either can be rotated alone), and a redelivery returns 200 and
+  notifies nobody.
+- `components/leads/ProductEnquiryCard.tsx` + `ProductEnquiryCardAsync.tsx` — the dossier
+  card. Thumbnail, name, brand, price, enquiry-type pill, the member's note, sold-out and
+  price-on-request flags, and links out to the listing and the member's record in the
+  shop's own panel.
+
+**Known gaps on the sending side, carried deliberately:** `enquiry_message` exists in their
+schema but has no UI yet, so notes are null today. There is no email field at all on their
+member schema (phone OTP is the only login), so `leads.email` stays null for this channel.
+No UTM capture. Price is in the payload shape but not yet populated. All are additive later
+with no schema change here.
+
+---
+
 ## 2026-08-30 — Python brain: the write tranche — Elaya ACTS from the second brain
 
 **Why:** Step 3's biggest block. The Python brain had full read parity (15/15) but could

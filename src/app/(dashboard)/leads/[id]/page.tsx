@@ -16,6 +16,7 @@ import { LeadActivitiesAsync } from '@/components/leads/LeadActivitiesAsync';
 import { LeadWhatsAppCardAsync } from '@/components/leads/LeadWhatsAppCardAsync';
 import { LeadTasksAsync } from '@/components/leads/LeadTasksAsync';
 import { ServiceInterestCardAsync } from '@/components/leads/ServiceInterestCardAsync';
+import { ProductEnquiryCardAsync } from '@/components/leads/ProductEnquiryCardAsync';
 import { LeadTasksCardSkeleton } from '@/components/leads/LeadTasksCardSkeleton';
 import { DossierCardSkeleton } from '@/components/leads/LeadDossierSkeletons';
 
@@ -124,6 +125,14 @@ export default async function LeadDossierPage({ params, searchParams }: Props) {
             and shift layout for nothing. */}
         <Suspense fallback={null}>
           <LeadDealCardAsync leadId={lead.id} />
+        </Suspense>
+
+        {/* App-channel product enquiries — only for leads that came from the shop
+            app. null fallback: every Meta/Google/website/WhatsApp lead has none,
+            and a skeleton would flash and shift layout on the majority of dossiers
+            (the same reasoning as the revival and deal cards above). */}
+        <Suspense fallback={null}>
+          <ProductEnquiryCardAsync leadId={lead.id} />
         </Suspense>
 
         {/* Two-column layout — single column below lg (.serene-dossier-grid, globals.css) */}

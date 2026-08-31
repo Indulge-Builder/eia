@@ -751,6 +751,67 @@ export type Database = {
           },
         ]
       }
+      // Hand-extended (migration 0180); regen after apply.
+      // Append-only ledger — no UPDATE/DELETE policy exists, so Update is Row-shaped
+      // for type compatibility only and must never be used.
+      lead_product_enquiries: {
+        Row: {
+          admin_member_url: string | null
+          brand: string | null
+          created_at: string
+          currency: string | null
+          enquired_at: string
+          enquiry_type: string
+          external_lead_id: string
+          id: string
+          lead_id: string
+          member_role: string | null
+          note: string | null
+          price: number | null
+          price_on_request: boolean | null
+          price_region: string | null
+          product_id: string | null
+          product_image_url: string | null
+          product_name: string
+          product_url: string | null
+          sold_out: boolean | null
+          source: string
+        }
+        Insert: {
+          admin_member_url?: string | null
+          brand?: string | null
+          created_at?: string
+          currency?: string | null
+          enquired_at: string
+          enquiry_type?: string
+          external_lead_id: string
+          id?: string
+          lead_id: string
+          member_role?: string | null
+          note?: string | null
+          price?: number | null
+          price_on_request?: boolean | null
+          price_region?: string | null
+          product_id?: string | null
+          product_image_url?: string | null
+          product_name: string
+          product_url?: string | null
+          sold_out?: boolean | null
+          source?: string
+        }
+        Update: {
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_product_enquiries_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_raw_payloads: {
         Row: {
           id: string
@@ -4377,6 +4438,10 @@ export type Notification = Database['public']['Tables']['notifications']['Row'] 
 // PushSubscriptionRow — one Web Push endpoint per device (migration 0120).
 // One user holds many rows (phone + desktop + …); UNIQUE key is `endpoint`.
 export type PushSubscriptionRow = Database['public']['Tables']['push_subscriptions']['Row']
+
+// LeadProductEnquiry — one product enquiry from an app channel (migration 0180).
+// One lead holds many; append-only, keyed for idempotency on external_lead_id.
+export type LeadProductEnquiry = Database['public']['Tables']['lead_product_enquiries']['Row']
 
 // NotificationPreferenceRow — one per-user channel-mute row (migration 0133).
 // Absence of a row for a (user_id, notification_key) pair means both channels ON.

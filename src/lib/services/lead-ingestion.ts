@@ -4,10 +4,11 @@ import { selectAdapter } from '@/lib/leads/adapters';
 import { resolveDomainFromCampaign, DEFAULT_LEAD_DOMAIN } from '@/lib/constants/campaign-domain-map';
 import { isGiaDomain, DEFAULT_GIA_DOMAIN } from '@/lib/constants/domains';
 import { getNextRoundRobinAgent } from '@/lib/services/leads-service';
-import { LEAD_SOURCE_ENUM, type LeadSource } from '@/lib/constants/lead-sources';
+import { LEAD_SOURCE_ENUM, SHOP_ENQUIRY_TYPES, type LeadSource } from '@/lib/constants/lead-sources';
 import { getDomainInterests } from '@/lib/constants/interests';
 import { canonicalizePhone } from '@/lib/utils/phone';
 import { invalidateLeadCaches } from '@/lib/services/lead-cache';
+import { recordProductEnquiry } from '@/lib/services/lead-enquiries-service';
 import type { Database, AppDomain, JsonValue } from '@/lib/types/database';
 
 // PostgreSQL unique-violation — thrown by the active-phone partial UNIQUE index
@@ -70,8 +71,20 @@ export function extractServiceInterests(
   }
 }
 
+/**
+ * What happened to the app-channel product enquiry on this request (migration 0180).
+ *   'none'      — not an app channel, or nothing to record.
+ *   'new'       — a genuinely new enquiry was appended to the ledger.
+ *   'duplicate' — this external_lead_id was already recorded: a redelivery from the
+ *                 sender's retry loop. NOTHING new happened, so the caller must
+ *                 notify nobody. Without this the shop's 3 automatic retries would
+ *                 ping the agent three times for one enquiry.
+ *   'failed'    — the ledger write errored. The lead still stands.
+ */
+export type EnquiryOutcome = 'none' | 'new' | 'duplicate' | 'failed';
+
 export type IngestionResult =
-  | { success: true; leadId: string; rawPayloadId: string; assigned_to: string | null; agent_name: string | null; domain: string; lead_name: string; lead_phone: string; is_duplicate: boolean }
+  | { success: true; leadId: string; rawPayloadId: string; assigned_to: string | null; agent_name: string | null; domain: string; lead_name: string; lead_phone: string; is_duplicate: boolean; enquiry: EnquiryOutcome; enquiry_product_name: string | null }
   | { success: false; error: string; status: 400 | 401 | 422 | 500 };
 
 // ─────────────────────────────────────────────
@@ -90,6 +103,31 @@ const leadPayloadSchema = z.object({
   domain:       z.string().nullable().optional(),
   attribution:  z.record(z.string(), z.unknown()).nullable().optional(),
   form_data:    z.record(z.string(), z.unknown()).default({}),
+  // App-channel product enquiry (migration 0180). Typed here rather than left to
+  // passthrough so the ingest body gets real types AND a second validation pass on
+  // adapter output — the shop is a first-party sender, but "first-party" is a trust
+  // level, not a guarantee about field shapes.
+  product_enquiry: z
+    .object({
+      external_id:       z.string().min(1),
+      product_id:        z.string().nullable(),
+      product_name:      z.string().min(1),
+      product_url:       z.string().nullable(),
+      product_image_url: z.string().nullable(),
+      brand:             z.string().nullable(),
+      price:             z.number().nullable(),
+      currency:          z.string().nullable(),
+      price_region:      z.string().nullable(),
+      sold_out:          z.boolean().nullable(),
+      price_on_request:  z.boolean().nullable(),
+      enquiry_type:      z.enum(SHOP_ENQUIRY_TYPES),
+      note:              z.string().nullable(),
+      member_role:       z.string().nullable(),
+      admin_member_url:  z.string().nullable(),
+      enquired_at:       z.string(),
+    })
+    .nullable()
+    .default(null),
 }).passthrough();
 
 // ─────────────────────────────────────────────
@@ -168,6 +206,19 @@ export async function ingestLead(
     await markIngestionError(rawPayloadId, 'empty_phone');
     return { success: false, error: 'Lead has no usable phone number', status: 422 };
   }
+  // App channels must carry a usable enquiry. Without an external id it cannot be
+  // de-duplicated (the sender retries the same payload up to 3 times automatically),
+  // and without a product name the dossier card has nothing to show — a shop lead
+  // with no product is a phone number nobody can act on. Rejecting LOUDLY here beats
+  // creating a hollow lead: the sender persists to its own DB before delivering, so
+  // nothing is lost, the raw row is already logged, and the failure surfaces on
+  // /error-log where it can be fixed and re-driven.
+  if (source === 'shop_app' && !data.product_enquiry) {
+    console.error('[lead-ingestion] shop_app payload without a usable product enquiry');
+    await markIngestionError(rawPayloadId, 'missing_product_enquiry');
+    return { success: false, error: 'Product enquiry missing external id or product name', status: 422 };
+  }
+
   let previousLeadId: string | null = null;
 
   if (phone) {
@@ -180,21 +231,55 @@ export async function ingestLead(
       const activeStatuses = ['new', 'touched', 'in_discussion', 'nurturing'];
 
       if (activeStatuses.includes(existing.status)) {
+        // ── The two dedup models meet here ──
+        // Our identity key is PHONE, so this is the same human. The shop's key is
+        // (member, product, type), so this may still be a genuinely NEW enquiry —
+        // the same member asking about a second piece. One lead per person, many
+        // enquiries hanging off it: append to the ledger, do not create a lead.
+        // Before migration 0180 the product was dropped on the floor here and the
+        // agent called about the wrong item.
+        let enquiry: EnquiryOutcome = 'none';
+        if (data.product_enquiry) {
+          const recorded = await recordProductEnquiry(existing.id, source, data.product_enquiry);
+          enquiry = recorded.ok ? (recorded.duplicate ? 'duplicate' : 'new') : 'failed';
+          if (enquiry === 'new') {
+            // The card reads this ledger, so the dossier must not serve a cached
+            // page that predates the new enquiry (P-08 — awaited, non-fatal).
+            await invalidateLeadCaches(
+              'ingestLead:repeatEnquiry',
+              // slug MUST be passed: the dossier caches under leadRowSlug on every
+              // normal load and leadRowId only on the UUID fallback. Deleting one
+              // key is a silent no-op (P-08 dual-key invariant).
+              { leadId: existing.id, slug: existing.slug, domain },
+              { row: true, activities: true },
+            );
+          }
+        }
+
         // Log a duplicate_submission activity on the existing lead — non-fatal,
         // but surface failures so a silently-missing re-enquiry is detectable (audit #25).
-        const { error: dupActivityError } = await supabase.from('lead_activities').insert({
-          lead_id:     existing.id,
-          actor_id:    null,
-          action_type: 'duplicate_submission',
-          details: {
-            source:         source,
-            utm_campaign:   data.utm_campaign ?? null,
-            domain,
-            raw_payload_id: rawPayloadId,
-          },
-        });
-        if (dupActivityError) {
-          console.error('[lead-ingestion] duplicate_submission activity insert failed:', dupActivityError.message);
+        // A REDELIVERY writes no activity: the sender's retry loop replays the same
+        // payload up to 3 times, and three identical timeline rows for one enquiry is
+        // noise, not history.
+        if (enquiry !== 'duplicate') {
+          const { error: dupActivityError } = await supabase.from('lead_activities').insert({
+            lead_id:     existing.id,
+            actor_id:    null,
+            action_type: 'duplicate_submission',
+            details: {
+              source:         source,
+              utm_campaign:   data.utm_campaign ?? null,
+              domain,
+              raw_payload_id: rawPayloadId,
+              // The product the person actually asked about. This is the field whose
+              // absence made repeat enquiries invisible.
+              product_name:   data.product_enquiry?.product_name ?? null,
+              enquiry_type:   data.product_enquiry?.enquiry_type ?? null,
+            },
+          });
+          if (dupActivityError) {
+            console.error('[lead-ingestion] duplicate_submission activity insert failed:', dupActivityError.message);
+          }
         }
 
         if (rawPayloadId) {
@@ -214,6 +299,8 @@ export async function ingestLead(
           lead_name:    data.last_name ? `${data.first_name} ${data.last_name}` : data.first_name,
           lead_phone:   phone,
           is_duplicate: true,
+          enquiry,
+          enquiry_product_name: data.product_enquiry?.product_name ?? null,
         };
       }
 
@@ -300,6 +387,13 @@ export async function ingestLead(
       const { data: raced } = await supabase.rpc('get_active_lead_by_phone', { p_phone: phone });
       if (raced && raced.length > 0) {
         const existing = raced[0];
+        // The enquiry belongs on whichever lead won the race, not on the row we
+        // failed to insert. Same append-to-ledger path as the dedup branch above.
+        let racedEnquiry: EnquiryOutcome = 'none';
+        if (data.product_enquiry) {
+          const recorded = await recordProductEnquiry(existing.id, source, data.product_enquiry);
+          racedEnquiry = recorded.ok ? (recorded.duplicate ? 'duplicate' : 'new') : 'failed';
+        }
         if (rawPayloadId) {
           await supabase.from('lead_raw_payloads').update({ lead_id: existing.id }).eq('id', rawPayloadId);
         }
@@ -313,6 +407,8 @@ export async function ingestLead(
           lead_name:    data.last_name ? `${data.first_name} ${data.last_name}` : data.first_name,
           lead_phone:   phone,
           is_duplicate: true,
+          enquiry:      racedEnquiry,
+          enquiry_product_name: data.product_enquiry?.product_name ?? null,
         };
       }
     }
@@ -329,6 +425,18 @@ export async function ingestLead(
       .from('lead_raw_payloads')
       .update({ lead_id: leadId })
       .eq('id', rawPayloadId);
+  }
+
+  // 7b. Append the app-channel product enquiry (migration 0180). Runs for the
+  //     lead-creating enquiry too, so the ledger holds EVERY enquiry and the dossier
+  //     card never has to special-case "the first one lives somewhere else".
+  //     Non-fatal: the lead row is the source of truth and stands regardless.
+  //     No cache invalidation needed here — a brand-new lead has no cached row yet,
+  //     and step 10 already clears the lists/dashboard slots.
+  let enquiryOutcome: EnquiryOutcome = 'none';
+  if (data.product_enquiry) {
+    const recorded = await recordProductEnquiry(leadId, source, data.product_enquiry);
+    enquiryOutcome = recorded.ok ? (recorded.duplicate ? 'duplicate' : 'new') : 'failed';
   }
 
   // 8. Log lead_created activity — error-checked so a missing creation event in
@@ -390,6 +498,8 @@ export async function ingestLead(
     lead_name:    ingestionLeadName,
     lead_phone:   phone,
     is_duplicate: false,
+    enquiry:      enquiryOutcome,
+    enquiry_product_name: data.product_enquiry?.product_name ?? null,
   };
 }
 

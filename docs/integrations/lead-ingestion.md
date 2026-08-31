@@ -2,13 +2,13 @@
 
 > **Purpose:** the inbound form-lead pipeline — webhook contract, source adapters, domain resolution, dedup, round-robin assignment, raw-payload policy.
 > **Audience:** engineers. · **Source-of-truth scope:** Pipeline A (form/webhook leads). The WhatsApp-origin pipeline (Pipeline B) lives in `whatsapp-gupshup.md`; the lead lifecycle after ingestion lives in `../modules/gia.md`; notification dispatch lives in `whatsapp-gupshup.md` § Orchestrator.
-> **Last verified:** 2026-07-02 against `src/app/api/webhooks/leads/route.ts`, `src/lib/services/lead-ingestion.ts`, `src/lib/leads/adapters.ts`, `src/lib/constants/campaign-domain-map.ts`, `src/lib/utils/phone.ts`.
+> **Last verified:** 2026-08-31 against `src/app/api/webhooks/leads/route.ts`, `src/lib/services/lead-ingestion.ts`, `src/lib/leads/adapters.ts`, `src/lib/services/lead-enquiries-service.ts`, `src/lib/constants/campaign-domain-map.ts`, `src/lib/utils/phone.ts`.
 
 ---
 
 ## 1. Webhook contract
 
-**Endpoint:** `POST /api/webhooks/leads?source=meta|google|website`
+**Endpoint:** `POST /api/webhooks/leads?source=meta|google|website|shop_app`
 **Route:** `src/app/api/webhooks/leads/route.ts` — exports `maxDuration = 60` (headroom for the
 `after()` notification sends).
 
@@ -23,8 +23,11 @@ Order of operations (the order matters — it is an auditability decision):
 4. **Log the raw payload to `lead_raw_payloads` *before* the auth check** so auth failures are
    auditable. `sanitizeRawPayload` strips sensitive envelope keys (`res2` — the Meta page access
    token).
-5. Bearer-token check (`PABBLY_WEBHOOK_SECRET`, timing-safe via `safeSecretCompare`) — on
-   failure, mark the raw row `ingestion_error: 'unauthorized'`, return 401.
+5. Bearer-token check, timing-safe via `safeSecretCompare`. The secret is picked **per
+   sender**, not per endpoint: `SHOP_APP_WEBHOOK_SECRET` when `source=shop_app`,
+   `PABBLY_WEBHOOK_SECRET` otherwise. They are separate so a leak on one sender can be
+   rotated without breaking the other. On failure, mark the raw row
+   `ingestion_error: 'unauthorized'`, return 401.
 6. `ingestLead(rawPayload, source, rawPayloadId)`.
 7. On success: `after(notifyLeadAssigned({ … }))` then return `201 { leadId }` — Pabbly is
    acked immediately; Vercel keeps the lambda alive until the awaited Gupshup sends settle
@@ -37,6 +40,7 @@ Order of operations (the order matters — it is an auditability decision):
 | `adaptMeta` | Meta lead ads (via Pabbly) | unwraps the Pabbly `raw_data` envelope, then reads `res3.field_data` exclusively (array, or JSON string via `parseFieldDataString`); no other fallback for contact fields |
 | `adaptGoogle` | Google Ads lead forms | `raw_google_fields` |
 | `adaptWebsite` | Website forms | flat key-value payload |
+| `adaptShopApp` | Indulge Shop app enquiries | flat server-built payload; product and enquiry fields become a typed `product_enquiry` |
 
 All produce a typed `NormalizedLeadPayload`. `sanitizeText()` on every text field (S-02).
 The adapter's phone normalisation is best-effort and never rejects; the hard identity check
@@ -49,6 +53,32 @@ happens later, inside `ingestLead()` (see §3 step 3).
 There is no `utm_content` field, and `source` is never set by the adapter; it comes from the
 webhook `?source=` param only (the old `utm_source` column was renamed to `source` in
 migration 0065). Every non-standard `field_data` answer lands in `form_data` automatically.
+
+### The shop app adapter
+
+The Indulge Shop app is a React Native client with a NestJS API on EC2. It posts to us
+directly, with no Pabbly in between. Pabbly only exists for Meta, which will not POST to an
+arbitrary URL.
+
+It is a first-party sender, so the payload is flat and server-built. The client cannot forge
+identity: phone, name and product are all resolved from the authenticated member on their
+side before the webhook fires. Phone arrives as verified E.164, because a phone OTP is the
+only way to have an account there at all.
+
+Two things make this adapter different from `adaptWebsite`:
+
+1. It builds a typed `product_enquiry` on `NormalizedLeadPayload`. Product data does not go
+   into `form_data`, because one lead accumulates many enquiries over time and `form_data`
+   is written once at INSERT and never updated (the migration 0096 contract).
+2. It carries an `external_id`, which is the shop's own Mongo lead id. Their delivery loop
+   retries three times automatically and any number of times manually, always with the same
+   id, so this is the value that makes redelivery safe.
+
+`member_city` is deliberately written into `form_data.city` rather than given its own route,
+so it rides the `form_data.city` to `leads.city` lift that already runs in step 6.
+
+`safeHttpUrl()` accepts http and https only. These values end up as `href` and `src` on the
+dossier card, and both `new URL()` and Zod's `.url()` accept `javascript:` without complaint.
 
 ## 3. Inside `ingestLead()` (`src/lib/services/lead-ingestion.ts`)
 
@@ -98,6 +128,61 @@ migration 0065). Every non-standard `field_data` answer lands in `form_data` aut
 
 Notifications and SLA scheduling are **not** done here — the route's
 `after(notifyLeadAssigned(...))` owns all four assignment side-effects.
+
+## 3b. Product enquiries and the two dedup models (migration 0180)
+
+This is the part worth understanding before touching anything in this pipeline.
+
+The shop de-duplicates on (member, product, enquiry type). We de-duplicate on **phone**.
+Those two models disagree in exactly the case a marketplace encourages: one member asking
+about three different pieces. Their side is right to send three webhooks. Our phone dedup is
+right to refuse to create three leads for one human.
+
+The resolution is **one lead per person, many enquiries hanging off it**. Every enquiry is
+appended to `lead_product_enquiries`, whether it created the lead or arrived against an
+existing one. Before this table the second and third products were dropped into a
+`duplicate_submission` activity that recorded only source, campaign, domain and raw payload
+id, so an agent would ring up about a handbag while the member waited to hear about a watch.
+
+Splitting into separate leads was considered and rejected: it would mean three agents, three
+SLA timers, and one person counted three times in the pipeline.
+
+**What each case does:**
+
+| Case | Lead | Enquiry row | Activity | Notification |
+| ---- | ---- | ----------- | -------- | ------------ |
+| New person | created | written | `lead_created` + `agent_assigned` | agent WhatsApp + founder alert + SLA timers |
+| Known person, new product | none, phone dedup holds | written | `duplicate_submission` carrying `product_name` and `enquiry_type` | in-app only, naming the product. No WhatsApp |
+| Redelivery of a known enquiry | none | none, 23505 on `external_lead_id` | none | none, and the route returns 200 |
+
+A redelivery has to be completely silent. The shop retries three times automatically with
+1s, 4s and 9s backoff, plus unlimited manual retries from its admin panel. Without the guard
+one enquiry would ping the assigned agent on every attempt.
+
+The repeat-enquiry notification is in-app only by decision. A WhatsApp per product would
+train agents to ignore the channel, and the agent already got a WhatsApp when the lead first
+arrived. It rides `notifyLeadAssigned`'s optional `repeatEnquiry` input rather than a second
+notification path.
+
+**A shop payload with no external id or no product name is rejected 422**
+(`ingestion_error: 'missing_product_enquiry'`). This is deliberate and loud. An enquiry with
+no external id cannot be de-duplicated, and one with no product name gives the dossier card
+nothing to show, so the lead would be a phone number nobody can act on. The sender writes to
+its own database before delivering, so nothing is lost: the raw row is already logged and
+the failure shows on /error-log where it can be fixed and re-driven.
+
+**Product columns are a snapshot, never a reference.** The shop hard-deletes listings and
+enriches at delivery time, so a lead redelivered after a deletion arrives with a null image
+and a URL that 404s. The dossier card renders from the stored columns and never re-fetches
+the shop URL. A dead link is honest. An empty card is not.
+
+### Rate limiting note for the shop
+
+The limiter is 100 requests per minute per IP, in-memory per worker. The shop runs a single
+EC2 box behind a fixed Elastic IP, so all of its traffic counts as one client. Normal
+enquiry volume is nowhere near the cap. The risk is their recovery sweep re-driving a
+backlog of failed deliveries, which must be paced at roughly 60 per minute with a cap per
+run.
 
 ## 4. Raw payload policy (security-audit F-5 — the recorded decision)
 
