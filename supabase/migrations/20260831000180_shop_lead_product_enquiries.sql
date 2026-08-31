@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS public.lead_product_enquiries (
 
 -- The dossier card reads every enquiry for one lead, newest first. One index
 -- serves that exactly.
-CREATE INDEX idx_lead_product_enquiries_lead
+CREATE INDEX IF NOT EXISTS idx_lead_product_enquiries_lead
   ON public.lead_product_enquiries (lead_id, enquired_at DESC);
 
 ALTER TABLE public.lead_product_enquiries ENABLE ROW LEVEL SECURITY;
@@ -93,6 +93,8 @@ ALTER TABLE public.lead_product_enquiries ENABLE ROW LEVEL SECURITY;
 -- Read: whoever can see the parent lead. Mirrors the lead_activities policy
 -- (migration 0003) rather than restating role logic -- an enquiry is never more or
 -- less visible than the lead it belongs to.
+DROP POLICY IF EXISTS lead_product_enquiries_select ON public.lead_product_enquiries;
+
 CREATE POLICY lead_product_enquiries_select
   ON public.lead_product_enquiries FOR SELECT
   TO authenticated
@@ -102,9 +104,17 @@ CREATE POLICY lead_product_enquiries_select
       WHERE l.id = lead_product_enquiries.lead_id
         AND (
           (get_user_role() = 'agent'   AND l.assigned_to = auth.uid())
-          OR (get_user_role() = 'manager' AND l.domain = get_user_domain()::text)
+          -- NO ::text cast. leads.domain is the app_domain ENUM since migration
+          -- 0041, which dropped and recreated every domain-referencing policy for
+          -- exactly this reason. get_user_domain() already returns app_domain
+          -- (migration 0001), so this is enum = enum. Casting either side to text
+          -- fails with 42883, operator does not exist: app_domain = text.
+          OR (get_user_role() = 'manager' AND l.domain = get_user_domain())
           OR get_user_role() IN ('admin', 'founder')
         )
+        -- Mirrors lead_activities_select as recreated in 0041. An archived lead
+        -- hides its activities, so it must hide its enquiries too.
+        AND l.archived_at IS NULL
     )
   );
 
