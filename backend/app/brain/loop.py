@@ -11,9 +11,12 @@ One turn: specialist prompt + trimmed toolset → model → (tool calls → exec
     breakpoint, so iterations 2..n re-read it at ~0.1x. The prefix is
     byte-stable within a turn by construction (nothing volatile in it).
 
-Deliberately NOT here yet (they stay owned by the Node brain until their port
-tranche, per the strangler rule): conversation persistence, the daily cap,
-the confirmation RESOLVER pre-step, write tools, the WhatsApp channel.
+Everything the strangler plan listed as "not here yet" has now landed:
+conversation persistence + the daily cap (core/elaya_store, the endpoint), the
+confirmation RESOLVER pre-step (brain/resolver), write tools (through the Node
+bridge), and the WhatsApp channel (`channel` threads into the persona block and
+the bridge's ledger rows — the Node gate still owns identity, dedup, voice and
+the reply send).
 """
 
 from __future__ import annotations
@@ -27,7 +30,7 @@ from app.brain.persona import build_system_prompt, build_time_context
 from app.brain.pii import mask_pii
 from app.brain.principal import StaffPrincipal
 from app.brain.specialists import Specialist
-from app.core import supa
+from app.core import elaya_store, supa
 from app.llm import registry
 from app.llm.provider import ChatMessage, CompleteRequest, ToolDefinition
 from app.tools import write_bridge
@@ -66,8 +69,16 @@ async def run_turn(
     conversation_id: str,
     channel: str = "in_app",
 ) -> TurnResult:
-    llm = await registry.resolve(specialist.job)
-    depth = await supa.get_pii_masking_depth()
+    # One round of concurrent reads, the brain.ts shape: model config, PII depth,
+    # the per-user persona (style prefs + learned blurb) and the user's notes —
+    # the last two are admin-client + code-scoped so they fold identically on
+    # both channels, and '' for a user who has set nothing.
+    llm, depth, (persona, learned), notes = await asyncio.gather(
+        registry.resolve(specialist.job),
+        supa.get_pii_masking_depth(),
+        elaya_store.get_user_persona(principal.user_id),
+        elaya_store.get_notes_for_elaya(principal.user_id),
+    )
 
     # The specialist's toolset ∩ the principal's role gate — both cuts apply.
     tool_names = [n for n in specialist.toolset if n in principal.toolset]
@@ -100,7 +111,9 @@ async def run_turn(
     # The FULL persona (ported from persona.ts) is the frozen cached prefix;
     # the volatile time anchor rides as the uncached system tail — the Node
     # brain's exact cache shape, and the year-bug protection.
-    system = build_system_prompt(principal, specialist.focus)
+    system = build_system_prompt(
+        principal, specialist.focus, channel, persona=persona, learned=learned, notes=notes
+    )
     time_tail = build_time_context()
 
     # Persisted history replays as TEXT ONLY (brain.ts law: tool_use blocks

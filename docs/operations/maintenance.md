@@ -66,18 +66,18 @@ pin everywhere it is written (RUNBOOK, this file).
 
 ## Open items (as of 2026-08-29)
 
-- [ ] **Founder phone numbers missing.** Syndia, Andreas, and Advita have no
-  phone on their profiles, so the Sia alarm's 1-hour WhatsApp escalation
-  silently skips them (in-app + push still reach them). Add numbers on their
-  profile pages.
+- [x] ~~Founder phone numbers missing.~~ Decided 2026-08-31: the founders'
+  WhatsApp leg of the Sia alarm stays dormant BY CHOICE. The alarm reads
+  `profiles.phone` at send time, so the moment a founder adds a number on
+  their profile page the 1-hour escalation starts reaching them, no code
+  change. Arfam and Manu (the 10-minute tier) now have numbers.
 - [ ] **Classify the ~466 Sia groups.** Serene → Sia → gear icon → Group
   mapping: mark each group client / vendor / internal, hide the noise.
-  Manual work, can be done in passes.
-- [ ] **Media backlog draining.** ~15.4k media rows were pending after the
-  2026-08-29 full re-sync (fresh links, so recovery rates are good). Watch
-  the counters in the Sia console. If it stalls or is too slow, the
-  parallel-lanes speedup (3-4 concurrent downloads) is a known, approved
-  next step — ask for it.
+  Manual work, can be done in passes. Feeds the Sia intelligence layer
+  (Elaya needs to know which groups are clients).
+- [x] ~~Media backlog draining.~~ Drained overnight 2026-08-30 on the
+  4-lane backfill (2 GB task): 12,580 recovered, 2,345 honestly expired
+  (WhatsApp no longer serves them), 0 lost.
 - [ ] **Regenerate database.ts types.** `supabase gen types typescript
   --linked` (splice above the hand-written appendix). Then remove the two
   interim casts in `src/lib/services/sia-service.ts` marked "retire at next
@@ -85,6 +85,16 @@ pin everywhere it is written (RUNBOOK, this file).
 - [ ] **Sia live-tail polish (candidate).** A reaction, edit, or delete on a
   message already on screen shows only after reopening the chat. Known pilot
   trade-off, not data loss. Improve when it starts to annoy.
+- [ ] **Lock the brain load balancer to CloudFront (candidate).** The Python
+  brain's ALB still has its original plain-HTTP listener open to the internet
+  (bearer-gated, so not an open door, but the CloudFront front
+  `dvoitvfdf56l3.cloudfront.net` is the only path production uses since
+  2026-08-31). Hardening options: restrict the ALB security group to the
+  CloudFront origin-facing prefix list, or add a secret origin header that
+  the FastAPI app requires. Copilot owns the security group, so do it through
+  the manifest, not by hand. Until then: always call the brain through the
+  CloudFront URL, never the ALB hostname, so the bearer never crosses in
+  cleartext.
 - [ ] **Possible-ban alert (candidate).** A WhatsApp ban (disconnect code 403)
   currently surfaces as the generic `unreachable` alarm after 15 minutes.
   A distinct "possible ban - do not retry, investigate" alert would be

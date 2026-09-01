@@ -46,6 +46,22 @@ async function getSettingValue(key: string): Promise<unknown> {
   return (data as { value: unknown } | null)?.value ?? null;
 }
 
+/**
+ * Which brain answers a channel (config rows `brain_whatsapp` / `brain_in_app`,
+ * value `"node"` | `"python"`; migration 0179). Read per request, never cached —
+ * flipping a row moves the very next message, no deploy (the model-switch
+ * posture). Anything missing, malformed, or failed → `'node'`: the incumbent
+ * brain keeps answering, so a config hiccup can never silence Elaya.
+ */
+export type ElayaBrainKind = 'node' | 'python';
+
+export async function getElayaBrainForChannel(
+  channel: 'whatsapp' | 'in_app',
+): Promise<ElayaBrainKind> {
+  const value = await getSettingValue(channel === 'whatsapp' ? 'brain_whatsapp' : 'brain_in_app');
+  return value === 'python' ? 'python' : 'node';
+}
+
 /** Server-enforced daily message cap (config row `daily_message_cap`). */
 export async function getDailyMessageCap(): Promise<number> {
   const value = await getSettingValue('daily_message_cap');

@@ -58,6 +58,19 @@ pii.ts                 ← maskPii() — THE PII gateway every tool result passe
 confirmation.ts        ← classifyConfirmation() — pure English+Hinglish affirmation gate
 brain.ts               ← the tool loop + the confirmation RESOLVER pre-step (the ONLY place a
                           state-change executes)
+sse.ts                 ← ElayaSseEvent + readElayaSseStream() — THE Elaya SSE frame vocabulary and
+                          byte-stream → event reader (meta/delta/tool/done/error). Runtime-neutral;
+                          pumped by the browser transport (components/elaya/elaya-stream.ts) AND
+                          python-brain.ts. Never re-parse `data:`/`\n\n` frames inline.
+python-brain.ts        ← (Step 3, channel tranche 2026-08-31) runPythonBrainTurn() +
+                          isPythonBrainConfigured() — THE Node → Python-brain transport. Bearer
+                          BRAIN_API_SECRET to ELAYA_BRAIN_URL/v1/elaya/chat (https:// REQUIRED in
+                          production — the CloudFront front on the Fargate ALB; http:// is refused),
+                          pumps the same SSE wire via sse.ts, maps rejections to typed reasons
+                          (cap 429 / duplicate 409 / unauthorized 401-403 / unavailable). Passes ONLY a
+                          verified profile id. Caller today: services/elaya-whatsapp.ts when the
+                          `brain_whatsapp` row says python; the in-app flip pipes the same frames
+                          through /api/elaya/chat next. Never a second brain client.
 ```
 
 ## The channel-parity rule (Phase 1 — structural, non-negotiable)

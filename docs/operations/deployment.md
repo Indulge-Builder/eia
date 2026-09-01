@@ -55,3 +55,46 @@ repo. Record them here once confirmed.
 4. Verify env registry parity (`environments.md`) in the Vercel project.
 5. `pnpm trigger:deploy` if `src/trigger/` or `trigger.config.ts` changed.
 6. `docs/changelog.md` entry exists for the change (Q-06a).
+
+## Python brain (Fargate `api` service)
+
+The second Elaya brain lives in `backend/app` (FastAPI) and runs as the Copilot service
+`api` in the `prod` environment, next to the Sia `watcher` service in the same cluster.
+
+Deploy from `backend/`:
+
+```bash
+cd backend
+copilot svc deploy --name api --env prod > /tmp/api-deploy.log 2>&1; echo REAL_EXIT=$?
+```
+
+Read the exit code, not the tail of the log (a piped `| tail` reports tail's status, which
+once hid a failed deploy). Then confirm the RUNNING state: the ECS service shows the new
+task-definition revision as PRIMARY with 1 running and 0 failed, and `GET /healthz` answers
+200 through the HTTPS front.
+
+How production reaches it:
+
+- **HTTPS front:** CloudFront distribution `E25WKM3MQB2HCY` (`dvoitvfdf56l3.cloudfront.net`)
+  in front of the Copilot load balancer. Caching disabled, all methods, 60s origin read
+  timeout (the SSE stream must keep sending within that window), host header rewritten to
+  the origin. Vercel's `ELAYA_BRAIN_URL` points here. The load balancer's own hostname is
+  plain HTTP and must never be used from production code.
+- **Shared bearer:** `BRAIN_API_SECRET`, in four places that move together (backend/.env,
+  .env.local, Vercel prod env, SSM `/copilot/serene/prod/secrets/BRAIN_API_SECRET`). After
+  an SSM change, force a new deployment so the task re-reads it.
+- **Who is on it:** the `elaya_settings` rows `brain_whatsapp` and `brain_in_app`
+  (`"node"` | `"python"`), read per message. Flip or roll back with one row update; no deploy.
+
+Smoke after a deploy (no secrets printed; uses the eval manager profile):
+
+```bash
+set -a; source backend/.env; set +a
+curl -s -N --max-time 60 -X POST https://dvoitvfdf56l3.cloudfront.net/v1/elaya/chat \
+  -H "Authorization: Bearer $BRAIN_API_SECRET" -H "Content-Type: application/json" \
+  -d '{"user_id":"f70219ad-9b28-479b-98f7-f5f05673ec07","message":"ping, one line please","channel":"whatsapp","wa_message_id":"smoke-'$(date +%s)'"}' \
+  | grep -o '"type": "[a-z]*"' | sort | uniq -c
+```
+
+Expect one `meta`, some `delta`, one `done`. A 401 means the bearer has drifted between its
+four homes. A 403 means the profile id is unknown or inactive.

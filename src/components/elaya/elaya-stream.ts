@@ -1,16 +1,14 @@
-// THE Elaya SSE transport (R-01 — one loop, never forked). Both the desktop
-// ElayaChatShell and the mobile ElayaChatScreen consume POST /api/elaya/chat
-// through this single function: fetch, \n\n frame buffering, `data: ` parse,
-// and the meta/delta/tool/done/error dispatch. The callers own ALL state
-// (transcript, cap, toolStatus) via the handler callbacks — this module is
-// transport only, no React.
+// THE Elaya browser SSE transport (R-01 — one loop, never forked). Both the
+// desktop ElayaChatShell and the mobile ElayaChatScreen consume
+// POST /api/elaya/chat through this single function: fetch, the shared frame
+// reader (lib/elaya/sse.ts — the same parser the server-side Python-brain
+// client uses), and the meta/delta/tool/done/error dispatch. The callers own
+// ALL state (transcript, cap, toolStatus) via the handler callbacks — this
+// module is transport only, no React.
 
-export type ElayaSseEvent =
-  | { type: 'meta'; conversationId: string; remainingToday: number }
-  | { type: 'delta'; text: string }
-  | { type: 'tool'; name: string }
-  | { type: 'done'; messageId: string | null }
-  | { type: 'error'; message: string };
+import { readElayaSseStream, type ElayaSseEvent } from '@/lib/elaya/sse';
+
+export type { ElayaSseEvent };
 
 // One status line per tool the model may call. Covers every read AND write tool —
 // a tool with no entry falls back to the generic line. Keep in step with
@@ -87,43 +85,20 @@ export async function streamElayaChat(
     return;
   }
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    let boundary = buffer.indexOf('\n\n');
-    while (boundary !== -1) {
-      const frame = buffer.slice(0, boundary);
-      buffer = buffer.slice(boundary + 2);
-      boundary = buffer.indexOf('\n\n');
-
-      if (!frame.startsWith('data: ')) continue;
-      let event: ElayaSseEvent;
-      try {
-        event = JSON.parse(frame.slice(6)) as ElayaSseEvent;
-      } catch {
-        continue;
-      }
-
-      if (event.type === 'meta') {
-        handlers.onMeta({
-          conversationId: event.conversationId,
-          remainingToday: event.remainingToday,
-        });
-      } else if (event.type === 'delta') {
-        handlers.onDelta(event.text);
-      } else if (event.type === 'tool') {
-        handlers.onTool(event.name);
-      } else if (event.type === 'done') {
-        handlers.onDone();
-      } else if (event.type === 'error') {
-        handlers.onStreamError(event.message);
-      }
+  await readElayaSseStream(res.body, (event) => {
+    if (event.type === 'meta') {
+      handlers.onMeta({
+        conversationId: event.conversationId,
+        remainingToday: event.remainingToday,
+      });
+    } else if (event.type === 'delta') {
+      handlers.onDelta(event.text);
+    } else if (event.type === 'tool') {
+      handlers.onTool(event.name);
+    } else if (event.type === 'done') {
+      handlers.onDone();
+    } else if (event.type === 'error') {
+      handlers.onStreamError(event.message);
     }
-  }
+  });
 }

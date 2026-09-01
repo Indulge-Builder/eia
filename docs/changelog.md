@@ -85,6 +85,89 @@ with no schema change here.
 
 ---
 
+## 2026-08-31 — Python brain: the WhatsApp channel — staff messages can now think in the second brain
+
+**Why:** The plan after the write tranche was: WhatsApp channel first, then the in-app flip, then
+the Sia intelligence layer. WhatsApp is the lower-traffic surface with no streaming, so it is the
+right place for the Python brain to carry real staff conversations before the web moves. The bar
+does not change: same gate, same reply, nothing a staff member can tell apart.
+
+**The shape (two brains, one gate):**
+
+- The Node WhatsApp gate (`services/elaya-whatsapp.ts`) keeps everything around the thinking:
+  identity by phone, the Gupshup-id dedup pre-check, voice-note transcription, media captions, the
+  single reply send, the learned-memory update. It now asks one config row, `brain_whatsapp`
+  (`elaya_settings`, migration 0179, read per message), who thinks.
+- `node` (the seed) runs the in-process path exactly as before. `python` hands the resolved TEXT to
+  the FastAPI brain through the new `lib/elaya/python-brain.ts`; the brain then owns the daily cap,
+  the 24h session, both message rows, the confirmation resolver and the turn for that message. Its
+  rows carry the same `channel` and `wa_message_id` columns the Node path writes, so transcripts,
+  the cross-channel cap and the WhatsApp dedup index behave identically whichever brain answered.
+- Both paths return one `StaffTurnOutcome` (`reply` / `canned` / `silent`) so the send and the memory
+  update stay identical. There is NO automatic fallback between brains on failure: a half-persisted
+  turn must never run twice. The row is the kill switch; a python row on a box without the transport
+  configured answers from Node with a warning.
+
+**Python (`backend/app`):**
+
+- `api/chat.py`: `channel` ("in_app" | "whatsapp") and `wa_message_id` on the request; the
+  conversation origin, both message rows, the persona and the bridge's ledger rows carry the
+  channel; a redelivered id that the gate's pre-check raced past answers **409** (the partial UNIQUE
+  index, surfaced by `core/elaya_store.DuplicateMessage`); the `meta` frame gains `messagesToday`
+  so the Node gate can keep the learned-memory throttle cadence.
+- `brain/persona.py`: the WhatsApp channel block (persona.ts verbatim, appended only for whatsapp,
+  so the in-app prefix is byte-identical). Also closes a parity gap the Node brain never had: the
+  STYLE-ONLY persona block (user prefs + the learned blurb, from `user_context`) and the NOTES
+  context block (`elaya_notes`, 6,000-char budget), read admin-client and code-scoped in
+  `core/elaya_store.py` so they fold on both channels. Zero bytes for a user who set nothing. The
+  learned-memory WRITER stays in Node and still runs after a Python turn.
+- `brain/loop.py`: one concurrent read round (model config, PII depth, persona, notes) like brain.ts.
+
+**Node:**
+
+- `lib/elaya/sse.ts` (new): the Elaya SSE frame vocabulary and byte-stream reader, extracted from the
+  browser transport so one parser serves both consumers (R-01). `components/elaya/elaya-stream.ts`
+  now composes it; no behaviour change on the web.
+- `lib/elaya/python-brain.ts` (new): THE Node → Python-brain transport. Bearer `BRAIN_API_SECRET`,
+  the request shape, the frame pump, a 120s whole-turn budget inside the webhook's 180s, and typed
+  rejections (`cap` 429, `duplicate` 409, `unauthorized` 401/403, `unavailable`). A mid-stream error
+  keeps the partial text, because the resolver's "Done" line may already confirm an executed action;
+  the gate delivers that rather than a contradiction. Passes ONLY a verified profile id.
+- `services/llm-providers-service.ts`: `getElayaBrainForChannel()`; missing, malformed or failed
+  reads resolve to `node` so a config hiccup can never silence Elaya.
+- Migration `0179_elaya_brain_channel_switch`: seeds `brain_whatsapp` and `brain_in_app` as `node`.
+  Applied to prod the same day. `.env.example` documents `BRAIN_API_SECRET` (the four homes) and
+  `ELAYA_BRAIN_URL`.
+
+**Transport security, found and fixed in this tranche:** the brain's Fargate load balancer only had a
+plain HTTP listener. Until now nothing in production called it (the bridge runs the other way, over
+HTTPS to Vercel), so this is the first hop where the shared bearer and staff message text would cross
+the public internet. Fix: a CloudFront distribution (`E25WKM3MQB2HCY`, `dvoitvfdf56l3.cloudfront.net`,
+default certificate, caching disabled, all methods, 60s origin read timeout for the SSE stream,
+`AllViewerExceptHostHeader`) fronts the load balancer over HTTPS, and `python-brain.ts` REFUSES a
+plain `http://` `ELAYA_BRAIN_URL` in production by construction. `ELAYA_BRAIN_URL` is set in the
+Vercel production env to the CloudFront origin. The load balancer's own HTTP listener stays as it was
+(bearer-gated); locking it to CloudFront-only traffic is logged as a hardening candidate in the
+maintenance ledger. Prod smokes and evals should use the CloudFront URL from now on.
+
+**Verified:** `tsc --noEmit` and eslint clean (real exit codes). Local: the Python endpoint with
+`channel=whatsapp` streamed meta/delta/done and persisted `user/whatsapp/{wa_message_id}` +
+`assistant/whatsapp/{brain: python}` rows, then answered 409 to the same id; the Node client returned
+`ok` (4.4s), `duplicate`, `unauthorized` and `unavailable` on the four paths; a plain `http://` URL is
+refused under `NODE_ENV=production`; the persona folds assert byte-identical output for a default user
+and the persona.ts tail order (Formatting → Channel → Style → Notes); eval subset `read-plate-today`,
+`lead-call-vs-note`, `confirm-propose-waits` 3/3 on the Python target.
+
+**Rollout:** the api service was redeployed with the channel + persona code; the migration seeds both
+rows to `node`, so nothing changed for staff until the operator flip. Rollback at any time is one row:
+`UPDATE elaya_settings SET value = '"node"' WHERE key = 'brain_whatsapp';` and the next message answers
+from Node, no deploy.
+
+**Follow-ups (not in this tranche):** the in-app flip (`brain_in_app`, the Node route piping the same
+frames); the eval harness has no `--channel whatsapp` switch yet (the channel smoke was by hand).
+
+---
+
 ## 2026-08-30 — Python brain: the write tranche — Elaya ACTS from the second brain
 
 **Why:** Step 3's biggest block. The Python brain had full read parity (15/15) but could

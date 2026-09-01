@@ -180,6 +180,34 @@ Contracts (extend the five foundation invariants — never weaken):
   (`elaya_messages.meta->>wa_message_id`).
 - Non-text messages get a polite "text only" reply — no cap burn, no model call.
 
+### Two brains, one gate (2026-08-31)
+
+The gate above is unchanged, but the THINKING can now happen in the Python brain
+(`backend/app`, the Fargate `api` service). One config row decides per message:
+
+```text
+elaya_settings.brain_whatsapp = "node"   → runElayaTurn in-process (the original path)
+elaya_settings.brain_whatsapp = "python" → lib/elaya/python-brain.ts → POST {ELAYA_BRAIN_URL}/v1/elaya/chat
+                                           (bearer BRAIN_API_SECRET, channel "whatsapp", wa_message_id)
+                                           the brain owns cap / session / rows / resolver / turn
+                                           and streams the same meta/delta/tool/done frames back;
+                                           the gate collects the text and sends the one reply
+```
+
+What stays identical whichever brain answers: identity by phone, the Gupshup-id dedup
+(pre-check in the gate, the partial UNIQUE index behind it, answered as 409 by the Python
+brain), voice transcription, media captions, the WhatsApp formatting pass, the single
+`sendElayaWhatsAppReply`, the `elaya_reply` audit row, and the learned-memory update (the
+Python `meta` frame carries `messagesToday` for the throttle). The Python persona carries
+the same WhatsApp channel block, the same per-user style block and the same notes block.
+
+Rules of the switch: read per message (a flip moves the next message, no deploy); anything
+missing or failed reads as `node`; NO automatic fallback between brains on a failed turn (a
+half-persisted turn must never run twice); a `python` row on a box without `ELAYA_BRAIN_URL`
++ `BRAIN_API_SECRET` answers from Node with a warning. The Node → brain hop is HTTPS only in
+production (the CloudFront front on the brain's load balancer; a plain `http://` URL is
+refused). Rollback: `UPDATE elaya_settings SET value = '"node"' WHERE key = 'brain_whatsapp';`.
+
 ## Routing provider in production (Lead Revival)
 
 The `routing` (Haiku) provider — seeded in 0116 and long described as "reserved" — is **live in

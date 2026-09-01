@@ -14,6 +14,18 @@
 // (whatsapp_conversations / whatsapp_messages / leads): the transcript lives
 // in elaya_messages (channel 'whatsapp'), the outbound audit row in
 // whatsapp_notification_logs (type 'elaya_reply').
+//
+// TWO BRAINS, ONE GATE (Step 3, channel tranche 2026-08-31): the config row
+// `brain_whatsapp` (elaya_settings, migration 0179 — read per message, no
+// deploy to flip) decides who THINKS. `node` = the in-process brain below,
+// unchanged. `python` = the FastAPI brain via lib/elaya/python-brain.ts, which
+// then owns cap / session / persistence / the confirmation resolver / the turn
+// for that message (its rows carry channel 'whatsapp' + the wa_message_id, the
+// same columns as the Node path). Everything around the thinking — identity by
+// phone, dedup, voice transcription, media handling, the single reply send, the
+// learned-memory update — stays HERE, identical for both. No automatic
+// fallback between brains on failure (a half-persisted turn must never run
+// twice); the row IS the kill switch.
 
 import { sanitizeText } from '@/lib/utils/sanitize';
 import { normalizeWaPhone } from '@/lib/utils/phone';
@@ -25,9 +37,10 @@ import {
 import { resolveLeadByPhone } from '@/lib/services/whatsapp-ingestion';
 import { sendElayaWhatsAppReply } from '@/lib/services/whatsapp-api';
 import { transcribeAudio } from '@/lib/services/transcription-service';
-import { resolveStaffPrincipal } from '@/lib/elaya/principal';
+import { resolveStaffPrincipal, type StaffPrincipal } from '@/lib/elaya/principal';
 import { runElayaTurn } from '@/lib/elaya/brain';
 import { maybeUpdateLearnedMemory } from '@/lib/elaya/memory';
+import { isPythonBrainConfigured, runPythonBrainTurn } from '@/lib/elaya/python-brain';
 import {
   countUserMessagesToday,
   getOrCreateActiveConversation,
@@ -36,7 +49,11 @@ import {
   insertUserMessage,
   touchConversation,
 } from '@/lib/services/elaya-service';
-import { getDailyMessageCap, getSessionExpiryHours } from '@/lib/services/llm-providers-service';
+import {
+  getDailyMessageCap,
+  getElayaBrainForChannel,
+  getSessionExpiryHours,
+} from '@/lib/services/llm-providers-service';
 import type { Profile } from '@/lib/types';
 import type { MetaInboundMessage } from '@/lib/types/whatsapp';
 
@@ -153,6 +170,82 @@ async function handleStaffMessage(
     return;
   }
 
+  // Which brain thinks for WhatsApp (config row, read per message). The Python
+  // branch is taken ONLY when the transport is actually configured — a flipped row
+  // on a box without ELAYA_BRAIN_URL/BRAIN_API_SECRET keeps answering from Node
+  // (warn-logged) rather than going silent.
+  const brain = await getElayaBrainForChannel('whatsapp');
+  let outcome: StaffTurnOutcome;
+  if (brain === 'python') {
+    if (isPythonBrainConfigured()) {
+      outcome = await turnViaPythonBrain(profile, content, message.id);
+    } else {
+      console.warn(
+        '[elaya-whatsapp] brain_whatsapp=python but the Python transport is not configured — answered by the Node brain',
+      );
+      outcome = await turnViaNodeBrain(profile, content, message.id);
+    }
+  } else {
+    outcome = await turnViaNodeBrain(profile, content, message.id);
+  }
+
+  if (outcome.kind === 'silent') return;
+  if (outcome.kind === 'canned') {
+    await sendElayaWhatsAppReply(normalizedPhone, outcome.text, profile.id);
+    return;
+  }
+
+  // The transcript keeps the model's raw text; the wire gets WhatsApp-native
+  // formatting (markdown ** / # would render as literal asterisks otherwise).
+  // Truncation is marker-aware — a bare slice could cut a */_/~ pair in half
+  // and leave the orphaned opener rendering literally.
+  const reply =
+    outcome.text.trim().length > 0
+      ? truncateWhatsAppText(markdownToWhatsApp(outcome.text), MAX_REPLY_CHARS)
+      : REPLY_EMPTY;
+  await sendElayaWhatsAppReply(normalizedPhone, reply, profile.id);
+
+  // Post-turn learned-memory update (Jarvis Phase 3) — AFTER the reply is sent, still
+  // inside the webhook route's after() lambda-alive window. Throttled + non-fatal
+  // (never throws). messagesToday = this message's ordinal today (shared
+  // cross-channel cap); both brains report it, so the throttle cadence is identical.
+  if (outcome.conversationId) {
+    await maybeUpdateLearnedMemory({
+      principal: outcome.principal,
+      conversationId: outcome.conversationId,
+      userMessagesToday: outcome.messagesToday,
+    });
+  }
+}
+
+/**
+ * What a brain turn produced, brain-agnostic. `reply` = a real answer to format and
+ * send (+ what the learned-memory writer needs); `canned` = a fixed channel line
+ * (cap reached / unavailable) sent as-is; `silent` = a duplicate delivery — say
+ * nothing (the first delivery already answered).
+ */
+type StaffTurnOutcome =
+  | {
+      kind: 'reply';
+      text: string;
+      principal: StaffPrincipal;
+      conversationId: string | null;
+      messagesToday: number;
+    }
+  | { kind: 'canned'; text: string }
+  | { kind: 'silent' };
+
+/**
+ * The in-process (Node) brain path — byte-for-byte the original WhatsApp turn:
+ * shared daily cap → one active session across channels → append the user row
+ * (with the wa_message_id dedup backstop) → the brain to completion → append the
+ * assistant row → touch.
+ */
+async function turnViaNodeBrain(
+  profile: Profile,
+  content: string,
+  waMessageId: string,
+): Promise<StaffTurnOutcome> {
   // Daily cap — shared across channels (one count per user), enforced before
   // the model and before persisting, exactly like the in-app route.
   const [sentToday, cap] = await Promise.all([
@@ -160,8 +253,7 @@ async function handleStaffMessage(
     getDailyMessageCap(),
   ]);
   if (sentToday >= cap) {
-    await sendElayaWhatsAppReply(normalizedPhone, REPLY_CAP_REACHED, profile.id);
-    return;
+    return { kind: 'canned', text: REPLY_CAP_REACHED };
   }
 
   // One active session per user across channels — a WhatsApp message
@@ -177,14 +269,14 @@ async function handleStaffMessage(
     senderId: profile.id,
     content,
     channel: 'whatsapp',
-    meta: { wa_message_id: message.id },
+    meta: { wa_message_id: waMessageId },
   });
   // Structural dedup backstop (M7): a concurrent redelivery already inserted this
   // exact wa_message_id (23505 on the partial UNIQUE index). The earlier
   // hasProcessedWaMessage check raced past it; stop here so we never run a second
   // brain turn, burn the cap again, or send a duplicate reply.
   if (inserted.duplicate) {
-    return;
+    return { kind: 'silent' };
   }
 
   // No streaming on WhatsApp: the brain runs to completion, one reply.
@@ -205,24 +297,77 @@ async function handleStaffMessage(
   });
   await touchConversation(conversation.id);
 
-  // The transcript keeps the model's raw text; the wire gets WhatsApp-native
-  // formatting (markdown ** / # would render as literal asterisks otherwise).
-  // Truncation is marker-aware — a bare slice could cut a */_/~ pair in half
-  // and leave the orphaned opener rendering literally.
-  const reply =
-    result.text.trim().length > 0
-      ? truncateWhatsAppText(markdownToWhatsApp(result.text), MAX_REPLY_CHARS)
-      : REPLY_EMPTY;
-  await sendElayaWhatsAppReply(normalizedPhone, reply, profile.id);
-
-  // Post-turn learned-memory update (Jarvis Phase 3) — AFTER the reply is sent, still
-  // inside the webhook route's after() lambda-alive window. Throttled + non-fatal
-  // (never throws). sentToday+1 = this message's count (shared cross-channel cap).
-  await maybeUpdateLearnedMemory({
+  return {
+    kind: 'reply',
+    text: result.text,
     principal,
     conversationId: conversation.id,
-    userMessagesToday: sentToday + 1,
+    messagesToday: sentToday + 1,
+  };
+}
+
+/**
+ * The Python brain path — the FastAPI brain owns cap / session / persistence /
+ * resolver / turn for this message (its rows carry channel 'whatsapp' and the
+ * wa_message_id, the same columns the Node path writes). This side only maps its
+ * typed rejections onto the channel copy. The principal is still resolved here
+ * because the learned-memory writer (Node-owned) needs it.
+ */
+async function turnViaPythonBrain(
+  profile: Profile,
+  content: string,
+  waMessageId: string,
+): Promise<StaffTurnOutcome> {
+  const principal = resolveStaffPrincipal(profile);
+  const result = await runPythonBrainTurn({
+    userId: profile.id,
+    message: content,
+    channel: 'whatsapp',
+    waMessageId,
   });
+
+  if (result.ok) {
+    return {
+      kind: 'reply',
+      text: result.text,
+      principal,
+      conversationId: result.conversationId,
+      messagesToday: result.messagesToday,
+    };
+  }
+
+  switch (result.reason) {
+    case 'cap':
+      return { kind: 'canned', text: REPLY_CAP_REACHED };
+    case 'duplicate':
+      // The brain's dedup index caught a redelivery our pre-check raced past —
+      // the first delivery already answered.
+      return { kind: 'silent' };
+    case 'unauthorized':
+      // Secret drift between the four BRAIN_API_SECRET homes, or the brain no
+      // longer recognises the profile. Loud log (the ops signature), honest reply.
+      console.error(
+        `[elaya-whatsapp] python brain refused the turn (${result.status}) — check BRAIN_API_SECRET parity (maintenance ledger #4)`,
+      );
+      return { kind: 'canned', text: REPLY_UNAVAILABLE };
+    case 'unconfigured':
+    case 'unavailable':
+    default:
+      // A mid-stream failure may already have said something real — e.g. the
+      // resolver's "Done — moved X to In Discussion." line for an action that DID
+      // execute. Deliver what she said rather than a contradiction; otherwise the
+      // channel's standard unavailable line.
+      if (result.partialText && result.partialText.trim().length > 0) {
+        return {
+          kind: 'reply',
+          text: result.partialText,
+          principal,
+          conversationId: null,
+          messagesToday: 0,
+        };
+      }
+      return { kind: 'canned', text: REPLY_UNAVAILABLE };
+  }
 }
 
 /**

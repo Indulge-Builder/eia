@@ -18,6 +18,14 @@ Trust model (pilot): the caller is our own server or the eval harness,
 authenticated by the shared bearer secret; it passes the USER ID it has
 already session-verified, and the brain INDEPENDENTLY re-verifies that id
 against public.profiles before any model runs (the Golden Rule).
+
+Channels (2026-08-31): `channel` = "in_app" (default) | "whatsapp". The Node
+WhatsApp gate (elaya-whatsapp.ts) owns identity-by-phone, voice transcription,
+media handling and the reply send; it forwards the resolved TEXT here with the
+Gupshup message id. This endpoint stamps `channel` on the conversation origin
+and both message rows (the Node service's exact columns), threads it into the
+persona block and the bridge's ledger rows, and answers 409 when the WhatsApp
+dedup index rejects a redelivered id — so a BSP retry never runs a second turn.
 """
 
 from __future__ import annotations
@@ -25,7 +33,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-from typing import AsyncIterator
+from typing import AsyncIterator, Literal
 
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import StreamingResponse
@@ -38,6 +46,7 @@ from app.brain.resolver import resolve_pending_action
 from app.brain.specialists import SPECIALISTS
 from app.config import settings
 from app.core import elaya_store, supa
+from app.core.elaya_store import DuplicateMessage
 
 router = APIRouter(prefix="/v1/elaya")
 
@@ -52,6 +61,10 @@ class ChatRequest(BaseModel):
     user_id: str = Field(min_length=36, max_length=36)
     message: str = Field(min_length=1, max_length=4000)
     conversation_id: str | None = None
+    # The surface the message arrived on — stamped on the rows, shapes the persona.
+    channel: Literal["in_app", "whatsapp"] = "in_app"
+    # WhatsApp only: the Gupshup message id — the dedup key (meta->>wa_message_id).
+    wa_message_id: str | None = Field(default=None, min_length=1, max_length=128)
 
 
 def _frame(payload: dict) -> str:
@@ -93,12 +106,25 @@ async def chat(body: ChatRequest, authorization: str = Header(default="")) -> St
     else:
         expiry_hours = await supa.get_session_expiry_hours()
         conversation = await elaya_store.get_or_create_active_conversation(
-            principal.user_id, expiry_hours
+            principal.user_id, expiry_hours, origin_channel=body.channel
         )
     conversation_id = conversation["id"]
 
-    await elaya_store.insert_user_message(conversation_id, principal.user_id, content)
+    # WhatsApp carries the Gupshup id in meta so the partial UNIQUE dedup index
+    # applies; a redelivery that raced the gate's pre-check lands here as 409.
+    wa_meta = (
+        {"wa_message_id": body.wa_message_id}
+        if body.channel == "whatsapp" and body.wa_message_id
+        else None
+    )
+    try:
+        await elaya_store.insert_user_message(
+            conversation_id, principal.user_id, content, channel=body.channel, meta=wa_meta
+        )
+    except DuplicateMessage:
+        raise HTTPException(status_code=409, detail="duplicate message")
     remaining_today = max(0, cap - sent_today - 1)
+    messages_today = sent_today + 1
 
     queue: asyncio.Queue[str | None] = asyncio.Queue()
 
@@ -116,6 +142,9 @@ async def chat(body: ChatRequest, authorization: str = Header(default="")) -> St
                         "type": "meta",
                         "conversationId": conversation_id,
                         "remainingToday": remaining_today,
+                        # This message's ordinal today — the Node gate's learned-memory
+                        # throttle reads it (the browser client ignores unknown keys).
+                        "messagesToday": messages_today,
                     }
                 )
             )
@@ -139,6 +168,7 @@ async def chat(body: ChatRequest, authorization: str = Header(default="")) -> St
                 emit_delta,
                 emit_tool,
                 conversation_id=conversation_id,
+                channel=body.channel,
             )
 
             saved = await elaya_store.insert_assistant_message(
@@ -151,6 +181,7 @@ async def chat(body: ChatRequest, authorization: str = Header(default="")) -> St
                     "routeMs": route_ms,
                     "usage": {"in": result.input_tokens, "out": result.output_tokens},
                 },
+                channel=body.channel,
             )
             await elaya_store.touch_conversation(conversation_id)
 
