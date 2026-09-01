@@ -158,10 +158,19 @@ refused under `NODE_ENV=production`; the persona folds assert byte-identical out
 and the persona.ts tail order (Formatting → Channel → Style → Notes); eval subset `read-plate-today`,
 `lead-call-vs-note`, `confirm-propose-waits` 3/3 on the Python target.
 
-**Rollout:** the api service was redeployed with the channel + persona code; the migration seeds both
-rows to `node`, so nothing changed for staff until the operator flip. Rollback at any time is one row:
-`UPDATE elaya_settings SET value = '"node"' WHERE key = 'brain_whatsapp';` and the next message answers
-from Node, no deploy.
+**Rollout (state on 2026-09-01):** api task revision 7 is PRIMARY / COMPLETED on Fargate (revision 6
+carried the channel code, 7 added the persona folds); the Vercel production build with
+`ELAYA_BRAIN_URL` is live; migration 0179 is applied and BOTH rows still read `node`, so staff
+WhatsApp is still answered by the Node brain. Revision 7 was smoked through the HTTPS front with a
+real staff profile (meta / delta / done). The switch itself is the founder's one line, thrown while
+watching the first reply:
+
+```sql
+UPDATE elaya_settings SET value = '"python"' WHERE key = 'brain_whatsapp';
+```
+
+The next staff WhatsApp message then thinks in Python (its rows carry `meta.brain = "python"`).
+Rollback is the same line with `"node"`; no deploy either way.
 
 **Follow-ups (not in this tranche):** the in-app flip (`brain_in_app`, the Node route piping the same
 frames); the eval harness has no `--channel whatsapp` switch yet (the channel smoke was by hand).
