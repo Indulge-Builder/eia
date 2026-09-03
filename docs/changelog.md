@@ -12,6 +12,46 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-09-04 — Client identity spine + WhatsApp group mapping (profiling step 0)
+
+Why: Sia's meaning layer (plan-whatsapp §8) blocks profiling until groups are mapped to
+clients, and the 0169 soft hooks (`wag_groups.client_id`, `wag_contacts.client_id`) had no
+table to point at. The founder approved automating only the high-confidence bulk; everything
+uncertain stays manual.
+
+What changed:
+
+- Migration 0181: `public.clients` — the identity spine. One row per client human: name,
+  E.164 phones (primary + alts), Freshdesk/Zoho ids, invite link, a strictly parsed
+  membership summary, `identity_status` (unverified/verified), `sources`, and `import_raw`
+  (the untouched source rows). Deliberately minimal: dynamic profile data (addresses,
+  preferences, notes) is the later profiling layer, never columns here — messy source data
+  cannot corrupt typed columns it never enters. Admin/founder read RLS; service-role writes
+  only. The sia soft hooks became real FKs (ON DELETE SET NULL).
+- `scripts/import-clients-and-map-groups.py` — the re-runnable import + mapper (dry-run by
+  default, `--apply` writes). Builds 598 identities from the two exports with a strict,
+  self-defending parser: bare international numbers get a country-code whitelist, bare
+  10-digit numbers become +91 only in the 6-9 mobile range, spurious `+91` prefixes are
+  vetoed and the true number recovered from the other export, `#deleted#` app suffixes are
+  stripped, the literal "Yes" in the Freshdesk-id column is rejected as an id, and one human
+  with two rows/two numbers merges into one record (second number as an alt). Anything that
+  does not parse stays NULL with the raw preserved.
+- Mapping method (three independent signals, all must agree for AUTO): the client's phone is
+  a current member of exactly one group, that group holds exactly one known client phone,
+  and the group subject corroborates the name. Result: 207 AUTO (founder-approved),
+  7 SUGGEST + 12 AMBIGUOUS left for the manual pass (mostly the same human twice — second
+  numbers, couples' groups, one internal-group member). The apply writes
+  `wag_groups.client_id` + `group_kind='client'`, flips the matched `wag_contacts` row to
+  `participant_role='client'`, marks those clients `identity_status='verified'`, and links
+  the 14 staff phones to `wag_contacts.staff_profile_id` (role labels untouched).
+- The client CSV exports and the mapping review file are git-ignored — client PII never
+  enters the repo.
+
+Notes: 221 of 477 groups had a visible client phone; the rest are hidden behind WhatsApp's
+LID privacy ids. The safe lift for those is a `wag_raw_events` replay to backfill
+`wag_contacts.phone` pn/lid pairs — no live-session queries (Sia discipline). The apply run
+itself is executed by the founder (bulk prod writes stay in human hands).
+
 ## 2026-09-04 — In-app Elaya channel wired to the brain switch (Step 3, in-app tranche)
 
 Why: the WhatsApp channel already thinks in the Python brain behind the `brain_whatsapp` row;
