@@ -12,6 +12,20 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-09-03 — Leads Agent filter now lists managers too
+
+**Fix.** The Agent filter dropdown on `/leads` only offered `role = 'agent'` profiles, so a
+domain's manager never appeared even though managers carry and call leads exactly like agents
+(`LEAD_ASSIGNABLE_ROLES`, the round-robin pool). Leads assigned to a manager existed in the
+table but could not be filtered to.
+
+One-line cause in `getLeadFilterOptions` (`leads-service.ts`): the profiles query used
+`.eq("role", "agent")` instead of the canonical role set. Now `.in("role",
+LEAD_ASSIGNABLE_ROLES)` — the same constant every other assign/filter surface reads, so the
+dropdown can never drift from the assignment pool again. Domain scoping unchanged (manager
+pinned to own domain, admin/founder scoped by the picked domain filter). No migration; the
+`leadFilterOptions` Redis entries (300s TTL) refresh themselves within 5 minutes of deploy.
+
 ## 2026-08-31 — Shop app lead channel: one lead per person, many product enquiries
 
 **Why:** the Indulge Shop app (React Native client, NestJS on EC2) needed its marketplace

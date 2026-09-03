@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGiaDomain, type GiaDomain } from "@/lib/constants/domains";
 import { goingColdCutoff } from "@/lib/constants/leads";
-import { ROUTING_POOL_ROLES } from "@/lib/constants/roles";
+import { LEAD_ASSIGNABLE_ROLES, ROUTING_POOL_ROLES } from "@/lib/constants/roles";
 import { redis } from "@/lib/redis";
 import {
   REDIS_KEYS,
@@ -592,11 +592,13 @@ export async function getLeadFilterOptions(
     ),
   ];
 
-  // Agents — scoped to domain for manager; all domains for admin/founder
+  // Lead-carrying members (agents + managers, LEAD_ASSIGNABLE_ROLES) — managers
+  // carry and call leads too, so the Agent filter must offer them. Scoped to
+  // domain for manager; all domains for admin/founder unless filterDomain set.
   let agentsQuery = supabase
     .from("profiles")
     .select("id, full_name")
-    .eq("role", "agent")
+    .in("role", LEAD_ASSIGNABLE_ROLES)
     .eq("is_active", true)
     .order("full_name", { ascending: true });
 
