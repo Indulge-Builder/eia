@@ -79,3 +79,9 @@ Thumbs.db
 "amit sir - leads.csv"
 amit sir - leads.csv
 elaya-model/
+
+# Client-PII exports — never commit (Sia mapping inputs live locally only)
+*client-export*.csv
+Subscription Manager*.csv
+mapping-review*.csv
+*leads.csv

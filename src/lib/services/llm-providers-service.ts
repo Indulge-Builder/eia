@@ -58,6 +58,17 @@ export type ElayaBrainKind = 'node' | 'python';
 export async function getElayaBrainForChannel(
   channel: 'whatsapp' | 'in_app',
 ): Promise<ElayaBrainKind> {
+  // Non-production test seam: ELAYA_BRAIN_OVERRIDE_IN_APP / _WHATSAPP short-circuit
+  // the DB read so the eval harness can drive the real route against a local brain
+  // without touching the shared config rows. Production ignores them by construction
+  // — the config row stays the only switch there.
+  if (process.env.NODE_ENV !== 'production') {
+    const override =
+      channel === 'whatsapp'
+        ? process.env.ELAYA_BRAIN_OVERRIDE_WHATSAPP
+        : process.env.ELAYA_BRAIN_OVERRIDE_IN_APP;
+    if (override === 'node' || override === 'python') return override;
+  }
   const value = await getSettingValue(channel === 'whatsapp' ? 'brain_whatsapp' : 'brain_in_app');
   return value === 'python' ? 'python' : 'node';
 }

@@ -33,6 +33,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import traceback
 from typing import AsyncIterator, Literal
 
 from fastapi import APIRouter, Header, HTTPException
@@ -196,8 +197,13 @@ async def chat(body: ChatRequest, authorization: str = Header(default="")) -> St
                     }
                 )
             )
-        except Exception as e:
-            await queue.put(_frame({"type": "error", "message": f"turn failed: {e}"}))
+        except Exception:
+            # The traceback goes to the service logs; the wire carries only a
+            # generic marker — an internal exception string must never reach a
+            # chat surface (the Node proxy rewrites error frames to user copy
+            # anyway; this keeps the frame clean for any direct consumer too).
+            print(f"[chat] turn failed:\n{traceback.format_exc()}")
+            await queue.put(_frame({"type": "error", "message": "turn failed"}))
         finally:
             await queue.put(None)
 

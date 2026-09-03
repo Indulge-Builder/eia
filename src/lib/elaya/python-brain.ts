@@ -5,9 +5,10 @@
 // bearer auth with the shared BRAIN_API_SECRET, the request shape, the frame
 // pump (lib/elaya/sse.ts — the browser transport's own parser), and the
 // mapping of its rejections onto a small, typed outcome the caller can act on
-// without ever seeing HTTP. Today's caller is the WhatsApp staff gate
-// (services/elaya-whatsapp.ts); the in-app flip will pipe the same frames
-// through /api/elaya/chat — never a second client.
+// without ever seeing HTTP. Two callers: the WhatsApp staff gate
+// (services/elaya-whatsapp.ts) pumps a whole turn via runPythonBrainTurn; the
+// in-app route (/api/elaya/chat) opens the raw stream via openPythonBrainStream
+// and proxies the frames to the browser. Never a second client.
 //
 // Trust posture: the bearer is a server secret (S-11) and the brain
 // re-verifies the user id against public.profiles before any model runs, so
@@ -63,6 +64,27 @@ export type PythonBrainTurnResult =
       status?: number;
     };
 
+/** A pre-flight rejection — the brain refused the turn before any frame streamed. */
+export type PythonBrainRejection = {
+  ok: false;
+  reason:
+    | 'unconfigured' // ELAYA_BRAIN_URL / BRAIN_API_SECRET missing (or http:// in prod)
+    | 'cap' // 429 — the shared daily cap; nothing persisted
+    | 'duplicate' // 409 — the wa_message_id already ran (BSP redelivery)
+    | 'unauthorized' // 401/403 — secret drift or an unknown/inactive user
+    | 'not_found' // 404 — a supplied conversation id that isn't the caller's (S-06)
+    | 'unavailable'; // network / 5xx — the fetch itself failed
+  status?: number;
+};
+
+export type PythonBrainOpenStream = {
+  ok: true;
+  /** The brain's live SSE bytes — pump with readElayaSseStream (sse.ts). */
+  stream: ReadableStream<Uint8Array>;
+  /** Clears the whole-turn abort timer — call in `finally` once the pump ends. */
+  release: () => void;
+};
+
 function brainBaseUrl(): string | null {
   const raw = process.env.ELAYA_BRAIN_URL?.trim();
   if (!raw) return null;
@@ -82,15 +104,17 @@ export function isPythonBrainConfigured(): boolean {
 }
 
 /**
- * Run ONE turn on the Python brain and pump its stream to completion.
- * Never throws for server-shaped failures — every rejection maps to a typed
- * `ok: false` reason so the caller picks the user-facing copy. `onEvent`
- * receives every frame (the future in-app proxy pipes them through).
+ * Open ONE turn on the Python brain and hand back its live SSE stream once the
+ * pre-flight (HTTP status) checks pass — the in-app route proxies these frames
+ * to the browser verbatim. Rejections come back typed BEFORE any frame, so the
+ * caller can still answer with plain JSON (cap 429 → the capReached shape the
+ * browser transport already handles). Never fetch the brain anywhere else —
+ * runPythonBrainTurn composes this open + the pump.
  */
-export async function runPythonBrainTurn(
+export async function openPythonBrainStream(
   input: PythonBrainTurnInput,
-  opts: { onEvent?: (event: ElayaSseEvent) => void; timeoutMs?: number } = {},
-): Promise<PythonBrainTurnResult> {
+  opts: { timeoutMs?: number } = {},
+): Promise<PythonBrainOpenStream | PythonBrainRejection> {
   const base = brainBaseUrl();
   const secret = process.env.BRAIN_API_SECRET?.trim();
   if (!base || !secret) return { ok: false, reason: 'unconfigured' };
@@ -98,15 +122,9 @@ export async function runPythonBrainTurn(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS);
 
-  let text = '';
-  let conversationId: string | null = null;
-  let messageId: string | null = null;
-  let messagesToday = 0;
-  const toolsUsed: string[] = [];
-  let errorFrame: string | null = null;
-
+  let res: Response;
   try {
-    const res = await fetch(`${base}/v1/elaya/chat`, {
+    res = await fetch(`${base}/v1/elaya/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -123,16 +141,58 @@ export async function runPythonBrainTurn(
       cache: 'no-store',
       signal: controller.signal,
     });
+  } catch (err) {
+    clearTimeout(timer);
+    // D-05: the failure shape only — never the message text.
+    console.error(
+      '[python-brain] turn transport failed:',
+      err instanceof Error ? `${err.name}: ${err.message}` : err,
+    );
+    return { ok: false, reason: 'unavailable' };
+  }
 
-    if (!res.ok || !res.body) {
-      const status = res.status;
-      if (status === 429) return { ok: false, reason: 'cap', status };
-      if (status === 409) return { ok: false, reason: 'duplicate', status };
-      if (status === 401 || status === 403) return { ok: false, reason: 'unauthorized', status };
-      return { ok: false, reason: 'unavailable', status };
+  if (!res.ok || !res.body) {
+    clearTimeout(timer);
+    const status = res.status;
+    if (status === 429) return { ok: false, reason: 'cap', status };
+    if (status === 409) return { ok: false, reason: 'duplicate', status };
+    if (status === 401 || status === 403) return { ok: false, reason: 'unauthorized', status };
+    if (status === 404) return { ok: false, reason: 'not_found', status };
+    return { ok: false, reason: 'unavailable', status };
+  }
+
+  return { ok: true, stream: res.body, release: () => clearTimeout(timer) };
+}
+
+/**
+ * Run ONE turn on the Python brain and pump its stream to completion.
+ * Never throws for server-shaped failures — every rejection maps to a typed
+ * `ok: false` reason so the caller picks the user-facing copy. `onEvent`
+ * receives every frame (the in-app proxy pipes them through).
+ */
+export async function runPythonBrainTurn(
+  input: PythonBrainTurnInput,
+  opts: { onEvent?: (event: ElayaSseEvent) => void; timeoutMs?: number } = {},
+): Promise<PythonBrainTurnResult> {
+  const opened = await openPythonBrainStream(input, { timeoutMs: opts.timeoutMs });
+  if (!opened.ok) {
+    if (opened.reason === 'not_found') {
+      // Only reachable with a supplied conversationId — the WhatsApp caller never
+      // sends one, so this collapses onto the generic failure copy.
+      return { ok: false, reason: 'unavailable', status: opened.status };
     }
+    return { ok: false, reason: opened.reason, status: opened.status };
+  }
 
-    await readElayaSseStream(res.body, (event) => {
+  let text = '';
+  let conversationId: string | null = null;
+  let messageId: string | null = null;
+  let messagesToday = 0;
+  const toolsUsed: string[] = [];
+  let errorFrame: string | null = null;
+
+  try {
+    await readElayaSseStream(opened.stream, (event) => {
       opts.onEvent?.(event);
       if (event.type === 'meta') {
         conversationId = event.conversationId;
@@ -155,7 +215,7 @@ export async function runPythonBrainTurn(
     );
     return { ok: false, reason: 'unavailable', partialText: text || undefined };
   } finally {
-    clearTimeout(timer);
+    opened.release();
   }
 
   if (errorFrame !== null) {

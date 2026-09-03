@@ -25,7 +25,13 @@ import {
   insertUserMessage,
   touchConversation,
 } from '@/lib/services/elaya-service';
-import { getDailyMessageCap, getSessionExpiryHours } from '@/lib/services/llm-providers-service';
+import {
+  getDailyMessageCap,
+  getElayaBrainForChannel,
+  getSessionExpiryHours,
+} from '@/lib/services/llm-providers-service';
+import { isPythonBrainConfigured, openPythonBrainStream } from '@/lib/elaya/python-brain';
+import { readElayaSseStream, type ElayaSseEvent } from '@/lib/elaya/sse';
 import { ElayaChatRequestSchema } from '@/lib/validations/elaya-schema';
 import { formErrors } from '@/lib/validations/form-errors';
 import { sanitizeText } from '@/lib/utils/sanitize';
@@ -44,16 +50,17 @@ const isRateLimited = createRateLimiter({ windowMs: 60_000, max: 20 });
 
 const encoder = new TextEncoder();
 
-type SseEvent =
-  | { type: 'meta'; conversationId: string; remainingToday: number }
-  | { type: 'delta'; text: string }
-  | { type: 'tool'; name: string }
-  | { type: 'done'; messageId: string | null }
-  | { type: 'error'; message: string };
-
-function sse(event: SseEvent): Uint8Array {
+// One frame vocabulary for both brains — lib/elaya/sse.ts (R-01). The Node
+// brain's ElayaTurnEvent (delta | tool) is a subset, so both paths encode here.
+function sse(event: ElayaSseEvent): Uint8Array {
   return encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
 }
+
+const SSE_HEADERS = {
+  'Content-Type': 'text/event-stream',
+  'Cache-Control': 'no-cache, no-transform',
+  Connection: 'keep-alive',
+} as const;
 
 export async function POST(request: Request) {
   const profile = await getCurrentProfile();
@@ -84,6 +91,21 @@ export async function POST(request: Request) {
   const content = sanitizeText(parsed.data.message);
   if (content.length === 0) {
     return NextResponse.json({ error: formErrors.elayaMessageInvalid }, { status: 400 });
+  }
+
+  // Two brains, one route (Step 3 in-app flip — the elaya-whatsapp.ts posture):
+  // the `brain_in_app` config row picks the brain per message. On the python
+  // path the FastAPI brain owns the daily cap, session resolve, both message
+  // rows, the E3 resolver and the turn — so every Node-side step below is
+  // skipped (running it too would double-count and double-persist). NO
+  // automatic fallback between brains mid-turn; the row is the kill switch.
+  if ((await getElayaBrainForChannel('in_app')) === 'python') {
+    if (isPythonBrainConfigured()) {
+      return respondViaPythonBrain(profile, content, parsed.data.conversationId);
+    }
+    console.warn(
+      '[elaya-chat] brain_in_app=python but the Python transport is not configured — answered by the Node brain',
+    );
   }
 
   // Daily cap — server-side, before the model and before persisting the message.
@@ -167,11 +189,100 @@ export async function POST(request: Request) {
     },
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
+  return new Response(stream, { headers: SSE_HEADERS });
+}
+
+/**
+ * The Python-brain proxy path (Step 3 in-app flip). The FastAPI brain owns the
+ * daily cap, session resolve (S-06 ownership of a supplied id — its 404), both
+ * message rows, the E3 resolver and the turn; this route stays the auth/burst/
+ * Zod boundary and re-emits the brain's frames verbatim (one vocabulary,
+ * sse.ts). Pre-flight rejections map onto the exact JSON shapes the browser
+ * transport already handles (cap → 429 + capReached). Mid-stream error frames
+ * are REWRITTEN to user-safe copy — the brain's message is diagnostic (D-05),
+ * never UI copy. Learned memory stays a Node concern on every channel (the
+ * WhatsApp gate's posture): it runs after the stream completes, inside the
+ * still-open lambda window, throttled by the meta frame's messagesToday.
+ */
+async function respondViaPythonBrain(
+  profile: Parameters<typeof resolveStaffPrincipal>[0],
+  content: string,
+  conversationId: string | undefined,
+): Promise<Response> {
+  const opened = await openPythonBrainStream({
+    userId: profile.id,
+    message: content,
+    channel: 'in_app',
+    conversationId,
+  });
+
+  if (!opened.ok) {
+    if (opened.reason === 'cap') {
+      return NextResponse.json(
+        { error: formErrors.elayaCapReached, capReached: true },
+        { status: 429 },
+      );
+    }
+    if (opened.reason === 'not_found') {
+      // A supplied conversation id that isn't the caller's — the Node path's
+      // getOwnedConversation shape (S-06).
+      return NextResponse.json({ error: formErrors.unauthorized }, { status: 404 });
+    }
+    // unconfigured / unauthorized (secret drift) / unavailable — and 'duplicate',
+    // unreachable in-app (no wa_message_id ever sent on this channel).
+    console.error(
+      '[elaya-chat] python brain rejected the turn:',
+      opened.reason,
+      opened.status ?? '',
+    );
+    return NextResponse.json({ error: formErrors.elayaUnavailable }, { status: 500 });
+  }
+
+  const principal = resolveStaffPrincipal(profile);
+
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let metaConversationId: string | null = null;
+      let metaMessagesToday = 0;
+      let sawError = false;
+      try {
+        await readElayaSseStream(opened.stream, (event) => {
+          if (event.type === 'meta') {
+            metaConversationId = event.conversationId;
+            if (typeof event.messagesToday === 'number') metaMessagesToday = event.messagesToday;
+          } else if (event.type === 'error') {
+            sawError = true;
+            // D-05: log the brain's diagnostic, ship only safe copy.
+            console.error('[elaya-chat] python brain turn error:', event.message);
+            controller.enqueue(sse({ type: 'error', message: formErrors.elayaUnavailable }));
+            return;
+          }
+          controller.enqueue(sse(event));
+        });
+
+        // Post-turn learned-memory update — same placement as the Node path:
+        // after the reply + done frame shipped, inside the open stream's
+        // lambda-alive window. Throttled + non-fatal (never throws).
+        if (!sawError && metaConversationId) {
+          await maybeUpdateLearnedMemory({
+            principal,
+            conversationId: metaConversationId,
+            userMessagesToday: metaMessagesToday,
+          });
+        }
+      } catch (e) {
+        // D-05: log the failure, never the prompt/message contents.
+        console.error(
+          '[elaya-chat] python brain stream failed:',
+          e instanceof Error ? e.message : e,
+        );
+        controller.enqueue(sse({ type: 'error', message: formErrors.elayaUnavailable }));
+      } finally {
+        opened.release();
+        controller.close();
+      }
     },
   });
+
+  return new Response(stream, { headers: SSE_HEADERS });
 }

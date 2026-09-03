@@ -12,6 +12,50 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-09-04 — In-app Elaya channel wired to the brain switch (Step 3, in-app tranche)
+
+Why: the WhatsApp channel already thinks in the Python brain behind the `brain_whatsapp` row;
+the in-app channel needed the same one-row switch so both surfaces ride one brain, with the
+Node path kept as the kill switch.
+
+What changed:
+
+- `POST /api/elaya/chat` reads `brain_in_app` per message (the elaya-whatsapp.ts posture).
+  On `node` the route is byte-identical to before. On `python` the route stays the auth,
+  burst-limit and Zod boundary and becomes a frame proxy (`respondViaPythonBrain`): the
+  FastAPI brain owns the daily cap, session resolve (S-06 ownership 404 included), both
+  message rows, the E3 resolver and the turn. Pre-flight rejections map onto the exact JSON
+  shapes the browser transport already handles (cap 429 + capReached, 404 unauthorized copy);
+  mid-stream error frames are rewritten to user-safe copy (the brain's text is log-only);
+  learned memory stays a Node concern, throttled by the meta frame's messagesToday. No
+  automatic fallback mid-turn; the row is the kill switch. The browser transport and UI are
+  untouched — same wire.
+- `lib/elaya/python-brain.ts` split: `openPythonBrainStream()` (pre-flight -> typed rejection
+  BEFORE any frame, or the live SSE stream) with `runPythonBrainTurn()` recomposed over it —
+  one fetch/mapping core, two consumers (WhatsApp gate, in-app proxy). New `not_found` reason
+  for a 404 on a supplied conversation id.
+- `getElayaBrainForChannel` honours `ELAYA_BRAIN_OVERRIDE_IN_APP` / `_WHATSAPP` in
+  NON-production builds only — the eval harness drives the real route against a local brain
+  without touching the shared config rows. Production ignores the override by construction.
+- Python brain hygiene (`backend/app/api/chat.py`): a turn failure now logs the full
+  traceback server-side and ships only a generic error frame — an internal exception string
+  never reaches a chat surface (the proxy rewrites frames anyway; defence in depth).
+
+Verified: tsc + eslint clean; S-06 rejection smoke (unowned conversation -> 404, exact Node
+copy); full eval suite through the real route on the python path: 27/28 (+2 known-gap). The
+one miss (`lang-hinglish-leads`) is model tool-choice variance on a borderline prompt — it
+passes on retry through the same route (2/5 route, 3/3 direct across the night), the failing
+answers are themselves defensible (the asked-about agent is outside the eval manager's
+domain), and a forensic pass excluded every transport-level mechanism (same specialist, same
+toolset, zero bridge failures, byte-identical message, fresh conversations). Local-rig trap
+recorded: the brain's `web_app_url` defaults to port 3000 (sawa_admin, not Serene) — without
+`WEB_APP_URL=http://localhost:3210` every turn silently runs read-only and the write block
+of the suite fails wholesale.
+
+Rollout: code is live but INERT — `brain_in_app` still reads `node`; the founder flips it
+with `UPDATE elaya_settings SET value = '"python"' WHERE key = 'brain_in_app';` (rollback =
+same line with `"node"`, no deploy either way).
+
 ## 2026-09-03 — WhatsApp staff channel flipped to the Python brain
 
 The founder ran the one-row switch (`brain_whatsapp` → `"python"`, Supabase SQL editor, 17:53 UTC)

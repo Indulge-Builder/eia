@@ -208,6 +208,32 @@ half-persisted turn must never run twice); a `python` row on a box without `ELAY
 production (the CloudFront front on the brain's load balancer; a plain `http://` URL is
 refused). Rollback: `UPDATE elaya_settings SET value = '"node"' WHERE key = 'brain_whatsapp';`.
 
+### Two brains, one route — the in-app channel (2026-09-03)
+
+The same switch pattern now covers the in-app channel: `POST /api/elaya/chat` reads
+`elaya_settings.brain_in_app` per message. On `node` the route runs exactly as before. On
+`python` the route stays the auth, burst-limit and Zod boundary, then becomes a frame proxy:
+
+```text
+route → openPythonBrainStream (lib/elaya/python-brain.ts, channel "in_app")
+        pre-flight rejections come back as the SAME JSON the browser already handles
+          cap → 429 { error, capReached: true }   unowned conversationId → 404 (S-06)
+        a live stream re-emits the brain's meta/delta/tool/done frames verbatim;
+        error frames are REWRITTEN to user-safe copy (the brain's text is log-only)
+```
+
+On the python path the brain owns the daily cap, session resolve, both message rows, the E3
+resolver and the turn — the route persists nothing (running its own steps too would
+double-count the cap and double-write rows). Learned memory stays a Node concern on every
+channel: the route runs it after the stream completes, throttled by the `meta` frame's
+`messagesToday`. The browser transport (`elaya-stream.ts`) is untouched — same wire, and
+unknown extra keys in the brain's frames pass through harmlessly.
+
+For evals only, non-production builds honour `ELAYA_BRAIN_OVERRIDE_IN_APP` /
+`ELAYA_BRAIN_OVERRIDE_WHATSAPP` so the harness can drive the real route against a local brain
+without touching the shared config rows; production ignores the override by construction.
+Rollback: `UPDATE elaya_settings SET value = '"node"' WHERE key = 'brain_in_app';`.
+
 ## Routing provider in production (Lead Revival)
 
 The `routing` (Haiku) provider — seeded in 0116 and long described as "reserved" — is **live in
