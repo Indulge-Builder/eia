@@ -12,6 +12,14 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-09-03 — WhatsApp staff channel flipped to the Python brain
+
+The founder ran the one-row switch (`brain_whatsapp` → `"python"`, Supabase SQL editor, 17:53 UTC)
+and the acceptance passed on live traffic: the next staff WhatsApp conversation (17:54) was answered
+by the Fargate brain — assistant rows carry `meta.brain = "python"`, identity/voice/dedup unchanged
+at the gate. `brain_in_app` remains `node`. Rollback stays the same UPDATE with `"node"`; no deploy
+either way. Next: wire the in-app route to the switch, then the Sia intelligence layer.
+
 ## 2026-09-03 — Leads Agent filter now lists managers too
 
 **Fix.** The Agent filter dropdown on `/leads` only offered `role = 'agent'` profiles, so a
