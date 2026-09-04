@@ -107,6 +107,7 @@ for product context
 | The customer WhatsApp Elaya (welcome blast + replies) | `modules/customer-welcome-blast.md` |
 | Lead lifecycle, SLA rules, ad→deal flow | `modules/gia.md` |
 | Lead Revival (silence → revive or review) | `modules/revival.md` |
+| Vendors: the relationship layer, scoring, best-vendor ranking (spec) | `modules/vendors.md` |
 | How leads enter the system | `integrations/lead-ingestion.md` |
 | Anything WhatsApp/Gupshup | `integrations/whatsapp-gupshup.md` |
 | Delayed jobs / reminders / SLA mechanics | `integrations/trigger-dev.md` |

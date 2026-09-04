@@ -3120,8 +3120,8 @@
     "semantic_hash": ""
   },
   "docs/01-vision.md": {
-    "mtime": 1782975640.9649537,
-    "ast_hash": "8bcc8b0ef5169ec5291b59bba08e9ff7",
+    "mtime": 1788512088.2982755,
+    "ast_hash": "81307f066bd6668bcc1c515151de5a65",
     "semantic_hash": ""
   },
   "docs/Indulge-Global.md": {
@@ -3130,8 +3130,8 @@
     "semantic_hash": ""
   },
   "docs/README.md": {
-    "mtime": 1787996432.084267,
-    "ast_hash": "81c9b0eeb4db4e58e852c02875745402",
+    "mtime": 1788512088.2968361,
+    "ast_hash": "35cb978e2422d6fbc497ec93361a15a5",
     "semantic_hash": ""
   },
   "docs/TODO.md": {
@@ -3170,8 +3170,8 @@
     "semantic_hash": ""
   },
   "docs/changelog.md": {
-    "mtime": 1788461607.557014,
-    "ast_hash": "1b1ddce6ad751d48bf19c74b1281d721",
+    "mtime": 1788512088.3068173,
+    "ast_hash": "1f108bff80ca38ab4180ab68cef8708c",
     "semantic_hash": ""
   },
   "docs/claude-project/1-product-and-status.md": {
@@ -3505,8 +3505,8 @@
     "semantic_hash": ""
   },
   "supabase/migrations/CLAUDE.md": {
-    "mtime": 1787377810.4277284,
-    "ast_hash": "722636f9d4ea2a64b127462bdea1d65b",
+    "mtime": 1788462698.0068755,
+    "ast_hash": "2b628b5b3bf32cd05fcab547352a24d5",
     "semantic_hash": ""
   },
   "imgs/DB-Schema-img-2.png": {
@@ -6862,6 +6862,21 @@
   "evals/results/20260903-185251.json": {
     "mtime": 1788461571.3517716,
     "ast_hash": "5c65a5c1888ba3b919afbbd45ac50a92",
+    "semantic_hash": ""
+  },
+  "scripts/import-clients-and-map-groups.py": {
+    "mtime": 1788498843.0383742,
+    "ast_hash": "c51b54167a224596a35dde8cede899b5",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20260904000181_clients_identity_spine.sql": {
+    "mtime": 1788461942.4135723,
+    "ast_hash": "04f206fac887a009e0f94ba13a36bd86",
+    "semantic_hash": ""
+  },
+  "docs/modules/vendors.md": {
+    "mtime": 1788512096.6606045,
+    "ast_hash": "212589ca055d6256f24aef30075c3929",
     "semantic_hash": ""
   }
 }
