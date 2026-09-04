@@ -290,20 +290,22 @@ its current score, and a tool result never carries an unmasked phone or email.
 
 ---
 
-## 9. Decisions for the founder (this session)
+## 9. Decisions, taken 2026-09-04
 
-| # | Question | Recommendation |
+| # | Question | Decision |
 | --- | --- | --- |
-| 1 | Request threads native to Serene, Freshdesk only as a later source? | Yes, native |
-| 2 | Build the codename vault before the first extraction, or run the backlog on regex masking? | Vault first (S1); it is small and the data is our most sensitive |
-| 3a | Staff role map from `profiles.role` to `participant_role` (agent to genie, manager to bishop, founder to founder; who is queen?) | Confirm, and name the queens |
-| 3b | Who may read a client's intelligence? | Group members plus domain manager plus admin and founder |
-| 4 | Approve the one-time backlog extraction spend after S2's exam passes? | Yes, low hundreds of dollars, reasoning tier |
-| 5 | Aging threshold and alert recipients | 4 business hours to the genie, 24 hours escalates to the bishop, daily digest to founders |
-| 6 | Embedding model | Choose at S4: Voyage 3 (Anthropic's recommended embedder) via API on masked text, pgvector 1024 dims; fallback OpenAI text-embedding-3-small |
-| 7 | Freshdesk ingestion | S5, once API access exists |
+| 1 | Request threads | **Parked.** Freshdesk is and stays the ticket system. The request-thread architecture (fields, workflow) is not designed yet, so `sia.requests` is NOT built in S2. What the model learns first is the link: "in this group the client sent this, and this Freshdesk ticket was made for it". Tickets become a fact source once Freshdesk API access exists. |
+| 2 | Masking | **Vault first**, with a guard: the exam scores the same sample masked and unmasked, and masking must not lower the score. Identity is hidden; intent, places and preferences stay whole. |
+| 3a | Roles | The org unit is the **queendom**: a queen leads it, a bishop is its captain (reads every client group, makes sure the Freshdesk ticket exists, is resolved in time, and the client is replied to), genies do the work. Vision: Elaya takes over the bishop's manual reading within about six months; bishops stay for now while Elaya is trained. `profiles.role` map: agent to `genie`, manager to `bishop`, plus explicit `queen` assignments. |
+| 3b | Access | A client profile belongs to a queendom. All staff of that queendom see it; admin and founder see everything. The subscription export's "Group" column ("Sanika Queendom", "Anishqa's Queendom") is the client-to-queendom assignment and joins the spine. |
+| 4 | Backlog spend | Not needed for S0/S1 (no model). At S2: read 20 groups first (about ten dollars), the founder checks quality, then the full run is approved or not. |
+| 5 | Aging alerts | **Parked** with the request threads. |
+| 6 | Embedding model | Decide at S4. |
+| 7 | Freshdesk | No API key or code exists in the repo today. Once a key is provided (`FRESHDESK_API_KEY` + `FRESHDESK_DOMAIN` in the env), Freshdesk ingestion moves up to sit beside S2 as the ticket fact source. |
 
----
+Consequences for the tranches: S2 ships facts and the client card only (no `sia.requests`); S3
+keeps digests and staff response metrics but drops request aging until the request architecture
+is designed; Freshdesk joins as soon as the key exists.
 
 ## 10. The order, at a glance
 
