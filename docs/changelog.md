@@ -12,6 +12,19 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-09-04 — Sia intelligence plan (the W5 / Phase 3c spec)
+
+Why: both plans promised a detailed spec before building the intelligence layer; the Python
+brain and the client spine now exist, so the spec can be grounded in real data.
+
+What changed: `plan-sia-intelligence.md` at the repo root (the plan-*.md convention). Measured
+ground truth (109k messages, only 12% inside the 207 mapped groups, 183 unmapped concierge
+groups resolvable by name, 19.5k raw phone-to-LID events), the three-layer data model (append-
+only facts and request threads, rebuildable snapshots and digests, deferred embeddings), the
+codename vault as the masking border, the cursor pipeline on the existing brain service, six
+tranches S0 to S5 each with an exam and a done-when, and seven founder decisions.
+`docs/modules/sia.md` is no longer a "not started" stub: it points at each live layer's contract.
+
 ## 2026-09-04 — In-app channel flipped to the Python brain
 
 The founder threw the second switch (`brain_in_app` → `"python"`, 09:20 UTC, via the Supabase

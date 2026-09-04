@@ -1,13 +1,19 @@
 # Sia — The Concierge Module
 
-> **Purpose:** placeholder for the concierge module.
-> **Audience:** everyone. · **Source-of-truth scope:** status only.
-> **Last verified:** 2026-07-02 (still no /sia route or module code in the repo) · **Status:** not started.
+> **Purpose:** the client-operations side of Serene: the WhatsApp group archive, the client
+> identity spine, and the intelligence layer on top of both.
+> **Audience:** everyone. · **Source-of-truth scope:** status and pointers.
+> **Last verified:** 2026-09-04 · **Status:** data layer live, UI live, intelligence layer planned.
 
-Sia is the planned Concierge module — the place a client lives after Gia converts them: the
-ongoing concierge relationship for the `concierge` domain. Reserved in the naming system from
-day one; no schema, code, or spec exists yet beyond the name.
+Sia is where a client lives after Gia converts them. It is built in layers, each with its own
+contract document:
 
-Expected adjacency (from the deals design): `deals.client_id` is the reserved hook for the
-clients/post-won flow that Sia will sit on. When scoping begins, this stub becomes the module
-doc.
+| Layer | Status | Contract |
+| --- | --- | --- |
+| The WhatsApp group data layer (`sia.wag_*`, the Baileys watcher on Fargate, raw-first ingest) | live since 2026-08-27 | `plan-whatsapp.md` sections 3, 10 and 11 |
+| The Sia section in Serene (`/sia`: groups rail, chat viewer, search, media, health, pairing, mapping tool) | live | `src/lib/services/sia-service.ts`, `src/components/sia/` |
+| The client identity spine (`public.clients`, migration 0181) and the group mapping | live since 2026-09-04, 207 groups mapped | changelog 2026-09-04, `scripts/import-clients-and-map-groups.py` |
+| The intelligence layer (facts, request threads, digests, alerts, Elaya tools) | planned | `plan-sia-intelligence.md` |
+
+Rules that never change: Sia and Gia never share tables or UI; they meet only in the client
+profile. The watcher never speaks. Facts are append only. Unmapped groups are never profiled.
