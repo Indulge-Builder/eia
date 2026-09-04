@@ -12,6 +12,38 @@ All notable changes to the Serene platform are recorded here in reverse chronolo
 
 ---
 
+## 2026-09-04 — In-app channel flipped to the Python brain
+
+The founder threw the second switch (`brain_in_app` → `"python"`, 09:20 UTC, via the Supabase
+connector on explicit instruction). Both Elaya channels now think in the Python brain on
+Fargate; the in-process Node brain stays as the kill switch on either row. Rollback for either
+channel is the same UPDATE with `"node"`; no deploy. Acceptance: the next in-app message's
+assistant row carries `meta.brain = "python"`.
+
+## 2026-09-04 — Vendors module spec (docs only, nothing built)
+
+Why: PR #3 (`vendor-master-table`) proposed a `vendors` table that bakes Freshdesk usage counts
+into the vendor row. That answers "who have we used most for Dining in Delhi" but cannot hold
+what the concierge work needs next: a best-vendor ranker per ticket, scores on speed and
+reliability that move on their own, per-agent preferences, and what a vendor does and refuses.
+The PR also reused migration versions 0179/0180, which are already applied on prod, and a
+bigint key where Sia's 0169 hooks wait for a uuid.
+
+What changed:
+
+- New `docs/modules/vendors.md`: the build contract for the revised PR. Facts are rows, scores
+  are computed. A thin `vendors` spine (uuid, E.164 contacts, `import_raw` keeps the computed
+  counts untouched), `vendor_capabilities` (offers/declines per category, service, cities),
+  the append-only `vendor_engagements` ledger (one row per ticket or job, client and agent ids,
+  every invoice path), append-only `vendor_reviews` (per-dimension 1..5 columns),
+  `vendor_agent_preferences` (preferred/avoid), and the private bucket renumbered. One ranker
+  (`rankVendorsForRequest`) for Elaya, the future Sia ticket screen and the extension. Scoring
+  signals, the Elaya tools, the data-in paths, the file map and five open decisions for the
+  founder are listed there.
+- `docs/README.md` index row and a `docs/01-vision.md` module row point at the spec.
+
+---
+
 ## 2026-09-04 — Client identity spine + WhatsApp group mapping (profiling step 0)
 
 Why: Sia's meaning layer (plan-whatsapp §8) blocks profiling until groups are mapped to
