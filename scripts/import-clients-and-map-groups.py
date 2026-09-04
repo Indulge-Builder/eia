@@ -344,15 +344,41 @@ def main() -> int:
             rest("POST", "clients", [r], prefer="return=minimal")
     print(f"✓ clients upserted ({len(records)})")
 
-    # 2. AUTO mappings.
+    # 2. AUTO mappings. Already-mapped groups are skipped up front so re-runs
+    # only touch what is missing.
+    already = {g["group_jid"] for g in get_all(
+        "wag_groups?select=group_jid&client_id=not.is.null", schema="sia")}
+
+    def tokset(s: str) -> frozenset:
+        return frozenset(t for t in re.sub(r"[^A-Za-z ]+", " ", s or "").lower().split()
+                         if len(t) >= 3 and t not in {"concierge", "private", "indulge",
+                                                      "group", "the", "and", "mr", "mrs", "dr"})
+
     mapped = skipped = 0
     for row in auto:
+        if row["group_jid"] in already:
+            mapped += 1
+            continue
         phone10 = row["client_phone"][-10:]
         cl = rest("GET", f"clients?primary_phone=like.*{phone10}&select=id")
         if len(cl) != 1:
-            print(f"  ! skip {row['group_jid']}: client lookup returned {len(cl)} rows")
-            skipped += 1
-            continue
+            # Recovery for export-mangled numbers: the group member's phone comes
+            # from the WhatsApp JID itself (the highest-trust source). Adopt it
+            # onto the phone-less client whose name-token set EXACTLY matches the
+            # review row — deterministic, or nothing.
+            wa_phone = next((c["phone"] for c in by_last10.get(phone10, []) if c["phone"]), None)
+            noph = rest("GET", "clients?primary_phone=is.null&select=id,full_name")
+            cands = [c for c in noph if tokset(c["full_name"]) == tokset(row["client_name"])]
+            if wa_phone and len(cands) == 1:
+                e164 = "+" + DIGITS.sub("", wa_phone)
+                rest("PATCH", f"clients?id=eq.{cands[0]['id']}", {"primary_phone": e164},
+                     prefer="return=minimal")
+                print(f"  ~ recovered {row['client_name']!r}: adopted WhatsApp-verified {e164[:6]}…")
+                cl = [{"id": cands[0]["id"]}]
+            else:
+                print(f"  ! skip {row['group_jid']}: client lookup returned {len(cl)} rows")
+                skipped += 1
+                continue
         cid = cl[0]["id"]
         rest("PATCH", f"wag_groups?group_jid=eq.{urllib.parse.quote(row['group_jid'])}",
              {"client_id": cid, "group_kind": "client"}, schema="sia", prefer="return=minimal")
