@@ -301,6 +301,9 @@ def build_client_records():
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true", help="write to the database (default: dry run)")
+    ap.add_argument("--review", default=REVIEW_CSV,
+                    help="review CSV to apply (default: mapping-review.csv; a by-name batch carries client_id + member_jid)")
+    ap.add_argument("--skip-import", action="store_true", help="skip the client upsert phase (mapping only)")
     args = ap.parse_args()
     if not BASE or not KEY:
         print("✗ NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY missing — source .env.local")
@@ -311,7 +314,7 @@ def main() -> int:
     print(f"client records: {len(records)} ({len(with_phone)} with a parsed phone, "
           f"{len(records) - len(with_phone)} phone-less)")
 
-    auto = [r for r in load_csv(REVIEW_CSV) if r["tier"] == "AUTO"]
+    auto = [r for r in load_csv(args.review) if r["tier"] == "AUTO"]
     print(f"AUTO mappings to write: {len(auto)}")
 
     profiles = get_all("profiles?select=id,phone&is_active=eq.true&phone=not.is.null")
@@ -331,10 +334,10 @@ def main() -> int:
         return 0
 
     # 1. Upsert clients (idempotent on primary_phone; phone-less: match by name+fd first).
-    for r in with_phone:
+    for r in ([] if args.skip_import else with_phone):
         rest("POST", "clients?on_conflict=primary_phone", [r],
              prefer="resolution=merge-duplicates,return=minimal")
-    for r in records:
+    for r in ([] if args.skip_import else records):
         if r["primary_phone"]:
             continue
         fd = r["freshdesk_contact_id"]
@@ -357,6 +360,20 @@ def main() -> int:
     mapped = skipped = 0
     for row in auto:
         if row["group_jid"] in already:
+            mapped += 1
+            continue
+        # A by-name batch row (subject + member display-name + unique client, human-approved)
+        # carries the client id and the echoing member directly — no phone lookup.
+        if row.get("client_id"):
+            cid = row["client_id"]
+            rest("PATCH", f"wag_groups?group_jid=eq.{urllib.parse.quote(row['group_jid'])}",
+                 {"client_id": cid, "group_kind": "client"}, schema="sia", prefer="return=minimal")
+            if row.get("member_jid"):
+                target = f"lid=eq.{urllib.parse.quote(row['member_jid'])}" if row["member_jid"].endswith("@lid") \
+                    else f"jid=eq.{urllib.parse.quote(row['member_jid'])}"
+                rest("PATCH", f"wag_contacts?{target}",
+                     {"client_id": cid, "participant_role": "client"}, schema="sia", prefer="return=minimal")
+            rest("PATCH", f"clients?id=eq.{cid}", {"identity_status": "verified"}, prefer="return=minimal")
             mapped += 1
             continue
         phone10 = row["client_phone"][-10:]

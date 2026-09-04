@@ -30,7 +30,9 @@ Built the way the brain was built: in tranches, each one shipped only when its e
 | Unmapped concierge-style groups | 253 | These hold the busy clients: "Naina V's Concierge" 2,401 messages, "Aarav Gupta's" 2,261, "Jeet's" 2,120 |
 | Unmapped that resolve by name to exactly one client | 183 | One-click confirms in the existing `/sia` mapping tool |
 | Internal and vendor groups | 19 | "Jokers" 6,227 messages, "Office Indulge Backend" (77 members), "Queen's Council", the Revenue groups |
-| Raw `lid-mapping.update` events | 19,535 | Explicit phone to LID pairs; the offline fix for hidden member numbers |
+| Raw `lid-mapping.update` events | 19,535 | Already normalized live by the connector (6,333 pairs, replay added 4 rows); the still-hidden members never had a pairing event |
+| Hidden members in unmapped concierge groups | 1,967 of 2,106 | 8 to 17 per group: these are mostly concierge STAFF who are not Serene users, so `profiles` cannot identify them. A staff roster (queendom, role, WhatsApp number) is required |
+| Unmapped concierge groups where subject, a member's display name and exactly one spine client all agree | 134 | The by-name batch (`mapping-review-by-name.csv`), same three-signal bar with the display name standing in for the hidden phone |
 | Voice notes | 358 | Transcription is not wired yet, and by volume it is not urgent |
 | Media rows with a transcript column | none | `wag_media` has no transcript field today |
 
@@ -201,9 +203,16 @@ sample.
    large share of the 183 name-resolvable groups to map automatically.
 3. **Assisted confirms** for the rest in the `/sia` mapping tool: the tool shows the single name
    candidate; a human clicks. Ambiguous and no-candidate groups stay unmapped, as agreed.
-4. **Staff role labels:** the 14 linked staff contacts get their `participant_role` from
-   `profiles.role` (agent to `genie`, manager to `bishop`, and so on). **DECIDE 3a:** confirm the
-   role map.
+4. **The staff roster.** Only 14 staff have a phone in `profiles`; the concierge floor (genies,
+   bishops, queens) mostly are not Serene users, so their group memberships are `unknown`. The
+   founder supplies a roster (queendom, name, role, WhatsApp number); it lands in a
+   `sia.staff_roster` table (or as inactive `profiles` rows, decided at build time) and syncs
+   `wag_contacts.participant_role` + the queendom link. Without this the "unknown member blocks
+   profiling" rule blocks nearly every group, so the roster is the real gate of S0.
+5. **Display-name corroboration** for groups whose client phone is hidden: subject name + a
+   member's WhatsApp display name + exactly one spine client, all agreeing, is accepted at the
+   same bar as the phone rule (134 groups). Subject-only matches (49) stay SUGGEST for a human
+   click; several candidates or no match (70) stay manual.
 
 **Done when:** at least 85% of all messages sit inside mapped client groups, and no mapped group
 has an `unknown` member who has sent more than a handful of messages.
